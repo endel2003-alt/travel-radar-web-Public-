@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141a2e">
+<meta name="description" content="아코르·IHG 회원 혜택(스위트 업그레이드 · 1+1 · 포인트 · 세일)으로 실제 예약 가능한 날짜를 한 표로">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Travel Radar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="app.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+</head>
+<body>
+<header class="topbar"><div class="in">
+  <nav class="nav"><a href="#radar" data-v="radar">Search</a><a href="#me" data-v="me">Today</a><a href="#best" data-v="best">Best</a><a href="#map" data-v="map">Map</a><a href="#hotels" data-v="hotels">Hotels</a><a href="#guide" data-v="guide">Guide</a><a href="#promos" data-v="promos">Offers</a></nav>
+  <a class="logo" href="#radar"><svg viewBox="0 0 170 190" aria-hidden="true"><path d="M30 176 V76 a55 55 0 0 1 110 0 V176 M18 176 H152" fill="none" stroke="#b8862b" stroke-width="9" stroke-linecap="round"></path><path d="M85 10 L92 22 L85 34 L78 22 Z" fill="#b8862b"></path><path d="M56 98 H114 M72 98 V158 M88 158 V114 H103 a11 11 0 0 1 0 22 H88 M99 136 L114 158" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="wm">Travel Radar</span></a>
+  <div class="right"><span class="members">Members only</span><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" title="낮/밤 전환">Night</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
+</div></header>
+
+<main>
+<section id="v-radar" class="home">
+  <div class="hero">
+    <div class="hero-l">
+      <div class="eyebrow" id="heroEyebrow">Members only</div>
+      <h1 class="headline" id="resTitle">날짜와 지역만 고르세요</h1>
+      <p class="lead" id="resSub"></p>
+    </div>
+    <div class="hero-r">
+      <form class="search" id="searchForm" role="search"><label for="fText" class="lbl">Search</label><input id="fText" type="search" placeholder="방콕 11월 2박 포인트 · 서울 주말 라운지 · 소피텔" autocomplete="off"><button type="button" class="clear" id="fClear" hidden>지우기</button><button type="submit" class="go">Enter</button></form>
+      <div class="tierbar" id="tierBar"></div>
+      <div class="quick" id="quick">
+        <button class="chip" data-q="이번 주말">주말</button><button class="chip" data-q="포인트">포인트</button><button class="chip" data-q="바우처">바우처</button><button class="chip" data-q="5박 무료">5박 무료</button><button class="chip" data-q="라운지">라운지</button><button class="chip" data-q="조식">조식</button><button class="chip" data-q="스위트">스위트</button>
+      </div>
+    </div>
+  </div>
+  <div class="ledgerbar">
+    <details id="filtersBox" class="filters"><summary>조건 <span class="muted" id="fSummary"></span></summary>
+      <div class="fbody">
+        <div class="fgroup"><div class="ft">When</div><div class="frow"><input id="fFrom" type="date"><span class="muted">–</span><input id="fTo" type="date"></div><label class="mini"><input id="fWeekend" type="checkbox"> 금·토 체크인만</label></div>
+        <div class="fgroup"><div class="ft">Where</div><select id="fWhere"><option value="">전체</option></select></div>
+        <div class="fgroup"><div class="ft">Benefit</div><div class="chips">
+          <button class="chip on" data-b="SUITE">스위트</button><button class="chip on" data-b="FREE_NIGHT">무료박</button><button class="chip on" data-b="POINTS">포인트</button><button class="chip on" data-b="SALE">세일</button></div></div>
+        <div class="fgroup"><div class="ft">Chain</div><div class="chips">
+          <button class="chip on" data-c="accor">Accor</button><button class="chip on" data-c="ihg">IHG</button><button class="chip on" data-c="marriott">Marriott</button><button class="chip on" data-c="hilton">Hilton</button></div></div>
+        <div class="fgroup"><label class="mini"><input id="fMine" type="checkbox"> 내가 쓸 수 있는 것만</label></div>
+        <div class="fgroup"><div class="ft">Sort</div><select id="fSort"><option value="tier">티어 가치순</option><option value="cost">내 비용 낮은 순</option><option value="saving">절약 큰 순</option><option value="date">날짜순</option><option value="new">새로 열림</option><option value="hotel">호텔명</option></select></div>
+        <button class="lnk" id="fReset">초기화</button>
+      </div></details>
+    <div class="rtools"><div class="seg" id="viewSeg"><button data-view="cards" class="on">Ledger</button><button data-view="table">Table</button></div></div>
+  </div>
+  <div class="tiles" id="tiles" hidden></div>
+  <div class="ledger" id="cards"></div>
+  <div class="tablewrap" id="tableWrap" hidden>
+    <table><thead><tr><th>체크인</th><th>호텔</th><th>혜택</th><th>내 비용 (₩)</th><th>비교 기준</th><th>절약</th><th>객실</th><th>예약</th></tr></thead><tbody id="tbody"></tbody></table>
+  </div>
+  <div class="more" id="more" hidden><button class="lnk">더 보기</button></div>
+  <div class="empty" id="empty" hidden>이 조건에 맞는 혜택이 없어요. 날짜·지역·조건을 넓혀 보세요.</div>
+  <div class="strip" id="rail"></div>
+</section>
+<section id="v-me" hidden></section>
+<section id="v-best" hidden></section>
+<section id="v-map" hidden>
+  <h1>지도로 보기</h1>
+  <p class="lead">레이더의 날짜·혜택·체인 조건이 그대로 적용돼요. 점이 클수록 가능한 날짜가 많고, 색은 체인이에요. 점을 누르면 가장 좋은 혜택과 예약 링크가 나옵니다.</p>
+  <div class="panel">
+    <div class="row">
+      <label class="big">언제 <input id="mFrom" type="date"> <span class="muted">~</span> <input id="mTo" type="date"></label>
+      <span class="mapjump" id="mapJump"></span>
+      <label class="mini"><input id="mMine" type="checkbox"> 내가 쓸 수 있는 것만</label>
+    </div>
+    <div class="chips" id="mapChips"></div>
+  </div>
+  <div class="mapwrap"><div id="map"></div><div class="maplegend"><span><i style="background:var(--c-accor)"></i>Accor</span><span><i style="background:var(--c-ihg)"></i>IHG</span><span><i style="background:var(--c-marriott)"></i>Marriott</span><span><i style="background:var(--c-hilton)"></i>Hilton</span><span><i class="approx"></i>대략 위치 (좌표 없음)</span></div></div>
+  <p class="muted small" id="mapNote"></p>
+</section>
+<section id="v-hotel" hidden></section>
+<section id="v-hotels" hidden></section>
+<section id="v-guide" hidden></section>
+<section id="v-promos" hidden></section>
+<footer><span class="brand">Travel Radar <span>Members only</span></span><span>개인 수집 데이터 기반, 예약은 각 체인 공식 사이트에서 본인 계정으로 진행됩니다.</span><span>혜택 자격(티어·바우처)은 본인 계정 기준으로 확인하세요.</span></footer>
+</main>
+<nav class="tabbar"><a href="#radar" data-v="radar">Search</a><a href="#me" data-v="me">Today</a><a href="#map" data-v="map">Map</a><a href="#hotels" data-v="hotels">Hotels</a><button type="button" id="moreTab">More</button></nav>
+<dialog id="dlgMore" class="sheet"><nav><a href="#best">Best — 이번 달 베스트</a><a href="#guide">Guide — 멤버십 비교</a><a href="#promos">Offers — 진행 중 오퍼</a><a href="#" id="moreProfile">My tier — 내 티어·포인트</a></nav><form method="dialog"><button class="lnk">닫기</button></form></dialog>
+
+<dialog id="dlgProfile">
+  <form method="dialog" id="profileForm">
+    <h3 style="margin:0">내 프로필</h3>
+    <p class="muted small" style="margin:0">로그인 없이, 이 브라우저에만 저장돼요. 입력하면 "내가 쓸 수 있는 것만" 필터와 행마다 사용 가능 표시가 켜집니다.</p>
+    <fieldset><legend>Accor ALL</legend>
+      <label>티어 <select name="accorTier"><option value="">회원 아님</option><option>Classic</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option><option>Limitless</option></select></label>
+      <label>ALL Accor+ Explorer 구독 <input name="explorer" type="checkbox"></label>
+      <label>SNU 남은 장수 <input name="snu" type="number" min="0" max="12"></label>
+      <label>Stay Plus 남은 장수 <input name="stayPlus" type="number" min="0" max="4"></label>
+      <label>보유 포인트 <input name="accorPts" type="number" min="0" step="100"></label>
+      <label>올해 숙박 수 <input name="accorNights" type="number" min="0" max="400"></label>
+      <label>SNU 만료일 <input name="snuExp" type="date"></label>
+      <label>Stay Plus 만료일 <input name="stayPlusExp" type="date"></label>
+    </fieldset>
+    <fieldset><legend>Marriott Bonvoy</legend>
+      <label>티어 <select name="marriottTier"><option value="">회원 아님</option><option>Member</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Titanium</option><option>Ambassador</option></select></label>
+      <label>보유 포인트 <input name="marriottPts" type="number" min="0" step="1000"></label>
+      <label>올해 숙박 수 <input name="marriottNights" type="number" min="0" max="400"></label>
+    </fieldset>
+    <fieldset><legend>Hilton Honors</legend>
+      <label>티어 <select name="hiltonTier"><option value="">회원 아님</option><option>Member</option><option>Silver</option><option>Gold</option><option>Diamond</option></select></label>
+      <label>보유 포인트 <input name="hiltonPts" type="number" min="0" step="1000"></label>
+      <label>올해 숙박 수 <input name="hiltonNights" type="number" min="0" max="400"></label>
+    </fieldset>
+    <fieldset><legend>IHG One Rewards</legend>
+      <label>티어 <select name="ihgTier"><option value="">회원 아님</option><option>Club</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></label>
+      <label>Ambassador 회원 <input name="ambassador" type="checkbox"></label>
+      <label>보유 포인트 <input name="ihgPts" type="number" min="0" step="1000"></label>
+      <label>올해 숙박 수 <input name="ihgNights" type="number" min="0" max="400"></label>
+      <label>Ambassador 만료일 <input name="ambExp" type="date"></label>
+    </fieldset>
+    <menu><button value="clear" class="lnk" formnovalidate>지우기</button><span style="flex:1"></span><button value="cancel" class="lnk" formnovalidate>취소</button><button value="ok" class="btn primary">저장</button></menu>
+  </form>
+</dialog>
+<dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
+
+<script src="compare.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

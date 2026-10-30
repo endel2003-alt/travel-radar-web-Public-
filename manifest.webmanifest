@@ -1,0 +1,11 @@
+{
+  "name": "Travel Radar",
+  "short_name": "Travel Radar",
+  "description": "아코르·IHG 회원 혜택으로 예약 가능한 날짜를 한 표로",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f4f0",
+  "theme_color": "#141a2e",
+  "lang": "ko",
+  "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }, { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }]
+}
