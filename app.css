@@ -47,15 +47,20 @@ h3 { font-size: 15px; font-weight: 500; margin: 18px 0 6px; }
 /* ---------- 상단 ---------- */
 .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); border-bottom: 1px solid var(--rule); }
 body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 30; background: var(--bg); }
-.topbar .in { max-width: 1400px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 56px; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); gap: 20px; }
-.nav { display: flex; gap: 26px; overflow-x: auto; scrollbar-width: none; }
+.topbar .in { max-width: 1680px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; height: 64px; padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); gap: 20px; }
+.nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
 .nav::-webkit-scrollbar { display: none; }
-.nav a { color: var(--muted); white-space: nowrap; padding: 4px 0; border-bottom: 1px solid transparent; }
+.nav a { color: var(--muted); white-space: nowrap; padding: 4px 0 3px; border-bottom: 1px solid transparent; display: flex; flex-direction: column; align-items: center; gap: 3px; line-height: 1; }
+.nav a b { font-weight: 600; }
+.nav a small { font-family: var(--serif); font-size: 12px; letter-spacing: 0.02em; text-transform: none; font-weight: 500; font-style: italic; color: var(--faint); }
 .nav a.on { color: var(--fg); border-bottom-color: var(--fg); }
+.nav a.on small { color: var(--gold); }
 .nav a:hover { color: var(--gold); }
-.logo { display: flex; align-items: center; gap: 10px; justify-self: center; color: var(--fg); }
-.logo svg { width: 20px; height: 22px; }
-.logo .wm { font-family: var(--serif); font-size: 20px; letter-spacing: 0.26em; text-transform: uppercase; font-weight: 500; white-space: nowrap; }
+.logo { display: flex; align-items: center; gap: 12px; justify-self: center; color: var(--fg); }
+.logo svg { width: 34px; height: 34px; flex-shrink: 0; }
+.logo .wm { display: flex; flex-direction: column; align-items: center; line-height: 1; white-space: nowrap; }
+.logo .wm b { font-family: var(--serif); font-size: 22px; letter-spacing: 0.28em; text-transform: uppercase; font-weight: 500; padding-left: 0.28em; }
+.logo .wm small { font-size: 9px; letter-spacing: 0.34em; text-transform: uppercase; font-weight: 600; color: var(--gold); margin-top: 5px; padding-left: 0.34em; }
 .topbar .right { display: flex; align-items: center; gap: 22px; justify-self: end; white-space: nowrap; }
 .topbar #meta { white-space: nowrap; }
 .members { color: var(--gold); white-space: nowrap; }
@@ -150,6 +155,25 @@ input[type="checkbox"] { accent-color: var(--gold); width: 14px; height: 14px; }
 .lrow .la a:hover { text-decoration-color: var(--gold); }
 .more { padding: 22px 0; }
 .empty { padding: 48px 0; color: var(--muted); border-bottom: 1px solid var(--line); font-family: var(--serif); font-size: 20px; }
+
+/* 내 지갑: 체인별 4칸 */
+.wallet { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--rule); margin-top: 28px; }
+.wallet:empty { display: none; }
+.wcard { display: flex; flex-direction: column; gap: 10px; padding: 22px 28px 22px 0; border-right: 1px solid var(--line); margin-right: 28px; color: inherit; }
+.wcard:last-child { border-right: 0; margin-right: 0; }
+.wcard .rl { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: var(--muted); padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.wcard .rl > span:first-child { color: var(--fg); font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.wcard .rl .muted { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+.wcard .wi { display: flex; flex-direction: column; gap: 3px; }
+.wcard .wi .rv { font-family: var(--serif); font-size: 22px; font-weight: 500; line-height: 1.1; color: var(--fg); }
+.wcard .wi .rv i { font-style: normal; color: var(--gold); }
+.wcard .wi .rs { font-size: 12.5px; color: var(--muted); }
+.wcard .wi .rs b { color: var(--fg); font-weight: 500; }
+.wcard .wi.pts { margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--line); }
+.wcard.off { color: var(--muted); }
+.wcard .ctag { font-size: 11px; }
+@media (max-width: 1100px) { .wallet { grid-template-columns: repeat(2, 1fr); } .wcard:nth-child(2) { border-right: 0; margin-right: 0; } .wcard:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+@media (max-width: 720px) { .wallet { grid-template-columns: 1fr; } .wcard { border-right: 0; margin-right: 0; border-bottom: 1px solid var(--line); padding: 16px 0; } }
 
 /* 하단 스트립 (레일) */
 .strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border-top: 1px solid var(--rule); margin-top: 28px; }
@@ -337,6 +361,7 @@ ul.gone li { padding: 10px 0; border-bottom: 1px solid var(--line); }
 .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 32px; }
 .pcard { display: flex; flex-direction: column; padding: 16px 0 18px; border-bottom: 1px solid var(--line); }
 .pcard img { width: 100%; aspect-ratio: 16/9; object-fit: cover; max-width: 100%; margin-bottom: 10px; filter: saturate(.85); }
+.pcard img.art { filter: none; }
 .pband { height: 1px; background: var(--rule); margin-bottom: 10px; }
 .pcard .b { display: flex; flex-direction: column; gap: 4px; }
 .pcard .t { font-weight: 500; }
@@ -364,7 +389,11 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
 @media (prefers-reduced-motion: no-preference) { .chip, .btn, .lnk, a { transition: color .12s, border-color .12s; } }
 
 /* ---------- 반응형 ---------- */
-@media (max-width: 1250px) { .topbar #meta { display: none; } }
+@media (max-width: 1800px) { .topbar #meta { display: none; } }
+@media (max-width: 1700px) { .nav { gap: 14px; } .nav a small { display: none; } .nav a { padding: 6px 0 5px; } }
+@media (max-width: 1180px) { .nav { gap: 11px; } .nav a b { font-size: 10.5px; letter-spacing: 0.1em; } }
+@media (max-width: 1000px) { .nav { gap: 9px; } .nav a b { font-size: 10px; letter-spacing: 0.05em; } .topbar .in { gap: 12px; } }
+@media (max-width: 1080px) { .logo .wm b { font-size: 18px; letter-spacing: 0.22em; } .logo .wm small { font-size: 8px; letter-spacing: 0.28em; } .logo svg { width: 30px; height: 30px; } .topbar .right { gap: 14px; } }
 @media (max-width: 1100px) {
   :root { --gutter: 24px; }
   .headline { font-size: 44px; }
@@ -374,10 +403,11 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
 }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 22px; padding: 36px 0 24px; }
-  .topbar .in { grid-template-columns: auto 1fr auto; height: 52px; }
+  .topbar .in { grid-template-columns: auto 1fr auto; height: 56px; }
+  .logo svg { width: 28px; height: 28px; } .logo .wm { align-items: flex-start; } .logo .wm b { font-size: 17px; padding-left: 0; } .logo .wm small { font-size: 8px; margin-top: 3px; padding-left: 0; }
   .topbar .nav { display: none; }
   .logo { justify-self: start; }
-  .topbar #meta, .topbar #collectorBtn, .topbar .members { display: none; }
+  .topbar #meta, .topbar #collectorBtn { display: none; }
   .themebtn { display: none; }
   .tierbtn { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 }

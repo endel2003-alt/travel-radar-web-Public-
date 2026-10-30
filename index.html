@@ -21,9 +21,9 @@
 </head>
 <body>
 <header class="topbar"><div class="in">
-  <nav class="nav"><a href="#radar" data-v="radar">Search</a><a href="#me" data-v="me">Today</a><a href="#best" data-v="best">Best</a><a href="#map" data-v="map">Map</a><a href="#hotels" data-v="hotels">Hotels</a><a href="#guide" data-v="guide">Guide</a><a href="#promos" data-v="promos">Offers</a></nav>
-  <a class="logo" href="#radar"><svg viewBox="0 0 170 190" aria-hidden="true"><path d="M30 176 V76 a55 55 0 0 1 110 0 V176 M18 176 H152" fill="none" stroke="#b8862b" stroke-width="9" stroke-linecap="round"></path><path d="M85 10 L92 22 L85 34 L78 22 Z" fill="#b8862b"></path><path d="M56 98 H114 M72 98 V158 M88 158 V114 H103 a11 11 0 0 1 0 22 H88 M99 136 L114 158" fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="wm">Travel Radar</span></a>
-  <div class="right"><span class="members">Members only</span><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" title="낮/밤 전환">Night</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
+  <nav class="nav"><a href="#radar" data-v="radar"><b>Search</b><small>by my tier</small></a><a href="#me" data-v="me"><b>Today</b><small>my benefits</small></a><a href="#best" data-v="best"><b>Best</b><small>of the month</small></a><a href="#map" data-v="map"><b>Map</b><small>all hotels</small></a><a href="#hotels" data-v="hotels"><b>Hotels</b><small>by city</small></a><a href="#guide" data-v="guide"><b>Guide</b><small>tiers compared</small></a><a href="#promos" data-v="promos"><b>Offers</b><small>live promos</small></a></nav>
+  <a class="logo" href="#radar"><svg viewBox="0 0 200 200" aria-hidden="true"><rect x="8" y="8" width="184" height="184" rx="40" fill="#d4a84b"></rect><path d="M44 62 H118 M72 62 V146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round"></path><path d="M104 146 V94 H128 a19 19 0 0 1 0 38 H104 M130 132 L152 146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="wm"><b>Travel Radar</b><small>Members only</small></span></a>
+  <div class="right"><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" title="낮/밤 전환">Night</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
 </div></header>
 
 <main>
@@ -38,7 +38,7 @@
       <form class="search" id="searchForm" role="search"><label for="fText" class="lbl">Search</label><input id="fText" type="search" placeholder="방콕 11월 2박 포인트 · 서울 주말 라운지 · 소피텔" autocomplete="off"><button type="button" class="clear" id="fClear" hidden>지우기</button><button type="submit" class="go">Enter</button></form>
       <div class="tierbar" id="tierBar"></div>
       <div class="quick" id="quick">
-        <button class="chip" data-q="이번 주말">주말</button><button class="chip" data-q="포인트">포인트</button><button class="chip" data-q="바우처">바우처</button><button class="chip" data-q="5박 무료">5박 무료</button><button class="chip" data-q="라운지">라운지</button><button class="chip" data-q="조식">조식</button><button class="chip" data-q="스위트">스위트</button>
+        <button class="chip" data-q="1+1">1+1</button><button class="chip" data-q="포인트">포인트</button><button class="chip" data-q="바우처">바우처</button><button class="chip" data-q="5박 무료">5박 무료</button><button class="chip" data-q="라운지">라운지</button><button class="chip" data-q="조식">조식</button><button class="chip" data-q="스위트">스위트</button>
       </div>
     </div>
   </div>
@@ -64,6 +64,7 @@
   </div>
   <div class="more" id="more" hidden><button class="lnk">더 보기</button></div>
   <div class="empty" id="empty" hidden>이 조건에 맞는 혜택이 없어요. 날짜·지역·조건을 넓혀 보세요.</div>
+  <div class="wallet" id="wallet"></div>
   <div class="strip" id="rail"></div>
 </section>
 <section id="v-me" hidden></section>

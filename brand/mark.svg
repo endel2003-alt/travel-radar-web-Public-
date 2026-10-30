@@ -1,8 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 190" width="170" height="190"><title>Travel Radar mark</title>
-<path d="M30 176 V76 a55 55 0 0 1 110 0 V176" fill="none" stroke="#d4a84b" stroke-width="5" stroke-linecap="round"/>
-<path d="M42 176 V78 a43 43 0 0 1 86 0 V176" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="3" stroke-linecap="round"/>
-<path d="M18 176 H152" stroke="#d4a84b" stroke-width="5" stroke-linecap="round"/>
-<path d="M85 12 L91 22 L85 32 L79 22 Z" fill="#d4a84b"/>
-<path d="M56 98 H114 M72 98 V158" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
-<path d="M88 158 V114 H103 a11 11 0 0 1 0 22 H88 M99 136 L114 158" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><title>Travel Radar mark</title>
+<rect x="8" y="8" width="184" height="184" rx="40" fill="#d4a84b"/>
+<path d="M44 62 H118 M72 62 V146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round"/>
+<path d="M104 146 V94 H128 a19 19 0 0 1 0 38 H104 M130 132 L152 146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
