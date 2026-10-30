@@ -122,12 +122,12 @@ input[type="checkbox"] { accent-color: var(--gold); width: 14px; height: 14px; }
 .seg button.on { color: var(--fg); border-bottom-color: var(--fg); }
 
 .ledger { display: flex; flex-direction: column; }
-.lhead { display: grid; grid-template-columns: 44px 150px 112px 1.3fr 1.3fr 1fr 150px 110px; gap: 0 20px; padding: 14px 0 10px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.lhead { display: grid; grid-template-columns: 44px 130px 180px 1.2fr 1.2fr 1fr 150px 100px; gap: 0 20px; padding: 14px 0 10px; border-bottom: 1px solid var(--line); color: var(--muted); }
 .lhead span:nth-child(7) { text-align: right; }
-.lrow { display: grid; grid-template-columns: 44px 150px 112px 1.3fr 1.3fr 1fr 150px 110px; gap: 0 20px; padding: 20px 0; border-bottom: 1px solid var(--line); align-items: start; transition: background .12s; }
+.lrow { display: grid; grid-template-columns: 44px 130px 180px 1.2fr 1.2fr 1fr 150px 100px; gap: 0 20px; padding: 20px 0; border-bottom: 1px solid var(--line); align-items: start; transition: background .12s; }
 .lrow:hover { background: var(--card); box-shadow: 0 0 0 20px var(--card); }
 .lrow .num { font-family: var(--serif); font-size: 21px; font-weight: 500; color: var(--gold); line-height: 1.1; }
-.lrow .li { display: block; width: 112px; height: 80px; background: var(--soft); overflow: hidden; }
+.lrow .li { display: block; width: 180px; height: 128px; background: var(--soft); overflow: hidden; }
 .lrow .li img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.8) contrast(1.02); transition: filter .2s; }
 .lrow:hover .li img { filter: saturate(1); }
 .lrow .li.noimg { background: transparent; border: 1px solid var(--line); }
@@ -140,7 +140,9 @@ input[type="checkbox"] { accent-color: var(--gold); width: 14px; height: 14px; }
 .bf { white-space: nowrap; }
 .bf.maybe { color: var(--fg); } .bf.no { color: var(--faint); } .bf.lock { color: var(--muted); white-space: normal; }
 .bf em { font-style: normal; color: var(--faint); }
-.lrow .lb b { font-weight: 600; font-size: 15px; }
+.lrow .lb b { font-weight: 600; font-size: 14.5px; }
+.lrow .lb .sub { font-size: 12.5px; color: var(--fg); }
+.lrow .lb .how { display: block; font-style: normal; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin-bottom: 1px; }
 .lrow .lv { text-align: right; }
 .lrow .lv b { font-family: var(--serif); font-size: 24px; font-weight: 500; line-height: 1.05; letter-spacing: -0.01em; }
 .lrow .la { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; font-size: 12.5px; }
@@ -367,8 +369,8 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
   :root { --gutter: 24px; }
   .headline { font-size: 44px; }
   .lhead { display: none; }
-  .lrow { grid-template-columns: 36px 112px 1fr 1fr; grid-template-areas: "no img hotel value" "no img date best" "no img for for" "no img act act"; gap: 6px 16px; }
-  .lrow .num { grid-area: no; } .lrow .li { grid-area: img; } .lrow .lh { grid-area: hotel; } .lrow .lv { grid-area: value; } .lrow .ld { grid-area: date; } .lrow .lb { grid-area: best; } .lrow .lf { grid-area: for; flex-direction: row; flex-wrap: wrap; gap: 2px 12px; } .lrow .la { grid-area: act; flex-direction: row; justify-content: flex-start; gap: 18px; }
+  .lrow { grid-template-columns: 36px 150px 1fr 1fr; grid-template-areas: "no img hotel value" "no img date best" "no img for for" "no img act act"; gap: 6px 16px; }
+  .lrow .num { grid-area: no; } .lrow .li { grid-area: img; width: 150px; height: 110px; } .lrow .lh { grid-area: hotel; } .lrow .lv { grid-area: value; } .lrow .ld { grid-area: date; } .lrow .lb { grid-area: best; } .lrow .lf { grid-area: for; flex-direction: row; flex-wrap: wrap; gap: 2px 12px; } .lrow .la { grid-area: act; flex-direction: row; justify-content: flex-start; gap: 18px; }
 }
 @media (max-width: 860px) {
   .hero { grid-template-columns: 1fr; gap: 22px; padding: 36px 0 24px; }
@@ -386,7 +388,7 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
   h1 { font-size: 30px; } h2 { font-size: 22px; }
   .search input { font-size: 16px; }
   .lrow { grid-template-columns: 30px 1fr; grid-template-areas: "no img" "no hotel" "no date" "no for" "no best" "no value" "no act"; padding: 16px 0; gap: 4px 12px; }
-  .lrow .li { width: 100%; height: 160px; margin-bottom: 6px; } .lrow .li.noimg { display: none; }
+  .lrow .li { width: 100%; height: 190px; margin-bottom: 6px; } .lrow .li.noimg { display: none; }
   .lrow .lv { text-align: left; flex-direction: row; align-items: baseline; gap: 8px; } .lrow .lv b { font-size: 22px; }
   .lrow .num { font-size: 18px; }
   .strip { grid-template-columns: 1fr; }
