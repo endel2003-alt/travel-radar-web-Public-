@@ -339,8 +339,9 @@ function mPhotoCard(o, i, opts) {
     ${tier && o.bv ? `<span class="tr pill w">혜택 ${won(o.bv)}</span>` : ''}
     <span class="tx"><small>${starsHtml(h, 'w')}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</small><b>${esc(h.name)}</b>${small ? '' : `<span class="bens">${bens}</span>`}<span class="pr"><span>${date}${r && (r.n || 1) > 1 ? ` · ${r.n}박` : ''}${r && r.ref && r.my != null ? ` · 정가 ${won(r.ref / (r.n || 1))}` : ''}</span><em>${per}<small>${r && r.my != null ? '/박' : ''}</small></em></span></span></a>`;
 }
+const refMax = (o) => Math.max(0, ...o.rows.map(r => (r.ref || r.my || 0) / (r.n || 1)));   // 정가(1박) 기준 — 호텔의 급
 function mobileHome(rows, groups) {
-  const P = profile; const hero = groups.find(o => hImg(o.h)) || groups[0];
+  const P = profile; const hero = groups.filter(o => hImg(o.h)).sort((a, b) => refMax(b) - refMax(a))[0] || groups[0];   // 메인 사진은 가장 비싼(정가 기준) 호텔
   const tiers = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier);
   const main = tiers[0]; let band = '';
   if (main) {
@@ -394,7 +395,6 @@ function heroSub(rows, groups) {
 function viewRadar() {
   const rows = filtered(); const groups = groupHotels(rows);
   const sort = $('#fSort').value;
-  const refMax = (o) => Math.max(0, ...o.rows.map(r => (r.ref || r.my || 0) / (r.n || 1)));   // 정가(1박) 기준 — 호텔의 급
   const gby = { pricey: (a, b) => refMax(b) - refMax(a) || b.tierValue - a.tierValue, tier: (a, b) => b.tierValue - a.tierValue || a.minCost - b.minCost, cost: (a, b) => a.minCost - b.minCost, saving: (a, b) => (b.best?.sv || 0) - (a.best?.sv || 0), date: (a, b) => a.best.d.localeCompare(b.best.d), new: (a, b) => b.newest - a.newest, hotel: (a, b) => a.h.name.localeCompare(b.h.name, 'ko') };
   groups.sort(gby[sort] || gby.tier);
   $('#tierBar').innerHTML = tierBarHtml();
