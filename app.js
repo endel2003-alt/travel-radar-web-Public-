@@ -73,7 +73,12 @@ function link(r) {
 async function loadFromServer() {
   const S = window.TR_SERVER; const headers = { apikey: S.anon, Authorization: `Bearer ${S.anon}`, 'Content-Type': 'application/json' };
   try { const tok = localStorage.getItem('tr_token'); if (tok) headers.Authorization = `Bearer ${tok}`; } catch (e) {}
-  const res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_data`, { method: 'POST', headers, body: '{}' });
+  let res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_data`, { method: 'POST', headers, body: '{}' });
+  if ((res.status === 401 || res.status === 403) && headers.Authorization !== `Bearer ${S.anon}`) {
+    // 내 토큰이 만료·무효 → 로그아웃 처리하고 손님으로 다시 (옛 data/ 폴더로 조용히 넘어가지 않게)
+    authSave(null); headers.Authorization = `Bearer ${S.anon}`;
+    res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_data`, { method: 'POST', headers, body: '{}' });
+  }
   if (!res.ok) throw new Error('server ' + res.status);
   const d = await res.json(); if (!d || !Array.isArray(d.rows)) return null;
   d.meta = d.meta || {}; d.meta.source = 'server'; return d;
@@ -125,7 +130,7 @@ function authFromHash() {
 async function authEnsure() {
   try { AUTH.s = JSON.parse(localStorage.getItem('tr_auth') || 'null'); } catch (e) {}
   if (!AUTH.s) return;
-  if (AUTH.s.expires_at - Date.now() > 90 * 1000) return;
+  if ((AUTH.s.expires_at || 0) - Date.now() > 5 * 60 * 1000) return;
   try {
     const r = await fetch(`${authBase()}/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: window.TR_SERVER.anon, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: AUTH.s.refresh_token }) });
     if (!r.ok) throw new Error('refresh ' + r.status);
@@ -1032,7 +1037,11 @@ function applyTheme() { document.documentElement.setAttribute('data-theme', 'dar
 themeBtn?.addEventListener('click', () => { const dark = document.documentElement.getAttribute('data-theme') ? document.documentElement.getAttribute('data-theme') === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; try { localStorage.setItem('tr_theme', dark ? 'light' : 'dark'); } catch (e) {} applyTheme(); });
 applyTheme();
 // PWA: 서비스 워커는 가능한 환경에서만 (아티팩트 미리보기 등에서는 조용히 건너뜀)
-if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai|preview/.test(location.hostname)) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai|preview/.test(location.hostname)) {
+  // 워커가 새 버전으로 바뀌면 한 번만 새로고침 → "폰이 옛 화면" 문제 해결
+  let reloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded || !navigator.serviceWorker.controller) return; reloaded = true; location.reload(); });
+  navigator.serviceWorker.register('sw.js?v=' + (document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '0')).then(r => r.update()).catch(() => {});
+}
 load().catch(e => { $('#cards').innerHTML = ''; $('#empty').hidden = false; $('#empty').textContent = '데이터를 불러오지 못했어요: ' + e.message; });
 // 창 폭이 720px 경계를 넘으면 앱 모드 ↔ 레저 모드 다시 그리기
 { let wasM = MOBILE(); window.addEventListener('resize', () => { const m = MOBILE(); if (m !== wasM) { wasM = m; if (!location.hash || /^#\/?radar/.test(location.hash)) viewRadar(); } }); }
