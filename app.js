@@ -185,6 +185,8 @@ $('#loginForm')?.addEventListener('submit', async (e) => {
   b.disabled = false;
 });
 $('#loginLogout')?.addEventListener('click', (e) => { e.preventDefault(); authLogout(); });
+// 구글 로그인: Supabase가 구글로 보냈다가 사이트로 돌려보내며 #access_token 을 붙여준다 (이메일 링크와 같은 처리)
+$('#loginGoogle')?.addEventListener('click', () => { location.href = `${authBase()}/authorize?provider=google&redirect_to=${encodeURIComponent(SITE_URL())}`; });
 
 // ---------- 라우터 ----------
 const views = { radar: viewRadar, me: viewMe, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };

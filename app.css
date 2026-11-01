@@ -566,3 +566,7 @@ select { color-scheme: light; }
 .limitNote { margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--gold); color: var(--muted); font-size: 13px; line-height: 1.6; }
 .limitNote b { color: var(--fg); } .limitNote a { color: var(--gold); border-bottom: 1px solid var(--gold); }
 .limitNote.m { margin: 0 20px 18px; }
+#dlgLogin .gbtn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 11px 14px; font-size: 13px; letter-spacing: .04em; background: #fff; color: #1f2937; border-color: #fff; }
+#dlgLogin .gbtn:hover { background: #f3f4f6; }
+#dlgLogin .or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; color: var(--muted); font-size: 11px; letter-spacing: .1em; }
+#dlgLogin .or::before, #dlgLogin .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
