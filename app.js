@@ -341,7 +341,11 @@ function mPhotoCard(o, i, opts) {
 }
 const refMax = (o) => Math.max(0, ...o.rows.map(r => (r.ref || r.my || 0) / (r.n || 1)));   // 정가(1박) 기준 — 호텔의 급
 function mobileHome(rows, groups) {
-  const P = profile; const hero = groups.filter(o => hImg(o.h)).sort((a, b) => refMax(b) - refMax(a))[0] || groups[0];   // 메인 사진은 가장 비싼(정가 기준) 호텔
+  const P = profile;
+  // 메인 사진: 소피텔·식스센스·리츠칼튼 중에서 (사진 있는 호텔) 열 때마다 하나 랜덤. 없으면 가장 비싼 호텔.
+  const HERO_BRANDS = /sofitel|소피텔|six senses|식스센스|ritz|리츠/i;
+  const picks = groups.filter(o => hImg(o.h) && HERO_BRANDS.test(`${o.h.brand || ''} ${o.h.name || ''}`));
+  const hero = picks.length ? picks[Math.floor(Math.random() * picks.length)] : (groups.filter(o => hImg(o.h)).sort((a, b) => refMax(b) - refMax(a))[0] || groups[0]);
   const tiers = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier);
   const main = tiers[0]; let band = '';
   if (main) {
