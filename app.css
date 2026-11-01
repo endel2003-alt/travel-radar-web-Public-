@@ -442,8 +442,13 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
   td.book { grid-column: 1 / -1; margin-top: 6px; }
   .hhead { grid-template-columns: 1fr; }
   .hphoto { width: 100%; }
-  .cell { min-height: 58px; padding: 5px; font-size: 10px; }
-  .cell .dn { font-size: 13px; }
+  .cal { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cal .dh { padding: 6px 4px 5px; font-size: 9px; letter-spacing: .06em; }
+  .cell { min-height: 54px; padding: 5px 4px; font-size: 9.5px; min-width: 0; overflow: hidden; }
+  .cell .dn { font-size: 13px; white-space: nowrap; }
+  .cell .mn, .cell .mp { font-size: 9.5px; letter-spacing: 0; }
+  .cell .dots { margin-top: 4px; gap: 2px; }
+  .maplegend { position: static; flex-wrap: wrap; gap: 6px 12px; border: 0; border-top: 1px solid var(--line); padding: 8px 10px; }
   footer { margin-bottom: 8px; }
 }
 
@@ -454,7 +459,7 @@ body.app-m main { padding-top: 0; }
 #mApp { margin: 0 calc(-1 * var(--gutter)); }
 .mhero { position: relative; height: 420px; background: linear-gradient(160deg, #2c3a66, #1a2342 55%, #3a2f1a); overflow: hidden; color: #fff; }
 .mhero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.mhero .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,23,42,.5) 0%, rgba(16,23,42,.4) 35%, rgba(16,23,42,.94) 100%); }
+.mhero .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,23,42,.6) 0%, rgba(16,23,42,.55) 35%, rgba(16,23,42,.95) 100%); }
 .mhero .brand { position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); left: 20px; display: flex; align-items: center; gap: 10px; }
 .mhero .brand svg { width: 30px; height: 30px; }
 .mhero .brand span { display: flex; flex-direction: column; line-height: 1; }
@@ -500,10 +505,10 @@ body.app-m main { padding-top: 0; }
 .mlist .mpc { height: 170px; }
 .mpc { position: relative; display: block; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, #2c3a66, #1a2342 55%, #3a2f1a); color: #fff; }
 .mpc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.mpc .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,17,34,.42) 0%, rgba(12,17,34,.5) 40%, rgba(12,17,34,.9) 100%); }   /* 사진 전체에 옅은 남색 막 + 아래로 갈수록 짙게 */
+.mpc .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,17,34,.58) 0%, rgba(12,17,34,.64) 40%, rgba(12,17,34,.94) 100%); }   /* 사진 전체에 옅은 남색 막 + 아래로 갈수록 짙게 */
 .mpc img { filter: saturate(.85); }
 .mpc .tx > b, .mpc .tx > small, .mpc .pr { text-shadow: 0 1px 10px rgba(0,0,0,.55); }
-.mpc .tl { position: absolute; left: 14px; top: 14px; display: flex; gap: 6px; }
+.mpc .tl { position: absolute; left: 14px; top: 14px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 56%; }   /* 오른쪽 '혜택 ₩' 칩과 안 겹치게 줄바꿈 */
 .mpc .tr { position: absolute; right: 14px; top: 14px; }
 .mpc .tx { position: absolute; left: 16px; right: 16px; bottom: 14px; display: flex; flex-direction: column; gap: 4px; }
 .mpc .tx > small { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; opacity: .8; }
@@ -548,3 +553,5 @@ select { color-scheme: light; }
 #map, #hmap, .leaflet-container { background: #0e1324; }
 .leaflet-control-attribution { background: rgba(16,23,42,.7) !important; color: rgba(236,231,218,.6) !important; font-size: 10px; }
 .leaflet-control-attribution a { color: rgba(236,231,218,.8) !important; }
+#v-best .note { margin: 0 0 22px; padding: 12px 16px; border: 1px solid var(--rule); border-left: 3px solid var(--gold); color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+#v-best .note a { color: var(--gold); border-bottom: 1px solid var(--gold); }
