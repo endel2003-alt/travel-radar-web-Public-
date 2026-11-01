@@ -549,11 +549,17 @@ function viewBest() {
 const chainColor = (c) => getComputedStyle(document.documentElement).getPropertyValue(`--c-${c}`).trim() || '#555';
 // 타일: OSM 본 서버는 확장에서 오는 요청에 403을 "그림"으로 돌려주고(에러 이벤트 없음), CARTO는 API 키 필수 → 키·referrer 제약 없는 Esri.
 // Esri 거리지도는 한국 등에서 줌 13~14까지만 상세 타일이 있어 그 위로는 "Map data not yet available" → 줌 15부터 위성사진 + 지명 레이어로 전환.
-// 지도 타일: CARTO 다크(무료·키 없음·밤 모드에 맞음) → 안 되면 OpenStreetMap 표준으로 자동 대체. 15줌 이상은 Esri 위성(선택적).
+// 지도 타일: Esri 다크 그레이 캔버스(무료·키 없음·밤 모드에 맞음) + 지명 레이어. CARTO는 2025년부터 키 없으면 "API KEY REQUIRED" 워터마크가 찍혀서 못 쓴다.
+// Esri 다크 캔버스는 줌 16까지만 있어 그 위로는 Esri 위성사진으로 전환.
 const osmTiles = () => {
-  const carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', minZoom: 1, maxZoom: 19, maxNativeZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>' });
-  let fails = 0; carto.on('tileerror', () => { if (++fails === 6 && carto._map) { const m = carto._map; m.removeLayer(carto); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(m); } });
-  return L.layerGroup([carto]);
+  const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+  const attr = 'Tiles &copy; Esri';
+  const dark = L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, attribution: attr });
+  const names = L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, pane: 'overlayPane', opacity: .9 });
+  const sat = L.tileLayer(ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { minZoom: 17, maxZoom: 19, maxNativeZoom: 19, attribution: attr });
+  const satNames = L.tileLayer(ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { minZoom: 17, maxZoom: 19, pane: 'overlayPane' });
+  let fails = 0; dark.on('tileerror', () => { if (++fails === 6 && dark._map) { const m = dark._map; [dark, names].forEach(l => m.removeLayer(l)); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(m); } });
+  return L.layerGroup([dark, names, sat, satNames]);
 };
 const markerStyle = (chain, r) => ({ radius: r, color: '#fff', weight: 1.5, fillColor: chainColor(chain), fillOpacity: .85 });
 const MAP = { map: null, layer: null, bounds: {} };
