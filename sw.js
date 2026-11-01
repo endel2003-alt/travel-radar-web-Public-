@@ -1,6 +1,6 @@
 // Travel Radar 서비스 워커 — 네트워크 우선(새 파일이 올라오면 바로 반영), 오프라인일 때만 캐시.
 // V 는 빌드 때 찍힌다 → 배포마다 워커가 바뀌어 옛 캐시를 버린다. (예전 버전은 캐시 우선이라 폰이 옛 화면을 계속 보여줬다)
-const V = '202611020155';
+const V = '202611020210';
 const SHELL = 'tr-shell-' + V;
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== SHELL).map(k => caches.delete(k)))).then(() => self.clients.claim())); });

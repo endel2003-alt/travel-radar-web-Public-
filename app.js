@@ -62,6 +62,12 @@ function link(r) {
     const q = new URLSearchParams({ propertyCode: h.id, fromDate: us(r.d), toDate: us(out), numberOfRooms: '1', numberOfAdults: '2', isSearch: 'true' }); if (r.b === 'POINTS' || r.br === 'FIVE4') q.set('useRewardsPoints', 'true');
     return `https://www.marriott.com/reservation/availabilitySearch.mi?${q}`;
   }
+  if (h.chain === 'hilton') {
+    // 힐튼 객실 선택 페이지 (수집기 deeplink와 같은 형식). 포인트·5박 무료는 포인트 요금으로 연다
+    const q = new URLSearchParams({ ctyhocn: h.id, arrivalDate: r.d, departureDate: out, numRooms: '1', numAdults: '2', redeemPts: r.b === 'POINTS' || r.br === 'FIVE4' || r.pt ? 'true' : 'false' });
+    return `https://www.hilton.com/ko/book/reservation/rooms/?${q}`;
+  }
+  if (h.chain !== 'ihg') return '#';
   const di = new Date(r.d + 'T00:00:00Z'), doo = new Date(out + 'T00:00:00Z');
   const my = (d) => String(d.getUTCMonth()).padStart(2, '0') + d.getUTCFullYear();
   const q = new URLSearchParams({ path: 'hd', brandCode: h.bc || '6C', localeCode: 'ko', regionCode: 'kr', hotelCode: h.id, checkInDate: String(di.getUTCDate()), checkInMonthYear: my(di), checkOutDate: String(doo.getUTCDate()), checkOutMonthYear: my(doo), rateCode: r.br === 'AMB' ? 'IBAMB' : 'IVANI', adultCount: '2', childCount: '0', roomCount: '1' });
