@@ -90,7 +90,7 @@ async function load() {
   if (window.TR_SERVER?.url) { authFromHash(); await authEnsure(); await profilePull(); }
   if (window.TR_PROVIDER) { ({ rows, hotels, promos, guides, meta } = await window.TR_PROVIDER()); }
   else if (window.TR_SERVER?.url && await loadFromServer().then(d => { if (!d) return false; ({ rows, hotels, promos, meta } = d); return true; }).catch(() => false)) {
-    guides = await fetch('data/guides.json').then(r => r.json()).catch(() => ({}));
+    guides = await fetch('guides.json').then(r => r.ok ? r.json() : Promise.reject()).catch(() => fetch('data/guides.json').then(r => r.json())).catch(() => ({}));
   }
   else { [rows, hotels, promos, guides, meta] = await Promise.all(['radar', 'hotels', 'promos', 'guides', 'meta'].map(n => fetch(`data/${n}.json`).then(r => r.json()))); try { meta.areaGeo = meta.areaGeo || await fetch('data/areas.json').then(r => r.json()); } catch (e) {} }
   for (const h of hotels) if (h.image && !/^https?:/i.test(h.image)) h.image = (h.chain === 'hilton' ? 'https://www.hilton.com' : h.chain === 'ihg' ? 'https://digital.ihg.com' : h.chain === 'marriott' ? 'https://cache.marriott.com' : 'https://www.ahstatic.com') + (h.image.startsWith('/') ? '' : '/') + h.image;   // 상대 경로 사진 → 절대 주소
