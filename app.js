@@ -82,6 +82,7 @@ async function loadFromServer() {
 async function load() {
   // 데이터 출처: 확장 프로그램 안에서는 window.TR_PROVIDER(수집 DB 직접), 사이트에서는 data/*.json
   let rows, hotels, promos, guides, meta;
+  if (window.TR_SERVER?.url) { authFromHash(); await authEnsure(); await profilePull(); }
   if (window.TR_PROVIDER) { ({ rows, hotels, promos, guides, meta } = await window.TR_PROVIDER()); }
   else if (window.TR_SERVER?.url && await loadFromServer().then(d => { if (!d) return false; ({ rows, hotels, promos, meta } = d); return true; }).catch(() => false)) {
     guides = await fetch('data/guides.json').then(r => r.json()).catch(() => ({}));
@@ -100,8 +101,90 @@ async function load() {
   for (const r of rows) { const h = D.hotels.get(r.h); r.hn = h ? h.name : r.h; r.cc = h?.cc; r.city = h?.city; r.chain = r.h.split('|')[0]; }
   if (window.TR_PROVIDER) { const b = $('#collectorBtn'); if (b) { b.hidden = false; b.href = '../app.html'; } }
   $('#meta').textContent = meta.collectedAt ? `마지막 수집 ${new Date(meta.collectedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : '';
-  fillWhere(); $('#filtersBox').open = false; route();
+  fillWhere(); $('#filtersBox').open = false; renderAuth(); route();
 }
+
+
+// ---------- 로그인 (Supabase Auth · 이메일 링크) ----------
+// 비밀번호 없음: 이메일로 받은 링크를 누르면 로그인. 세션(토큰)은 이 브라우저에 저장, 프로필은 서버(tr_profiles)에 저장돼 어디서 열어도 같다.
+const AUTH = { s: null };
+const authBase = () => (window.TR_SERVER?.url || '').replace(/\/$/, '') + '/auth/v1';
+const SITE_URL = () => location.origin + location.pathname;
+function authSave(sess) { AUTH.s = sess; try { if (sess) { localStorage.setItem('tr_auth', JSON.stringify(sess)); localStorage.setItem('tr_token', sess.access_token); } else { localStorage.removeItem('tr_auth'); localStorage.removeItem('tr_token'); } } catch (e) {} }
+const jwtPayload = (t) => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch (e) { return {}; } };
+const authUser = () => AUTH.s ? { email: AUTH.s.email, id: AUTH.s.user_id } : null;
+// 1) 주소창 해시에 로그인 결과(#access_token=…)가 실려 오면 세션으로 바꾸고 해시를 지운다
+function authFromHash() {
+  const h = location.hash.slice(1); if (!/(^|&)access_token=/.test(h) && !/(^|&)error=/.test(h)) return;
+  const q = new URLSearchParams(h);
+  if (q.get('error')) { alert('로그인 실패: ' + (q.get('error_description') || q.get('error')).replace(/\+/g, ' ')); }
+  else { const at = q.get('access_token'); const pl = jwtPayload(at); authSave({ access_token: at, refresh_token: q.get('refresh_token'), expires_at: Date.now() + (+q.get('expires_in') || 3600) * 1000, email: pl.email || '', user_id: pl.sub || '' }); }
+  history.replaceState(null, '', location.pathname + location.search + '#radar');
+}
+// 2) 토큰이 만료 직전이면 갱신
+async function authEnsure() {
+  try { AUTH.s = JSON.parse(localStorage.getItem('tr_auth') || 'null'); } catch (e) {}
+  if (!AUTH.s) return;
+  if (AUTH.s.expires_at - Date.now() > 90 * 1000) return;
+  try {
+    const r = await fetch(`${authBase()}/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: window.TR_SERVER.anon, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: AUTH.s.refresh_token }) });
+    if (!r.ok) throw new Error('refresh ' + r.status);
+    const j = await r.json(); authSave({ access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (j.expires_in || 3600) * 1000, email: j.user?.email || AUTH.s.email, user_id: j.user?.id || AUTH.s.user_id });
+  } catch (e) { authSave(null); }
+}
+async function authSendLink(email) {
+  const r = await fetch(`${authBase()}/otp?redirect_to=${encodeURIComponent(SITE_URL())}`, { method: 'POST', headers: { apikey: window.TR_SERVER.anon, 'Content-Type': 'application/json' }, body: JSON.stringify({ email, create_user: true }) });
+  if (!r.ok) { const t = await r.json().catch(() => ({})); throw new Error(t.msg || t.error_description || t.error || ('HTTP ' + r.status)); }
+}
+async function authLogout() {
+  try { if (AUTH.s) await fetch(`${authBase()}/logout`, { method: 'POST', headers: { apikey: window.TR_SERVER.anon, Authorization: `Bearer ${AUTH.s.access_token}` } }); } catch (e) {}
+  authSave(null); location.reload();
+}
+// 3) 프로필 서버 동기화: 로그인돼 있으면 서버 것을 쓰고, 서버에 없고 이 기기에 있으면 올린다
+const restHeaders = () => ({ apikey: window.TR_SERVER.anon, Authorization: `Bearer ${AUTH.s.access_token}`, 'Content-Type': 'application/json' });
+async function profilePull() {
+  if (!AUTH.s) return;
+  try {
+    const r = await fetch(`${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1/tr_profiles?select=data&user_id=eq.${AUTH.s.user_id}`, { headers: restHeaders() });
+    if (!r.ok) return; const rows = await r.json();
+    if (rows[0]?.data && Object.keys(rows[0].data).length) { profile = Object.assign({}, PROFILE_DEFAULT, rows[0].data); try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {} }
+    else if (hasProfile()) await profilePush();
+  } catch (e) {}
+}
+async function profilePush() {
+  if (!AUTH.s) return;
+  try { await fetch(`${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1/rpc/tr_save_profile`, { method: 'POST', headers: restHeaders(), body: JSON.stringify({ p: profile }) }); } catch (e) {}
+}
+// 4) 화면: 상단 버튼 · More 시트 · 로그인 창
+function renderAuth() {
+  const u = authUser(); const pro = !!D.meta?.pro;
+  for (const el of document.querySelectorAll('.authBtn')) { el.hidden = !window.TR_SERVER?.url; el.innerHTML = u ? `<span class="who">${esc(u.email.split('@')[0])}</span>${pro ? '<b class="pro">PRO</b>' : ''}` : '로그인'; el.title = u ? u.email : ''; }
+  const m = $('#moreAuth'); if (m) m.textContent = u ? `Account — ${u.email}${pro ? ' · PRO' : ''} · 로그아웃` : 'Login — 이메일로 로그인';
+  for (const lim of document.querySelectorAll('.limitNote')) { const t = limitText(); lim.hidden = !t; lim.innerHTML = t; }
+}
+// 무료 범위(오늘+7일) 안내문 — 서버 데이터이고 pro가 아닐 때만
+function limitText() {
+  const m = D.meta || {}; const u = authUser();
+  if (m.source !== 'server' || m.pro || !m.horizon || !m.fullDateTo || m.horizon >= m.fullDateTo) return '';
+  return u ? `무료 회원은 <b>오늘부터 7일</b>까지만 보여요. 전체(${m.fullDateTo.slice(5).replace('-', '.')}까지)는 멤버십에서 열립니다.` : `지금은 <b>오늘부터 7일</b>까지만 보여요. <a href="#" data-login>로그인</a>하면 더 긴 기간을 볼 수 있어요.`;
+}
+function openLogin() {
+  const u = authUser(); const d = $('#dlgLogin'); if (!d) return;
+  $('#loginIn').hidden = !!u; $('#loginOut').hidden = !u; $('#loginMsg').textContent = '';
+  if (u) $('#loginWho').textContent = `${u.email}${D.meta?.pro ? ' · PRO' : ' · 무료'}`;
+  d.showModal(); if (!u) setTimeout(() => $('#loginEmail').focus(), 50);
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('.authBtn, [data-login], #moreAuth'); if (!a) return; e.preventDefault(); $('#dlgMore')?.open && $('#dlgMore').close(); openLogin();
+});
+$('#loginForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault(); const email = $('#loginEmail').value.trim(); const msg = $('#loginMsg'); if (!email) return;
+  const b = $('#loginSend'); b.disabled = true; msg.textContent = '보내는 중…';
+  try { await authSendLink(email); msg.innerHTML = `<b>${esc(email)}</b> 로 로그인 링크를 보냈어요. 메일의 링크를 <b>이 기기에서</b> 누르면 로그인됩니다. (안 오면 스팸함 확인 · 1시간에 몇 통까지만 보낼 수 있어요)`; }
+  catch (err) { msg.textContent = '보내지 못했어요: ' + err.message; }
+  b.disabled = false;
+});
+$('#loginLogout')?.addEventListener('click', (e) => { e.preventDefault(); authLogout(); });
 
 // ---------- 라우터 ----------
 const views = { radar: viewRadar, me: viewMe, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
@@ -371,6 +454,7 @@ function mobileHome(rows, groups) {
     ${band}${wallet}
     <form class="msearch" id="mSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="방콕 11월 2박 라운지" value="${esc(q)}"><button type="button" class="mflt">필터</button></form>
     <div class="mchips">${['1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
+    ${limitText() ? `<p class="limitNote m">${limitText()}</p>` : ''}
     <div class="mlab">오늘 당신에게 열린 곳</div>
     <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
     ${soonHtml}
@@ -935,6 +1019,7 @@ $('#dlgProfile').addEventListener('close', () => {
   else if (rv === 'ok') profile = { accorTier: f.accorTier.value, explorer: f.explorer.checked, snu: +f.snu.value || 0, stayPlus: +f.stayPlus.value || 0, accorPts: +f.accorPts.value || 0, ihgTier: f.ihgTier.value, ambassador: f.ambassador.checked, ihgPts: +f.ihgPts.value || 0, marriottTier: f.marriottTier.value, marriottPts: +f.marriottPts.value || 0, accorNights: +f.accorNights.value || 0, snuExp: f.snuExp.value, stayPlusExp: f.stayPlusExp.value, ihgNights: +f.ihgNights.value || 0, ambExp: f.ambExp.value, marriottNights: +f.marriottNights.value || 0, hiltonTier: f.hiltonTier.value, hiltonPts: +f.hiltonPts.value || 0, hiltonNights: +f.hiltonNights.value || 0 };
   else return;
   try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {}
+  profilePush();
   if (!hasProfile()) $('#fMine').checked = false; route();
 });
 $('#profileForm').addEventListener('submit', (e) => { /* dialog method: 기본 동작으로 닫힘 */ });

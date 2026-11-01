@@ -555,3 +555,14 @@ select { color-scheme: light; }
 .leaflet-control-attribution a { color: rgba(236,231,218,.8) !important; }
 #v-best .note { margin: 0 0 22px; padding: 12px 16px; border: 1px solid var(--rule); border-left: 3px solid var(--gold); color: var(--muted); font-size: 13.5px; line-height: 1.6; }
 #v-best .note a { color: var(--gold); border-bottom: 1px solid var(--gold); }
+
+/* ---------- 로그인 ---------- */
+.authBtn .who { max-width: 120px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: bottom; }
+.authBtn .pro { font-size: 9px; letter-spacing: .16em; color: var(--accent-fg, #141a2e); background: var(--gold); padding: 2px 6px; margin-left: 6px; border-radius: 3px; vertical-align: 1px; }
+#dlgLogin { max-width: 420px; }
+#dlgLogin .field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+#dlgLogin .field span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#dlgLogin input { font-size: 16px; padding: 10px 12px; border: 1px solid var(--rule); background: transparent; color: var(--fg); width: 100%; }
+.limitNote { margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--rule); border-left: 3px solid var(--gold); color: var(--muted); font-size: 13px; line-height: 1.6; }
+.limitNote b { color: var(--fg); } .limitNote a { color: var(--gold); border-bottom: 1px solid var(--gold); }
+.limitNote.m { margin: 0 20px 18px; }
