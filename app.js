@@ -654,22 +654,27 @@ const chainColor = (c) => getComputedStyle(document.documentElement).getProperty
 // Esri 거리지도는 한국 등에서 줌 13~14까지만 상세 타일이 있어 그 위로는 "Map data not yet available" → 줌 15부터 위성사진 + 지명 레이어로 전환.
 // 지도 타일: OpenFreeMap 벡터 지도(무료·키 없음·상업 이용 가능)를 MapLibre로 그리고, 색은 사이트 톤(미드나잇·골드), 지명은 한국어 → 영어 → 현지어 순.
 // MapLibre(약 0.8MB)는 지도를 처음 열 때만 불러온다. WebGL이 없거나 실패하면 예전 Esri 다크 그림 타일로 자동 대체.
-const MAPSTYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+// dark 주소는 공식 안내에 없어서, 확인된 positron 을 2순위로 (어차피 색은 전부 다시 칠한다)
+const MAPSTYLE_URLS = ['https://tiles.openfreemap.org/styles/dark', 'https://tiles.openfreemap.org/styles/positron', 'https://tiles.openfreemap.org/styles/liberty'];
 const PAL = { bg: '#10172a', water: '#0a1020', land: '#131c33', park: '#142338', building: '#1a2440', road: '#232f4d', roadMajor: '#2f3d62', motorway: 'rgba(212,168,75,.45)', rail: '#2a3454', border: '#4a5578', text: '#b9c0d2', textMajor: '#ece7da', halo: '#0c1222', waterText: '#5d6d93' };
 let _mlLoad = null;
 function loadMapLibre() {
   if (window.maplibregl && L.maplibreGL) return Promise.resolve();
   if (_mlLoad) return _mlLoad;
   const add = (tag, attrs) => new Promise((res, rej) => { const el = document.createElement(tag); Object.assign(el, attrs); el.onload = res; el.onerror = rej; document.head.appendChild(el); });
-  _mlLoad = add('link', { rel: 'stylesheet', href: 'vendor/maplibre/maplibre-gl.css' })
-    .then(() => window.maplibregl ? null : add('script', { src: 'vendor/maplibre/maplibre-gl.js' }))
-    .then(() => L.maplibreGL ? null : add('script', { src: 'vendor/maplibre/leaflet-maplibre-gl.js' }));
+  // 1순위 공용 CDN(jsDelivr, 버전 고정) → 2순위 사이트의 vendor/maplibre/ (GitHub에 파일을 안 올려도 동작)
+  const CDN = { 'maplibre-gl.css': 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css', 'maplibre-gl.js': 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js', 'leaflet-maplibre-gl.js': 'https://cdn.jsdelivr.net/npm/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js' };
+  const both = (tag, key, name) => { const extra = tag === 'link' ? { rel: 'stylesheet' } : {}; return add(tag, { [key]: CDN[name], crossOrigin: 'anonymous', ...extra }).catch(() => add(tag, { [key]: 'vendor/maplibre/' + name, ...extra })); };
+  _mlLoad = both('link', 'href', 'maplibre-gl.css').catch(() => null)
+    .then(() => window.maplibregl ? null : both('script', 'src', 'maplibre-gl.js'))
+    .then(() => L.maplibreGL ? null : both('script', 'src', 'leaflet-maplibre-gl.js'));
   return _mlLoad;
 }
 let _styleP = null;
 function brandStyle() {
   if (_styleP) return _styleP;
-  _styleP = fetch(MAPSTYLE_URL).then(r => { if (!r.ok) throw new Error('style ' + r.status); return r.json(); }).then(st => {
+  const tryUrls = async () => { let last; for (const u of MAPSTYLE_URLS) { try { const r = await fetch(u); if (r.ok) { const j = await r.json(); if (j?.layers?.length) return j; } last = new Error('style ' + r.status + ' ' + u); } catch (e) { last = e; } } throw last; };
+  _styleP = tryUrls().then(st => {
     const KO = ['coalesce', ['get', 'name:ko'], ['get', 'name:en'], ['get', 'name_en'], ['get', 'name']];
     const keep = [];
     for (const ly of st.layers) {
@@ -685,7 +690,11 @@ function brandStyle() {
         if (sl === 'transportation') ly.paint['line-color'] = /motorway|trunk/.test(id) ? PAL.motorway : /primary|secondary/.test(id) ? PAL.roadMajor : /rail|transit/.test(id) ? PAL.rail : PAL.road;
         else if (sl === 'boundary') ly.paint['line-color'] = PAL.border;
         else if (sl === 'waterway') ly.paint['line-color'] = PAL.water;
+        else ly.paint['line-color'] = PAL.road;
+        delete ly.paint['line-pattern'];
       }
+      else if (ly.type === 'fill-extrusion') { ly.paint['fill-extrusion-color'] = PAL.building; ly.paint['fill-extrusion-opacity'] = 0.6; }
+      else if (ly.type === 'circle') { ly.paint['circle-color'] = PAL.roadMajor; }
       else if (ly.type === 'symbol') {
         const tf = ly.layout['text-field']; if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = KO;
         if (ly.layout['icon-image'] && sl !== 'transportation_name') delete ly.layout['icon-image'];
@@ -710,13 +719,13 @@ const osmTiles = () => {
   const g = L.layerGroup();
   const fallback = () => { if (g._fb) return; g._fb = true; esriTiles().forEach(l => g.addLayer(l)); };
   if (!webglOK()) { fallback(); return g; }
-  let done = false; const timer = setTimeout(() => { if (!done) fallback(); }, 9000);
+  let done = false; const timer = setTimeout(() => { if (!done) { console.warn('[map] 벡터 지도 시간 초과 → Esri 대체'); fallback(); } }, 15000);
   Promise.all([loadMapLibre(), brandStyle()]).then(([, style]) => {
     done = true; clearTimeout(timer); if (g._fb) return;
     const gl = L.maplibreGL({ style, localIdeographFontFamily: "'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif", attributionControl: false, interactive: false });
     g.addLayer(gl);
     const m = g._map; if (m) m.attributionControl?.addAttribution('<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OSM</a>');
-  }).catch(() => { done = true; clearTimeout(timer); fallback(); });
+  }).catch((e) => { done = true; clearTimeout(timer); console.warn('[map] 벡터 지도 실패 → Esri 대체:', e && (e.message || e.type || e)); fallback(); });
   return g;
 };
 const MAP_DOT = { accor: '#8ea8e8' };   // 아코르 남색은 밤 지도에서 안 보여서 지도에서만 밝게
