@@ -652,19 +652,75 @@ function viewBest() {
 const chainColor = (c) => getComputedStyle(document.documentElement).getPropertyValue(`--c-${c}`).trim() || '#555';
 // 타일: OSM 본 서버는 확장에서 오는 요청에 403을 "그림"으로 돌려주고(에러 이벤트 없음), CARTO는 API 키 필수 → 키·referrer 제약 없는 Esri.
 // Esri 거리지도는 한국 등에서 줌 13~14까지만 상세 타일이 있어 그 위로는 "Map data not yet available" → 줌 15부터 위성사진 + 지명 레이어로 전환.
-// 지도 타일: Esri 다크 그레이 캔버스(무료·키 없음·밤 모드에 맞음) + 지명 레이어. CARTO는 2025년부터 키 없으면 "API KEY REQUIRED" 워터마크가 찍혀서 못 쓴다.
-// Esri 다크 캔버스는 줌 16까지만 있어 그 위로는 Esri 위성사진으로 전환.
-const osmTiles = () => {
+// 지도 타일: OpenFreeMap 벡터 지도(무료·키 없음·상업 이용 가능)를 MapLibre로 그리고, 색은 사이트 톤(미드나잇·골드), 지명은 한국어 → 영어 → 현지어 순.
+// MapLibre(약 0.8MB)는 지도를 처음 열 때만 불러온다. WebGL이 없거나 실패하면 예전 Esri 다크 그림 타일로 자동 대체.
+const MAPSTYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
+const PAL = { bg: '#10172a', water: '#0a1020', land: '#131c33', park: '#142338', building: '#1a2440', road: '#232f4d', roadMajor: '#2f3d62', motorway: 'rgba(212,168,75,.45)', rail: '#2a3454', border: '#4a5578', text: '#b9c0d2', textMajor: '#ece7da', halo: '#0c1222', waterText: '#5d6d93' };
+let _mlLoad = null;
+function loadMapLibre() {
+  if (window.maplibregl && L.maplibreGL) return Promise.resolve();
+  if (_mlLoad) return _mlLoad;
+  const add = (tag, attrs) => new Promise((res, rej) => { const el = document.createElement(tag); Object.assign(el, attrs); el.onload = res; el.onerror = rej; document.head.appendChild(el); });
+  _mlLoad = add('link', { rel: 'stylesheet', href: 'vendor/maplibre/maplibre-gl.css' })
+    .then(() => window.maplibregl ? null : add('script', { src: 'vendor/maplibre/maplibre-gl.js' }))
+    .then(() => L.maplibreGL ? null : add('script', { src: 'vendor/maplibre/leaflet-maplibre-gl.js' }));
+  return _mlLoad;
+}
+let _styleP = null;
+function brandStyle() {
+  if (_styleP) return _styleP;
+  _styleP = fetch(MAPSTYLE_URL).then(r => { if (!r.ok) throw new Error('style ' + r.status); return r.json(); }).then(st => {
+    const KO = ['coalesce', ['get', 'name:ko'], ['get', 'name:en'], ['get', 'name_en'], ['get', 'name']];
+    const keep = [];
+    for (const ly of st.layers) {
+      const sl = ly['source-layer'] || ''; const id = ly.id || ''; ly.paint = ly.paint || {}; ly.layout = ly.layout || {};
+      if (sl === 'poi' || /poi|housenumber|aerodrome_label/.test(id)) continue;          // 상점·번지 등 잡음 제거
+      if (ly.type === 'background') ly.paint['background-color'] = PAL.bg;
+      else if (ly.type === 'fill') {
+        ly.paint['fill-color'] = sl === 'water' ? PAL.water : sl === 'building' ? PAL.building : /park|wood|grass|landcover/.test(sl + id) ? PAL.park : PAL.land;
+        if (sl === 'building') ly.paint['fill-opacity'] = 0.7;
+        delete ly.paint['fill-pattern']; delete ly.paint['fill-outline-color'];
+      }
+      else if (ly.type === 'line') {
+        if (sl === 'transportation') ly.paint['line-color'] = /motorway|trunk/.test(id) ? PAL.motorway : /primary|secondary/.test(id) ? PAL.roadMajor : /rail|transit/.test(id) ? PAL.rail : PAL.road;
+        else if (sl === 'boundary') ly.paint['line-color'] = PAL.border;
+        else if (sl === 'waterway') ly.paint['line-color'] = PAL.water;
+      }
+      else if (ly.type === 'symbol') {
+        const tf = ly.layout['text-field']; if (tf && JSON.stringify(tf).includes('name')) ly.layout['text-field'] = KO;
+        if (ly.layout['icon-image'] && sl !== 'transportation_name') delete ly.layout['icon-image'];
+        const major = /place_(city|country|capital|state)|country|city/.test(id);
+        ly.paint['text-color'] = /water/.test(sl + id) ? PAL.waterText : major ? PAL.textMajor : PAL.text;
+        ly.paint['text-halo-color'] = PAL.halo; ly.paint['text-halo-width'] = 1.2;
+      }
+      keep.push(ly);
+    }
+    st.layers = keep; return st;
+  });
+  return _styleP;
+}
+function esriTiles() {
   const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
-  const attr = 'Tiles &copy; Esri';
-  const dark = L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, attribution: attr });
-  const names = L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, pane: 'overlayPane', opacity: .9 });
-  const sat = L.tileLayer(ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { minZoom: 17, maxZoom: 19, maxNativeZoom: 19, attribution: attr });
-  const satNames = L.tileLayer(ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { minZoom: 17, maxZoom: 19, pane: 'overlayPane' });
-  let fails = 0; dark.on('tileerror', () => { if (++fails === 6 && dark._map) { const m = dark._map; [dark, names].forEach(l => m.removeLayer(l)); L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(m); } });
-  return L.layerGroup([dark, names, sat, satNames]);
+  return [L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, attribution: 'Tiles &copy; Esri' }),
+          L.tileLayer(ESRI + 'Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', { minZoom: 1, maxZoom: 16, pane: 'overlayPane', opacity: .9 }),
+          L.tileLayer(ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { minZoom: 17, maxZoom: 19, attribution: 'Tiles &copy; Esri' })];
+}
+const webglOK = () => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch (e) { return false; } };
+const osmTiles = () => {
+  const g = L.layerGroup();
+  const fallback = () => { if (g._fb) return; g._fb = true; esriTiles().forEach(l => g.addLayer(l)); };
+  if (!webglOK()) { fallback(); return g; }
+  let done = false; const timer = setTimeout(() => { if (!done) fallback(); }, 9000);
+  Promise.all([loadMapLibre(), brandStyle()]).then(([, style]) => {
+    done = true; clearTimeout(timer); if (g._fb) return;
+    const gl = L.maplibreGL({ style, localIdeographFontFamily: "'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif", attributionControl: false, interactive: false });
+    g.addLayer(gl);
+    const m = g._map; if (m) m.attributionControl?.addAttribution('<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OSM</a>');
+  }).catch(() => { done = true; clearTimeout(timer); fallback(); });
+  return g;
 };
-const markerStyle = (chain, r) => ({ radius: r, color: '#fff', weight: 1.5, fillColor: chainColor(chain), fillOpacity: .85 });
+const MAP_DOT = { accor: '#8ea8e8' };   // 아코르 남색은 밤 지도에서 안 보여서 지도에서만 밝게
+const markerStyle = (chain, r) => ({ radius: r, color: '#fff', weight: 1.5, fillColor: MAP_DOT[chain] || chainColor(chain), fillOpacity: .9 });
 const MAP = { map: null, layer: null, bounds: {} };
 // ※ 아래 지도 로직은 레이더/베스트와 같은 데이터(D.rows)를 쓴다.
 // 좌표 없는 호텔은 지역 중심에 살짝 흩어서(대략 위치) 놓는다
@@ -718,7 +774,7 @@ function drawMap(fit) {
       <div class="pl"><a href="#hotel/${encodeURIComponent(key)}">달력 보기 →</a><a href="${esc(link(best))}" target="_blank" rel="noopener">예약 ↗</a></div>`, { maxWidth: 320 });
     MAP.bounds.ALL.extend([pos.lat, pos.lng]); (MAP.bounds[h.cc] = MAP.bounds[h.cc] || L.latLngBounds([])).extend([pos.lat, pos.lng]); shown++;
   }
-  $('#mapNote').textContent = (IN_ARTIFACT ? '테스트 페이지에서는 지도 배경(타일)이 차단될 수 있어요 — 점과 팝업은 동작합니다. ' : '') + `${shown}개 호텔${approxN ? ` · 그중 ${approxN}곳은 좌표가 없어 지역 중심 근처에 표시(점선)` : ''}${noPos ? ` · ${noPos}곳은 지역 정보가 없어 생략` : ''} · 지도: Esri`;
+  $('#mapNote').textContent = (IN_ARTIFACT ? '테스트 페이지에서는 지도 배경(타일)이 차단될 수 있어요 — 점과 팝업은 동작합니다. ' : '') + `${shown}개 호텔${approxN ? ` · 그중 ${approxN}곳은 좌표가 없어 지역 중심 근처에 표시(점선)` : ''}${noPos ? ` · ${noPos}곳은 지역 정보가 없어 생략` : ''} · 지도: OpenFreeMap`;
   if (fit && MAP.bounds.ALL.isValid()) MAP.map.fitBounds(MAP.bounds.ALL, { padding: [30, 30] });
 }
 
