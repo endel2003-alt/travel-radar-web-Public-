@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -23,11 +23,12 @@
 <header class="topbar"><div class="in">
   <nav class="nav"><a href="#radar" data-v="radar"><b>Search</b><small>by my tier</small></a><a href="#me" data-v="me"><b>Today</b><small>my benefits</small></a><a href="#best" data-v="best"><b>Best</b><small>of the month</small></a><a href="#map" data-v="map"><b>Map</b><small>all hotels</small></a><a href="#hotels" data-v="hotels"><b>Hotels</b><small>by city</small></a><a href="#guide" data-v="guide"><b>Guide</b><small>tiers compared</small></a><a href="#promos" data-v="promos"><b>Offers</b><small>live promos</small></a></nav>
   <a class="logo" href="#radar"><svg viewBox="0 0 200 200" aria-hidden="true"><rect x="8" y="8" width="184" height="184" rx="40" fill="#d4a84b"></rect><path d="M44 62 H118 M72 62 V146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round"></path><path d="M104 146 V94 H128 a19 19 0 0 1 0 38 H104 M130 132 L152 146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="wm"><b>Travel Radar</b><small>Members only</small></span></a>
-  <div class="right"><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" title="낮/밤 전환">Night</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
+  <div class="right"><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" hidden title="낮/밤 전환">Night</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
 </div></header>
 
 <main>
 <section id="v-radar" class="home">
+  <div id="mApp" hidden></div>
   <div class="hero">
     <div class="hero-l">
       <div class="eyebrow" id="heroEyebrow">Members only</div>
@@ -51,9 +52,8 @@
           <button class="chip on" data-b="SUITE">스위트</button><button class="chip on" data-b="FREE_NIGHT">무료박</button><button class="chip on" data-b="POINTS">포인트</button><button class="chip on" data-b="SALE">세일</button></div></div>
         <div class="fgroup"><div class="ft">Chain</div><div class="chips">
           <button class="chip on" data-c="accor">Accor</button><button class="chip on" data-c="ihg">IHG</button><button class="chip on" data-c="marriott">Marriott</button><button class="chip on" data-c="hilton">Hilton</button></div></div>
-        <div class="fgroup"><label class="mini"><input id="fMine" type="checkbox"> 내가 쓸 수 있는 것만</label></div>
-        <div class="fgroup"><div class="ft">Sort</div><select id="fSort"><option value="tier">티어 가치순</option><option value="cost">내 비용 낮은 순</option><option value="saving">절약 큰 순</option><option value="date">날짜순</option><option value="new">새로 열림</option><option value="hotel">호텔명</option></select></div>
-        <button class="lnk" id="fReset">초기화</button>
+        <div class="fgroup"><div class="ft">Sort</div><select id="fSort"><option value="tier">티어 가치순</option><option value="cost">내 비용 낮은 순</option><option value="saving">절약 큰 순</option><option value="date">날짜순</option><option value="new">새로 열림</option><option value="pricey">비싼 호텔 순 (정가)</option><option value="hotel">호텔명</option></select></div>
+        <div class="fgroup fend"><label class="mini"><input id="fMine" type="checkbox"> 내가 쓸 수 있는 것만</label><button class="lnk" id="fReset">초기화</button></div>
       </div></details>
     <div class="rtools"><div class="seg" id="viewSeg"><button data-view="cards" class="on">Ledger</button><button data-view="table">Table</button></div></div>
   </div>
@@ -129,6 +129,7 @@
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
 <script src="compare.js"></script>
+<script src="config.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
