@@ -229,6 +229,46 @@ $('#loginLogout')?.addEventListener('click', (e) => { e.preventDefault(); authLo
 // 구글 로그인: Supabase가 구글로 보냈다가 사이트로 돌려보내며 #access_token 을 붙여준다 (이메일 링크와 같은 처리)
 $('#loginGoogle')?.addEventListener('click', () => { location.href = `${authBase()}/authorize?provider=google&redirect_to=${encodeURIComponent(SITE_URL())}`; });
 
+
+// ---------- 운영자 편집 모드 ----------
+// 운영자(tr_is_owner)에게만 호텔 화면에 '호텔 정보 수정' 버튼. 저장은 서버 tr_overrides 에 → 매일 수집이 덮어쓰지 않는다.
+const EDIT_LABEL = { name: '이름', brand: '브랜드', stars: '성급', lounge: '라운지', city: '지역', img: '사진', note: '메모' };
+let editKey = null;
+function openHotelEditor(key) {
+  const h = D.hotels.get(key); const d = $('#dlgEdit'); if (!h || !d) return; editKey = key; const f = $('#editForm');
+  $('#editTitle').textContent = h.name; $('#editMsg').textContent = '';
+  f.name.value = h.name || ''; f.brand.value = h.brand || ''; f.city.value = h.city || ''; f.img.value = (h._edited?.img) || ''; f.note.value = h.note || '';
+  f.stars.value = h._edited?.stars != null ? String(h._edited.stars) : ''; f.lounge.value = h._edited?.lounge === true ? 'yes' : h._edited?.lounge === false ? 'no' : '';
+  $('#editAuto').textContent = `수집 값 · 성급 ${starsOf(Object.assign({}, h, { stars: h._edited?.stars != null ? null : h.stars }))?.n || '?'}성 · 라운지 ${hasLounge(Object.assign({}, h, { lounge: h._edited?.lounge != null ? undefined : h.lounge })) === true ? '있음' : hasLounge(h) === false ? '없음' : '브랜드 추정'}`;
+  $('#editReset').hidden = !h._edited; d.showModal();
+}
+async function saveOverride(key, p) {
+  if (!AUTH.s) throw new Error('로그인이 필요해요');
+  await authEnsure();
+  const r = await fetch(`${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1/rpc/tr_save_override`, { method: 'POST', headers: restHeaders(), body: JSON.stringify({ k: key, p }) });
+  if (!r.ok) { const t = await r.json().catch(() => ({})); throw new Error(t.message || ('HTTP ' + r.status)); }
+  // 새 데이터로 다시 그리기 (수정이 반영된 호텔 목록)
+  const d = await loadFromServer(); if (d) { dataCachePut(d); QUIET = true; applyData(Object.assign({}, d, { guides: D.guides })); QUIET = false; }
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-edit-hotel]'); if (b) { e.preventDefault(); openHotelEditor(b.dataset.editHotel); } });
+$('#editForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault(); const h = D.hotels.get(editKey); if (!h) return; const f = $('#editForm'); const msg = $('#editMsg');
+  const p = Object.assign({}, h._edited || {});
+  const txt = (k, v) => { v = v.trim(); if (!v) delete p[k]; else if (v !== (h._edited?.[k] ?? h[k] ?? '')) p[k] = v; else if (h._edited?.[k] == null) delete p[k]; };
+  txt('name', f.name.value); txt('brand', f.brand.value); txt('city', f.city.value); txt('note', f.note.value);
+  const img = f.img.value.trim(); if (img) { if (!/^https:\/\//.test(img)) { msg.textContent = '사진 주소는 https:// 로 시작해야 해요'; return; } p.img = img; } else delete p.img;
+  if (f.stars.value) p.stars = +f.stars.value; else delete p.stars;
+  if (f.lounge.value === 'yes') p.lounge = true; else if (f.lounge.value === 'no') p.lounge = false; else delete p.lounge;
+  msg.textContent = '저장 중…'; $('#editSave').disabled = true;
+  try { await saveOverride(editKey, p); $('#dlgEdit').close(); } catch (err) { msg.textContent = '저장 실패: ' + err.message; }
+  $('#editSave').disabled = false;
+});
+$('#editReset')?.addEventListener('click', async () => {
+  if (!confirm('이 호텔의 수정 내용을 지우고 수집된 값으로 되돌릴까요?')) return;
+  const msg = $('#editMsg'); msg.textContent = '되돌리는 중…';
+  try { await saveOverride(editKey, {}); $('#dlgEdit').close(); } catch (err) { msg.textContent = '실패: ' + err.message; }
+});
+
 // ---------- 라우터 ----------
 const views = { radar: viewRadar, me: viewMe, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
@@ -921,7 +961,7 @@ function viewHotel(key) {
   }
   const gid = h.chain || 'accor'; const tb = tierBenefits(h); const tier = myTier(h.chain);
   el.innerHTML = `<p><a href="#hotels">← 호텔 목록</a></p>
-    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div></div>
+    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div></div>
       ${tier ? `<div class="band ${h.chain}" style="margin:8px 0"><b>${esc(tierKo(tier))}인 당신은</b>${(tb || []).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : b.s === 'maybe' ? '△' : '✗'}${b.note ? ` <em>${esc(b.note)}</em>` : ''}</span>`).join('')}</div>` : ''}<div class="stats"><div class="stat"><b>${rows.length}</b><span>혜택 날짜</span></div><div class="stat"><b style="color:var(--suite)">${c.SUITE}</b><span>스위트</span></div><div class="stat"><b style="color:var(--free)">${c.FREE_NIGHT}</b><span>무료박</span></div><div class="stat"><b style="color:var(--points)">${c.POINTS}</b><span>포인트</span></div><div class="stat"><b style="color:var(--sale)">${c.SALE}</b><span>세일</span></div></div></div>
     ${h.lat != null && h.lng != null && window.L ? '<div class="hmap" id="hmap"></div>' : ''}
     <h2>다음 30일 가능한 혜택</h2>

@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611020919">
+<link rel="stylesheet" href="app.css?v=202611022315">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -94,6 +94,23 @@
 <nav class="tabbar"><a href="#radar" data-v="radar">Search</a><a href="#me" data-v="me">Today</a><a href="#map" data-v="map">Map</a><a href="#hotels" data-v="hotels">Hotels</a><button type="button" id="moreTab">More</button></nav>
 <dialog id="dlgMore" class="sheet"><nav><a href="#best">Best — 이번 달 베스트</a><a href="#guide">Guide — 멤버십 비교</a><a href="#promos">Offers — 진행 중 오퍼</a><a href="#" id="moreProfile">My tier — 내 티어·포인트</a><a href="#" id="moreAuth">Login — 이메일로 로그인</a></nav><form method="dialog"><button class="lnk">닫기</button></form></dialog>
 
+<dialog id="dlgEdit">
+  <form id="editForm">
+    <h3 style="margin:0">호텔 정보 수정 <span class="muted small">운영자 전용</span></h3>
+    <p id="editTitle" class="muted small" style="margin:4px 0 14px"></p>
+    <div class="egrid">
+      <label class="field"><span>호텔 이름</span><input name="name" autocomplete="off"></label>
+      <label class="field"><span>브랜드</span><input name="brand" autocomplete="off"></label>
+      <label class="field"><span>성급</span><select name="stars"><option value="">자동 (수집·브랜드 기준)</option><option value="5">5성</option><option value="4">4성</option><option value="3">3성</option><option value="2">2성</option><option value="1">1성</option></select></label>
+      <label class="field"><span>라운지</span><select name="lounge"><option value="">자동</option><option value="yes">있음</option><option value="no">없음</option></select></label>
+      <label class="field"><span>지역 (표시용)</span><input name="city" autocomplete="off"></label>
+      <label class="field wide"><span>사진 주소 (비우면 보관 사진)</span><input name="img" type="url" placeholder="https://…" autocomplete="off"></label>
+      <label class="field wide"><span>메모 (호텔 화면에 표시)</span><textarea name="note" rows="2" placeholder="예: 2026년 리노베이션 완료, 클럽 라운지 18층"></textarea></label>
+    </div>
+    <p id="editAuto" class="muted small" style="margin:10px 0 0"></p>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:16px;flex-wrap:wrap"><button type="submit" class="btn" id="editSave">저장</button><button type="button" class="lnk" id="editReset" hidden>수집 값으로 되돌리기</button><button type="button" class="lnk" onclick="document.getElementById('dlgEdit').close()">닫기</button><span id="editMsg" class="small"></span></div>
+  </form>
+</dialog>
 <dialog id="dlgLogin">
   <div id="loginIn">
     <h3 style="margin:0">로그인</h3>
@@ -146,8 +163,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611020919"></script>
-<script src="config.js?v=202611020919"></script>
-<script src="app.js?v=202611020919"></script>
+<script src="compare.js?v=202611022315"></script>
+<script src="config.js?v=202611022315"></script>
+<script src="app.js?v=202611022315"></script>
 </body>
 </html>
