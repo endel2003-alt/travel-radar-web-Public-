@@ -6,6 +6,13 @@ const hImg = (h) => h.img || h.image || '';
 // 사진 오류: 보관본이 깨지면 원본 주소로 한 번 더, 그것도 안 되면 자리를 비운다
 window.trImgErr = function (el, orig, onFail) { if (orig && el.src !== orig && !el.dataset.retried) { el.dataset.retried = '1'; el.src = orig; return; } if (onFail === 'parent') { el.parentElement?.classList.add('noimg'); } el.remove(); };
 const won = (n) => n == null ? '–' : '₩' + Math.round(n).toLocaleString('ko-KR');
+// 최근 7일 변동 화살표 (수집기가 ca=바뀐 시각, pc=이전 비용, pp=이전 포인트를 준다). 내리면 초록 ▼, 오르면 빨강 ▲
+const chg = (r) => {
+  if (!r || !r.ca || Date.now() - r.ca > 7 * 86400e3) return '';
+  if (r.pt && r.pp && r.pp !== r.pt) { const d = r.pt - r.pp; return `<span class="chg ${d < 0 ? 'dn' : 'up'}" title="최근 7일 변동 · 이전 ${r.pp.toLocaleString()}pt">${d < 0 ? '▼' : '▲'}${Math.abs(d) >= 10000 ? (Math.abs(d) / 10000).toFixed(1).replace(/\.0$/, '') + '만' : Math.abs(d).toLocaleString()}pt</span>`; }
+  if (!r.pt && r.pc != null && r.my != null && r.pc !== r.my) { const d = r.my - r.pc; return `<span class="chg ${d < 0 ? 'dn' : 'up'}" title="최근 7일 변동 · 이전 ${won(r.pc)}">${d < 0 ? '▼' : '▲'}${wonShort(Math.abs(d)).replace('₩', '₩')}</span>`; }
+  return '';
+};
 const wonShort = (n) => n == null ? '–' : n >= 1e8 ? `₩${(n / 1e8).toFixed(1)}억` : n >= 1e4 ? `₩${Math.round(n / 1e4)}만` : won(n);   // 좁은 칸용: ₩48만
 const ptShort = (n) => n >= 1e4 ? `${+(n / 1e4).toFixed(1)}만pt` : `${n.toLocaleString()}pt`;   // 9.3만pt
 const NARROW = () => window.matchMedia('(max-width: 860px)').matches;
@@ -126,6 +133,18 @@ async function loadLegacy() {
   else { [rows, hotels, promos, guides, meta] = await Promise.all(['radar', 'hotels', 'promos', 'guides', 'meta'].map(n => fetch(`data/${n}.json`).then(r => r.json()))); try { meta.areaGeo = meta.areaGeo || await fetch('data/areas.json').then(r => r.json()); } catch (e) {} }
   return applyData({ rows, hotels, promos, guides, meta });
 }
+// 정가 이상치 보정: 일반실이 매진된 날엔 남은 가장 싼 현금 요금이 클럽·스위트라 '정가'가 평소의 몇 배로 잡힌다
+// → 포인트·특가 절약액이 부풀어 티어 가치 1위로 올라온다. 호텔별 평소 1박 정가(중앙값)의 2.5배를 넘으면 평소 값으로 보정.
+// 스위트 업그레이드(SUITE)는 원래 객실 차액이 정가라 제외.
+function fixOddRefs(rows) {
+  const per = new Map();
+  for (const r of rows) { if (r.b === 'SUITE' || !r.ref) continue; const v = r.ref / (r.n || 1); (per.get(r.h) || per.set(r.h, []).get(r.h)).push(v); }
+  const med = new Map(); for (const [k, a] of per) { if (a.length < 4) continue; a.sort((x, y) => x - y); med.set(k, a[Math.floor(a.length / 2)]); }
+  for (const r of rows) {
+    if (r.b === 'SUITE' || !r.ref) continue; const m = med.get(r.h); if (!m) continue; const n = r.n || 1;
+    if (r.ref / n > m * 2.5) { r.ref0 = r.ref; r.ref = Math.round(m * n); if (r.my != null) r.sv = r.ref - r.my; r.ap = 1; r.odd = 1; }
+  }
+}
 function applyData({ rows, hotels, promos, guides, meta }) {
   $('#loadingNote')?.remove();
   rows = rows.map(r => Object.assign({}, r)); hotels = hotels.map(h => Object.assign({}, h));
@@ -140,6 +159,7 @@ function applyData({ rows, hotels, promos, guides, meta }) {
     try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {}
   }
   for (const r of rows) { const h = D.hotels.get(r.h); r.hn = h ? h.name : r.h; r.cc = h?.cc; r.city = h?.city; r.chain = r.h.split('|')[0]; }
+  fixOddRefs(rows);
   if (window.TR_PROVIDER) { const b = $('#collectorBtn'); if (b) { b.hidden = false; b.href = '../app.html'; } }
   $('#meta').textContent = meta.collectedAt ? `마지막 수집 ${new Date(meta.collectedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}` : '';
   fillWhere(); $('#filtersBox').open = false; renderAuth(); route();
@@ -269,15 +289,137 @@ $('#editReset')?.addEventListener('click', async () => {
   try { await saveOverride(editKey, {}); $('#dlgEdit').close(); } catch (err) { msg.textContent = '실패: ' + err.message; }
 });
 
+
+// ---------- 여행 플래너 ----------
+// 기간+지역 → 날짜마다 내가 쓸 수 있는 혜택을 깔고, 이어지는 밤을 조합해 3안을 만든다.
+// 값 = 절약액(sv) + 티어 혜택 가치(bv × 박수). 바우처(SNU·Stay Plus) 개수와 체인별 포인트 잔액 안에서만. 호텔을 옮기면 감점.
+const PLAN = { last: null };
+const MOVE_PENALTY = 60000;
+function planOptions(from, nights, where, opt) {
+  const dates = Array.from({ length: nights }, (_, i) => addDays(from, i)); const idx = Object.fromEntries(dates.map((d, i) => [d, i]));
+  const okHotel = (h) => {
+    if (!h) return false;
+    if (where) { const [k, cc, city] = where.split(':'); if (k === 'c' && h.cc !== cc) return false; if (k === 't' && (h.cc !== cc || h.city !== city)) return false; }
+    if (opt.lounge && hasLounge(h) === false) return false;
+    if (opt.stars && (starsOf(h)?.n || 0) < opt.stars) return false;
+    return true;
+  };
+  const bvCache = new Map(); const bv = (h) => { if (!bvCache.has(h.key)) bvCache.set(h.key, benefitValue(tierBenefits(h))); return bvCache.get(h.key); };
+  const out = [];
+  for (const r of D.rows) {
+    if (!(r.d in idx)) continue; const n = r.n || 1; if (idx[r.d] + n > nights) continue;
+    if (hasProfile() && !eligible(r)) continue;
+    const h = D.hotels.get(r.h); if (!okHotel(h)) continue;
+    const isPt = !!r.pt && (r.b === 'POINTS' || r.br === 'FIVE4' || r.br === 'POINTS_SUITE');
+    out.push({ r, h, s: idx[r.d], n, value: (r.sv || 0) + bv(h) * n, cash: isPt ? 0 : (r.my ?? 0), pts: isPt ? r.pt : 0, chain: h.chain, snu: r.br === 'SNU' ? 1 : 0, sp: r.br === 'STAY_PLUS' ? 1 : 0 });
+  }
+  return { dates, opts: out };
+}
+// DP: 밤 i, 마지막 호텔, 이동 횟수, 쓴 SNU, 쓴 Stay Plus → 최고 점수
+function planDP(nights, opts, score, { maxMoves = 1, snu = 9, sp = 9, onlyHotel = null } = {}) {
+  const byStart = Array.from({ length: nights }, () => []); for (const o of opts) if (!onlyHotel || o.h.key === onlyHotel) byStart[o.s].push(o);
+  let layer = new Map([['|0|0|0', { sc: 0, path: [], last: '', mv: 0, su: 0, pu: 0 }]]); const layers = [layer];
+  const best = Array.from({ length: nights + 1 }, () => new Map()); best[0] = layer;
+  for (let i = 0; i < nights; i++) {
+    for (const st of best[i].values()) {
+      const push = (j, ns) => { const k = `${ns.last}|${ns.city || ''}|${ns.mv}|${ns.su}|${ns.pu}`; const cur = best[j].get(k); if (!cur || ns.sc > cur.sc) best[j].set(k, ns); };
+      push(i + 1, Object.assign({}, st, { path: st.path.concat([{ gap: true, s: i }]) }));   // 혜택 없는 밤
+      for (const o of byStart[i]) {
+        const move = st.last && st.last !== o.h.key ? 1 : 0; if (st.mv + move > maxMoves) continue;
+        if (st.city && st.city !== (o.h.city || '')) continue;   // 호텔 이동은 같은 도시 안에서만 (창원→서울 같은 일정 방지)
+        if (st.su + o.snu > snu || st.pu + o.sp > sp) continue;
+        push(i + o.n, { sc: st.sc + score(o) - move * MOVE_PENALTY, path: st.path.concat([o]), last: o.h.key, city: o.h.city || '', mv: st.mv + move, su: st.su + o.snu, pu: st.pu + o.sp });
+      }
+    }
+  }
+  let top = null; for (const st of best[nights].values()) if (!top || st.sc > top.sc) top = st; return top;
+}
+function planFix(nights, opts, score, lim) {
+  // 체인별 포인트 잔액 초과 시: 가장 비효율적인 포인트 옵션을 빼고 다시 (최대 12번)
+  const bal = { accor: profile.accorPts || 0, ihg: profile.ihgPts || 0, marriott: profile.marriottPts || 0, hilton: profile.hiltonPts || 0 };
+  let pool = opts.slice();
+  for (let t = 0; t < 12; t++) {
+    const st = planDP(nights, pool, score, lim); if (!st) return null;
+    const used = {}; for (const o of st.path) if (!o.gap && o.pts) used[o.chain] = (used[o.chain] || 0) + o.pts;
+    const over = hasProfile() ? Object.keys(used).find(c => used[c] > bal[c]) : null; if (!over) return st;
+    const worst = st.path.filter(o => !o.gap && o.pts && o.chain === over).sort((a, b) => a.value / a.pts - b.value / b.pts)[0]; pool = pool.filter(o => o !== worst);
+  }
+  return null;
+}
+function planSummary(st, dates) {
+  const segs = []; for (const o of st.path) { if (o.gap) { const last = segs[segs.length - 1]; if (last?.gap) last.n++; else segs.push({ gap: true, s: o.s, n: 1 }); } else segs.push(o); }
+  const t = { value: 0, cash: 0, pts: {}, snu: 0, sp: 0, covered: 0, moves: st.mv };
+  for (const o of st.path) if (!o.gap) { t.value += o.value; t.cash += o.cash; if (o.pts) t.pts[o.chain] = (t.pts[o.chain] || 0) + o.pts; t.snu += o.snu; t.sp += o.sp; t.covered += o.n; }
+  return { segs, t, dates };
+}
+function makePlans(from, nights, where, opt) {
+  const { dates, opts } = planOptions(from, nights, where, opt);
+  if (!opts.length) return { dates, plans: [], n: 0 };
+  const lim = { maxMoves: opt.moves, snu: hasProfile() ? (profile.snu || 0) : 9, sp: hasProfile() ? (profile.stayPlus || 0) : 9 };
+  const plans = [];
+  const A = planFix(nights, opts, o => o.value, lim); if (A) plans.push(Object.assign({ key: 'max', title: '혜택 최대', sub: '티어 가치가 가장 큰 조합' }, planSummary(A, dates)));
+  // 한 호텔에서 쭉: 호텔마다 계산해서 (덮는 밤 수, 가치)가 가장 큰 곳
+  let B = null; for (const hk of new Set(opts.map(o => o.h.key))) { const st = planFix(nights, opts, o => o.value + o.n * 1e6, Object.assign({}, lim, { onlyHotel: hk, maxMoves: 0 })); if (st && (!B || st.sc > B.sc)) B = st; }
+  if (B) plans.push(Object.assign({ key: 'one', title: '한 호텔에서 쭉', sub: '짐 한 번만 푸는 일정' }, planSummary(B, dates)));
+  // 현금 최소: 밤을 최대한 덮되 현금을 가장 적게 (포인트·바우처 우선)
+  const C = planFix(nights, opts, o => o.n * 1e6 - o.cash + o.value * 0.05, lim); if (C) plans.push(Object.assign({ key: 'cash', title: '현금 최소', sub: '포인트·바우처를 먼저 쓰는 조합' }, planSummary(C, dates)));
+  // 같은 결과는 하나로
+  const seen = new Set(); const uniq = plans.filter(p => { const k = p.segs.map(x => x.gap ? 'g' + x.n : x.r.h + x.r.d + x.r.br).join(','); if (seen.has(k)) return false; seen.add(k); return true; });
+  return { dates, plans: uniq, n: opts.length };
+}
+function planCard(p) {
+  const fmt = (d) => `${d.slice(5).replace('-', '.')} ${DOW[dow(d)]}`;
+  const segs = p.segs.map(o => {
+    if (o.gap) return `<li class="gap"><span class="pd">${fmt(p.dates[o.s])}${o.n > 1 ? ` – ${fmt(addDays(p.dates[o.s], o.n))}` : ''} · ${o.n}박</span><span class="ph muted">혜택 없는 밤 · 일반 예약이나 다른 체인으로</span></li>`;
+    const r = o.r, h = o.h; const isPt = !!o.pts;
+    return `<li><span class="pd">${fmt(r.d)} – ${fmt(addDays(r.d, o.n))} · ${o.n}박</span>
+      <span class="ph"><a href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a> <span class="muted small">${starsHtml(h)}${CHAIN[h.chain]} · ${esc(h.city || '')}</span></span>
+      <span class="pb"><span class="badge ${r.b}">${badgeLabel(r)}</span> ${isPt ? `${o.pts.toLocaleString()}pt` : won(r.my)}${chg(r)}</span>
+      <span class="pv">+${won(o.value)} <a class="lnk small" href="${link(r)}" target="_blank" rel="noopener">예약 ↗</a></span></li>`;
+  }).join('');
+  const pts = Object.entries(p.t.pts).map(([c, v]) => `${CHAIN[c]} ${v.toLocaleString()}pt`).join(' · ');
+  const used = [p.t.snu ? `SNU ${p.t.snu}장` : '', p.t.sp ? `Stay Plus ${p.t.sp}장` : '', pts].filter(Boolean).join(' · ');
+  return `<article class="pcard ${p.key}"><header><b>${p.title}</b><span class="muted">${p.sub}</span></header>
+    <div class="ptot"><div><em>+${won(p.t.value)}</em><span>티어 가치</span></div><div><em>${won(p.t.cash)}</em><span>현금</span></div><div><em>${p.t.covered}/${p.dates.length}</em><span>혜택 박</span></div><div><em>${p.t.moves}</em><span>이동</span></div></div>
+    ${used ? `<p class="small muted" style="margin:6px 0 0">사용: ${esc(used)}</p>` : ''}
+    <ol class="psegs">${segs}</ol></article>`;
+}
+function viewPlan() {
+  const el = $('#v-plan'); const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const lp = PLAN.last || { from: addDays(today, 7) > (D.meta.dateTo || today) ? today : addDays(today, 7), nights: 3, where: '', lounge: false, stars: 0, moves: 1 };
+  el.innerHTML = `<h1>여행 플래너</h1><p class="lead">기간과 지역을 고르면, <b>내 티어·바우처·포인트</b>로 쓸 수 있는 혜택을 이어 붙여 숙박 일정 3안을 만들어요. ${hasProfile() ? '' : '<a href="#" data-open-profile>티어를 넣으면</a> 내가 쓸 수 있는 것만으로 계산해요.'}</p>
+    <form id="planForm" class="pform">
+      <label>체크인<input type="date" name="from" value="${lp.from}" min="${D.meta.dateFrom || today}" max="${D.meta.dateTo || ''}"></label>
+      <label>박수<select name="nights">${Array.from({ length: 14 }, (_, i) => `<option value="${i + 1}" ${lp.nights === i + 1 ? 'selected' : ''}>${i + 1}박</option>`).join('')}</select></label>
+      <label class="w">어디<select name="where">${$('#fWhere')?.innerHTML || '<option value="">전체</option>'}</select></label>
+      <label>호텔 이동<select name="moves"><option value="0" ${lp.moves === 0 ? 'selected' : ''}>안 옮김</option><option value="1" ${lp.moves === 1 ? 'selected' : ''}>최대 1번</option><option value="2" ${lp.moves === 2 ? 'selected' : ''}>최대 2번</option></select></label>
+      <label>성급<select name="stars"><option value="0">전체</option><option value="4" ${lp.stars === 4 ? 'selected' : ''}>4성 이상</option><option value="5" ${lp.stars === 5 ? 'selected' : ''}>5성만</option></select></label>
+      <label class="ck"><input type="checkbox" name="lounge" ${lp.lounge ? 'checked' : ''}> 라운지 있는 곳</label>
+      <button class="btn" type="submit">일정 짜기</button>
+    </form>
+    <div id="planOut"></div>
+    <p class="small muted" style="margin-top:18px">※ 1박·2박 단위로 수집한 결과를 이어 붙인 추정이에요. 연박 요금·객실 재고는 예약 직전 각 체인 공식 사이트에서 확인하세요.</p>`;
+  const f = $('#planForm'); f.where.value = lp.where;
+  const go = () => {
+    const q = { from: f.from.value, nights: +f.nights.value, where: f.where.value, moves: +f.moves.value, stars: +f.stars.value, lounge: f.lounge.checked }; PLAN.last = q;
+    const out = $('#planOut');
+    if (q.from < (D.meta.dateFrom || '') || addDays(q.from, q.nights - 1) > (D.meta.dateTo || '9999')) { out.innerHTML = `<div class="empty">지금 데이터는 ${D.meta.dateFrom?.slice(5).replace('-', '.')} – ${D.meta.dateTo?.slice(5).replace('-', '.')} 범위예요. 그 안에서 골라 주세요.${D.meta.pro ? '' : ' (무료는 오늘부터 7일)'}</div>`; return; }
+    const res = makePlans(q.from, q.nights, q.where, q);
+    out.innerHTML = res.plans.length ? `<div class="pgrid">${res.plans.map(planCard).join('')}</div>` : `<div class="empty">이 기간·지역에 ${hasProfile() ? '내가 쓸 수 있는 ' : ''}혜택이 없어요. 날짜를 옮기거나 지역을 넓혀 보세요.</div>`;
+  };
+  f.addEventListener('submit', (e) => { e.preventDefault(); go(); });
+  if (PLAN.last) go();
+}
+
 // ---------- 라우터 ----------
-const views = { radar: viewRadar, me: viewMe, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { radar: viewRadar, me: viewMe, plan: viewPlan, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || 'radar'; const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { plan: 'Trip planner', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
@@ -415,7 +557,7 @@ function rowHtml(r, showHotel = true) {
     <td class="date">${r.d.slice(5).replace('-', '.')} <span class="dow ${we ? 'we' : ''}">${DOW[dow(r.d)]}</span><div class="muted small">${r.n || 1}박</div></td>
     <td class="hotel">${showHotel ? `<a class="hname" href="#hotel/${encodeURIComponent(r.h)}">${esc(r.hn)}</a>` : ''}<div class="hsub"><span class="ctag ${r.chain}">${CHAIN[r.chain]}</span>${esc(h.brand || '')} · ${esc(h.country || '')} ${esc(h.city || '')}</div></td>
     <td class="benefit"><span class="badge ${r.b}">${badgeLabel(r)}</span>${r.also ? '<span class="tag">Red Hot</span>' : ''}<span class="blabel">${esc(rawLabel(r))}</span>${elig}</td>
-    <td class="cost">${cost}</td>
+    <td class="cost">${cost}${chg(r)}</td>
     <td class="refc"><span class="ref">${ref}<span class="note">${esc(note)}</span></span></td>
     <td class="savec">${r.sv ? `<span class="save">${won(r.sv)}${r.ap ? ' <span class="ap">추정</span>' : ''}</span>` : '<span class="muted">–</span>'}</td>
     <td class="roomsc">${rooms}</td>
@@ -471,7 +613,7 @@ function cardHtml(o, i) {
   const pay = (r, kind) => !r ? null : kind === 'points' ? `${r.pt.toLocaleString()}pt${(r.n || 1) > 1 ? ` / ${r.n}박` : ''}` : kind === 'voucher' ? (r.br === 'SNU' ? `${won(r.my)} 스위트` : `${won(r.my)} / ${r.n || 1}박`) : won(r.my);
   const pct = (r) => r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0;
   const how = (r) => r.br === 'SNU' ? 'SNU로 스위트' : r.br === 'STAY_PLUS' ? 'Stay Plus · 1박 무료' : r.br === 'AMB' ? 'Ambassador · 주말 1박 무료' : r.br === 'FIVE4' ? '포인트 5박 · 1박 무료' : r.b === 'POINTS' ? '포인트' : r.br === 'RED_HOT' ? 'Red Hot Room' : r.b === 'SALE' ? '회원 특가' : KIND_KO[bestKind];
-  const bestTxt = o.best ? `<i class="how">${how(o.best)}</i>${pay(o.best, bestKind)}` : '—';
+  const bestTxt = o.best ? `<i class="how">${how(o.best)}</i>${pay(o.best, bestKind)}${chg(o.best)}` : '—';
   const bestSub = o.best ? [perNight(o.best), pct(o.best) ? `정가 대비 ${pct(o.best)}% 절약` : ''].filter(Boolean).join(' · ') : '';
   const others = [['cash', '현금', o.cash], ['points', '포인트', o.points], ['voucher', '바우처', o.voucher]].filter(([k]) => k !== bestKind).map(([k, l, r]) => `${l} ${r ? pay(r, k) : '—'}`).join(' · ');
   const forYou = tier
