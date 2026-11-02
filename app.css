@@ -571,3 +571,53 @@ select { color-scheme: light; }
 #dlgLogin .gbtn:hover { background: #f3f4f6; }
 #dlgLogin .or { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; color: var(--muted); font-size: 11px; letter-spacing: .1em; }
 #dlgLogin .or::before, #dlgLogin .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+
+/* 첫 로딩 표시 */
+.loadingNote { display: flex; align-items: center; gap: 12px; padding: 40px 0; color: var(--muted); font-size: 14px; letter-spacing: .02em; }
+.loadingNote span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--gold); animation: trspin .9s linear infinite; }
+@keyframes trspin { to { transform: rotate(360deg); } }
+body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
+
+/* ---------- 운영자 편집 ---------- */
+.hnote { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; border-left: 2px solid var(--gold); padding-left: 10px; }
+.hedit { margin: 12px 0 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+#dlgEdit { max-width: 560px; width: calc(100% - 32px); }
+#dlgEdit .egrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#dlgEdit .egrid .wide { grid-column: 1 / -1; }
+#dlgEdit .field { display: flex; flex-direction: column; gap: 5px; text-align: left; }
+#dlgEdit .field span { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#dlgEdit input, #dlgEdit select, #dlgEdit textarea { font: inherit; font-size: 14px; padding: 8px 10px; border: 1px solid var(--rule); background: transparent; color: var(--fg); width: 100%; }
+#dlgEdit select option { color: #141a2e; }
+@media (max-width: 560px) { #dlgEdit .egrid { grid-template-columns: 1fr; } }
+
+/* ---------- 변동 화살표 ---------- */
+.chg { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0; white-space: nowrap; vertical-align: 1px; }
+.chg.dn { color: #4fbf8a; } .chg.up { color: #e2735f; }
+
+/* ---------- 여행 플래너 ---------- */
+.pform { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; padding: 18px 0 22px; border-bottom: 1px solid var(--line); margin-bottom: 22px; }
+.pform label { display: flex; flex-direction: column; gap: 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.pform label.w select { min-width: 200px; }
+.pform label.ck { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--fg); padding-bottom: 8px; }
+.pform input[type=date], .pform select { font: inherit; font-size: 14px; letter-spacing: 0; text-transform: none; padding: 7px 10px; border: 1px solid var(--rule); background: transparent; color: var(--fg); color-scheme: dark; }
+.pform select option { color: #141a2e; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.pcard { border: 1px solid var(--line); background: var(--card); padding: 18px 18px 8px; }
+.pcard.max { border-color: var(--gold); }
+.pcard header { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
+.pcard header b { font-family: var(--serif); font-size: 22px; font-weight: 500; }
+.pcard header span { font-size: 12px; }
+.ptot { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.ptot div { display: flex; flex-direction: column; gap: 3px; }
+.ptot em { font-style: normal; font-family: var(--serif); font-size: 17px; color: var(--fg); white-space: nowrap; }
+.pcard.max .ptot div:first-child em { color: var(--gold); }
+.ptot span { font-size: 10.5px; color: var(--muted); letter-spacing: .08em; }
+.psegs { list-style: none; margin: 10px 0 0; padding: 0; }
+.psegs li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 11px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.psegs li:last-child { border-bottom: 0; }
+.psegs .pd { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); letter-spacing: .02em; }
+.psegs .ph a { color: var(--fg); font-weight: 600; }
+.psegs .pb { grid-column: 1; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.psegs .pv { grid-column: 2; grid-row: 2 / span 2; text-align: right; color: var(--gold); white-space: nowrap; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.psegs li.gap .ph { grid-column: 1 / -1; font-size: 12.5px; }
+@media (max-width: 720px) { .pform label.w select { min-width: 0; width: 100%; } .pform label.w { flex: 1 1 100%; } }
