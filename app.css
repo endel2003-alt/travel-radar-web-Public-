@@ -601,7 +601,7 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 .pform label.ck { flex-direction: row; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--fg); padding-bottom: 8px; }
 .pform input[type=date], .pform select { font: inherit; font-size: 14px; letter-spacing: 0; text-transform: none; padding: 7px 10px; border: 1px solid var(--rule); background: transparent; color: var(--fg); color-scheme: dark; }
 .pform select option { color: #141a2e; }
-.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.plgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; }
 .pcard { border: 1px solid var(--line); background: var(--card); padding: 18px 18px 8px; }
 .pcard.max { border-color: var(--gold); }
 .pcard header { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }

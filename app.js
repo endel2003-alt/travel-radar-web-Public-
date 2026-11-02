@@ -410,7 +410,7 @@ function viewPlan() {
     const out = $('#planOut');
     if (q.from < (D.meta.dateFrom || '') || addDays(q.from, q.nights - 1) > (D.meta.dateTo || '9999')) { out.innerHTML = `<div class="empty">지금 데이터는 ${D.meta.dateFrom?.slice(5).replace('-', '.')} – ${D.meta.dateTo?.slice(5).replace('-', '.')} 범위예요. 그 안에서 골라 주세요.${D.meta.pro ? '' : ' (무료는 오늘부터 7일)'}</div>`; return; }
     const res = makePlans(q.from, q.nights, q.where, q);
-    out.innerHTML = res.plans.length ? `<div class="pgrid">${res.plans.map(planCard).join('')}</div>` : `<div class="empty">이 기간·지역에 ${hasProfile() ? '내가 쓸 수 있는 ' : ''}혜택이 없어요. 날짜를 옮기거나 지역을 넓혀 보세요.</div>`;
+    out.innerHTML = res.plans.length ? `<div class="plgrid">${res.plans.map(planCard).join('')}</div>` : `<div class="empty">이 기간·지역에 ${hasProfile() ? '내가 쓸 수 있는 ' : ''}혜택이 없어요. 날짜를 옮기거나 지역을 넓혀 보세요.</div>`;
   };
   f.addEventListener('submit', (e) => { e.preventDefault(); go(); });
   if (PLAN.last) go();
