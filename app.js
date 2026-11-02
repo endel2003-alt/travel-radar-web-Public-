@@ -134,15 +134,20 @@ async function loadLegacy() {
   return applyData({ rows, hotels, promos, guides, meta });
 }
 // 정가 이상치 보정: 일반실이 매진된 날엔 남은 가장 싼 현금 요금이 클럽·스위트라 '정가'가 평소의 몇 배로 잡힌다
-// → 포인트·특가 절약액이 부풀어 티어 가치 1위로 올라온다. 호텔별 평소 1박 정가(중앙값)의 2.5배를 넘으면 평소 값으로 보정.
-// 스위트 업그레이드(SUITE)는 원래 객실 차액이 정가라 제외.
+// → 포인트·특가 절약액이 부풀어 티어 가치 1위로 올라온다. 호텔별 평소 1박 정가(중앙값)의 2배를 넘으면 평소 값으로 보정.
+// 스위트 업그레이드(SUITE)는 원래 객실 차액이 정가라 제외. 기준: 평소 1박 정가(중앙값)의 2배 초과.
 function fixOddRefs(rows) {
   const per = new Map();
   for (const r of rows) { if (r.b === 'SUITE' || !r.ref) continue; const v = r.ref / (r.n || 1); (per.get(r.h) || per.set(r.h, []).get(r.h)).push(v); }
   const med = new Map(); for (const [k, a] of per) { if (a.length < 4) continue; a.sort((x, y) => x - y); med.set(k, a[Math.floor(a.length / 2)]); }
   for (const r of rows) {
     if (r.b === 'SUITE' || !r.ref) continue; const m = med.get(r.h); if (!m) continue; const n = r.n || 1;
-    if (r.ref / n > m * 2.5) { r.ref0 = r.ref; r.ref = Math.round(m * n); if (r.my != null) r.sv = r.ref - r.my; r.ap = 1; r.odd = 1; }
+    if (r.ref / n > m * 2) {
+      const k = (m * n) / r.ref; r.ref0 = r.ref; r.ref = Math.round(m * n); r.ap = 1; r.odd = 1;
+      // 바우처·무료박은 내 비용도 같은 (비정상) 요금에서 나왔으니 같은 비율로 줄인다. 포인트·특가는 내 비용이 따로 정해져 있어 정가만 보정.
+      if (r.b === 'FREE_NIGHT' && !r.pt) { if (r.my != null) r.my = Math.round(r.my * k); if (r.sv != null) r.sv = Math.round(r.sv * k); }
+      else if (r.my != null) r.sv = r.ref - r.my;
+    }
   }
 }
 function applyData({ rows, hotels, promos, guides, meta }) {
@@ -821,17 +826,18 @@ function percentiles(rows) {
   return (r) => { const arr = sorted[r.b]; const v = rowValue(r); if (!arr || !arr.length || !v) return 0; let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; } return lo / arr.length; };
 }
 function bestOf(rows, pct) {
-  pct = pct || percentiles(rows);
+  // 점수 = 그 호텔에서 가장 많이 아끼는 혜택의 절약액(₩) + 티어 혜택 가치(라운지·조식 등) — 레저의 '티어 가치'와 같은 기준.
+  // (예전: 같은 종류 안 절약률 상위 % → 싼 호텔의 큰 할인율이 비싼 호텔의 큰 절약보다 위로 올라왔다)
   const by = {};
   for (const r of rows) { const o = by[r.h] || (by[r.h] = { h: r.h, rows: [], kinds: new Set(), dates: new Set() }); o.rows.push(r); o.kinds.add(r.b); o.dates.add(r.d); }
   const out = [];
   for (const o of Object.values(by)) {
-    const scored = o.rows.map(r => ({ r, p: pct(r), ratio: r.sv && r.ref ? r.sv / r.ref : 0 })).sort((a, b) => (b.p - a.p) || ((b.r.sv || 0) - (a.r.sv || 0)));
-    const top = scored[0]; if (!top || !top.p) continue;
-    const score = top.p * 100 + Math.log10(1 + (top.r.sv || 0)) * 3 + o.kinds.size * 5 + Math.min(o.dates.size, 30) * 0.4;
-    out.push({ h: o.h, chain: o.h.split('|')[0], score, best: top.r, ratio: top.ratio, pctl: top.p, kinds: [...o.kinds], days: o.dates.size });
+    const top = o.rows.filter(r => (r.sv || 0) > 0).sort((a, b) => (b.sv || 0) - (a.sv || 0) || (a.ap ? 1 : 0) - (b.ap ? 1 : 0))[0]; if (!top) continue;
+    const h = D.hotels.get(o.h) || {}; const bv = benefitValue(tierBenefits(h));
+    const score = (top.sv || 0) + bv;
+    out.push({ h: o.h, chain: o.h.split('|')[0], score, bv, best: top, ratio: top.sv && top.ref ? top.sv / top.ref : 0, kinds: [...o.kinds], days: o.dates.size });
   }
-  return out.sort((a, b) => b.score - a.score);
+  return out.sort((a, b) => b.score - a.score || b.days - a.days);
 }
 // 체인당 최대 perChain곳 (후보가 모자라면 채움)
 function mixChains(list, n, perChain = 2) {
@@ -842,10 +848,11 @@ function mixChains(list, n, perChain = 2) {
 }
 function bestCard(b, i) {
   const h = D.hotels.get(b.h) || {}; const r = b.best; const bl = BEN[r.b];
-  const val = r.b === 'POINTS' && r.pt && r.ref ? `1pt당 ₩${(r.ref / r.pt).toFixed(1)} 가치 (정가 ${won(r.ref)} → ${r.pt.toLocaleString()}pt)` : r.sv ? `${badgeLabel(r)}로 ${won(r.sv)} 절약${b.ratio ? ` (정가 대비 ${Math.round(b.ratio * 100)}%)` : ''}` : badgeLabel(r);
+  const val = r.b === 'POINTS' && r.pt && r.ref ? `${won(r.sv)} 절약 · 1pt당 ₩${(r.ref / r.pt).toFixed(1)} (정가 ${won(r.ref)} → ${r.pt.toLocaleString()}pt)` : r.sv ? `${badgeLabel(r)}로 ${won(r.sv)} 절약${b.ratio ? ` (정가 대비 ${Math.round(b.ratio * 100)}%)` : ''}` : badgeLabel(r);
+  const tv = `티어 가치 +${won(b.score)}${b.bv ? ` <span class="muted">(절약 ${won(r.sv)} + 혜택 ${won(b.bv)})</span>` : ''}`;
   const why = [val, `${b.days}일 가능`, b.kinds.length > 1 ? `혜택 ${b.kinds.length}종` : ''].filter(Boolean).join(' · ');
   const img = hImg(h) && !NO_EXT_IMG ? `<img src="${esc(hImg(h))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}', 'parent')">` : '';
-  return `<a class="bcard ${h.chain} ${img ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(b.h)}"><div class="bimg">${img}<span class="brank">${i + 1}</span></div><div class="bbody"><div class="hname">${esc(h.name)}</div><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} · ${esc(h.city || '')}</div><div class="bwhy"><span class="badge ${r.b}">${badgeLabel(r)}</span> <span class="small">${esc(why)}</span></div><div class="bkinds">${b.kinds.map(k => `<i class="dot ${k}" title="${BEN[k].label}"></i>`).join('')}<span class="muted small">가장 좋은 날 ${r.d.slice(5).replace('-', '.')} · 내 비용 ${r.pt ? r.pt.toLocaleString() + 'pt' : won(r.my)}</span></div></div></a>`;
+  return `<a class="bcard ${h.chain} ${img ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(b.h)}"><div class="bimg">${img}<span class="brank">${i + 1}</span></div><div class="bbody"><div class="hname">${esc(h.name)}</div><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} · ${esc(h.city || '')}</div><div class="btv">${tv}</div><div class="bwhy"><span class="badge ${r.b}">${badgeLabel(r)}</span> <span class="small">${esc(why)}</span></div><div class="bkinds">${b.kinds.map(k => `<i class="dot ${k}" title="${BEN[k].label}"></i>`).join('')}<span class="muted small">가장 좋은 날 ${r.d.slice(5).replace('-', '.')} · 내 비용 ${r.pt ? r.pt.toLocaleString() + 'pt' : won(r.my)}</span></div></div></a>`;
 }
 function viewBest() {
   const el = $('#v-best'); let mine = hasProfile() ? D.rows.filter(eligible) : D.rows; let note = '';
@@ -858,7 +865,7 @@ function viewBest() {
   const all = bestOf(mine, pct); const overall = mixChains(all, 5);
   const KINDS = [['SUITE', '스위트 업그레이드', '스위트 vs 일반 객실 차액이 큰 곳'], ['FREE_NIGHT', '무료박', 'IHG 앰배서더 주말·아코르 Stay Plus·메리어트/힐튼 5박 무료'], ['POINTS', '포인트 가치', '포인트 1pt가 가장 비싸게 쓰이는 곳'], ['SALE', '세일', '회원 전용 특가']];
   const sections = KINDS.map(([b, title, sub]) => { const list = mixChains(bestOf(mine.filter(r => r.b === b), pct), 3, 2); return list.length ? `<h2>${title} <span class="muted small">${sub}</span></h2><div class="bgrid">${list.map(bestCard).join('')}</div>` : ''; }).join('');
-  el.innerHTML = `<h1>이번 달 베스트</h1><p class="lead">수집된 혜택을 바탕으로 매일 자동 계산해요. 혜택 종류마다 값의 성격이 달라서(스위트 차액·포인트 가치·무료박) <b>같은 종류 안에서 상위 몇 %인지</b>로 비교하고, TOP 5는 체인당 최대 2곳으로 섞습니다.${hasProfile() ? ' <b>내 프로필로 쓸 수 있는 혜택만</b> 반영했어요.' : ' <a href="#" id="bestProfile">내 프로필</a>을 넣으면 나에게 가능한 것만으로 계산해요.'}</p>
+  el.innerHTML = `<h1>이번 달 베스트</h1><p class="lead">수집된 혜택을 바탕으로 매일 자동 계산해요. 순위는 <b>실제로 아끼는 금액(₩)</b>에 라운지·조식 같은 <b>티어 혜택 가치</b>를 더한 <b>티어 가치</b> 순이고, TOP 5는 체인당 최대 2곳으로 섞습니다. 정가가 비정상적으로 높게 잡힌 날은 평소 값으로 보정해요.</p>
     ${note}<h2>전체 TOP 5</h2><div class="bgrid">${overall.map(bestCard).join('')}</div>
     ${sections}
     ${ORDER.filter(cc => byC[cc]).map(cc => `<h2>${esc(label(cc))} TOP 5</h2><div class="bgrid">${mixChains(bestOf(byC[cc], pct), 5).map(bestCard).join('')}</div>`).join('')}`;
