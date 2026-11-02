@@ -90,15 +90,45 @@ async function loadFromServer() {
   d.meta = d.meta || {}; d.meta.source = 'server'; return d;
 }
 // ---------- 데이터 로드 ----------
+// 서버 데이터 캐시: 마지막으로 받은 tr_data를 브라우저(Cache API)에 보관 → 다음 방문 땐 즉시 그리고, 뒤에서 새 데이터를 받아 바뀌었으면 조용히 다시 그림
+const DCACHE = 'tr-data-cache';
+const dataKey = () => '/__trdata/' + (AUTH.s?.user_id || 'guest');
+async function dataCacheGet() { try { const c = await caches.open(DCACHE); const r = await c.match(dataKey()); return r ? await r.json() : null; } catch (e) { return null; } }
+async function dataCachePut(d) { try { const c = await caches.open(DCACHE); await c.put(dataKey(), new Response(JSON.stringify(d), { headers: { 'content-type': 'application/json' } })); } catch (e) {} }
+const loadGuides = () => fetch('guides.json').then(r => r.ok ? r.json() : Promise.reject()).catch(() => fetch('data/guides.json').then(r => r.json())).catch(() => ({}));
+let QUIET = false;   // true면 다시 그릴 때 맨 위로 스크롤하지 않음
 async function load() {
+  if (window.TR_SERVER?.url && !window.TR_PROVIDER) {
+    authFromHash(); await authEnsure();
+    const guidesP = loadGuides(); const cached = await dataCacheGet(); const prof0 = JSON.stringify(profile);
+    const fresh = Promise.all([profilePull(), loadFromServer()]).then(([, d]) => d);
+    if (cached?.rows) {
+      applyData(Object.assign({}, cached, { guides: await guidesP }));
+      fresh.then(async (d) => {
+        if (!d) return; dataCachePut(d);
+        const changed = JSON.stringify([d.meta?.uploadedAt, d.meta?.pro, d.meta?.horizon, d.rows.length]) !== JSON.stringify([cached.meta?.uploadedAt, cached.meta?.pro, cached.meta?.horizon, cached.rows.length]) || JSON.stringify(profile) !== prof0;
+        if (changed) { QUIET = true; applyData(Object.assign({}, d, { guides: await guidesP })); QUIET = false; }
+      }).catch(() => {});
+      return;
+    }
+    const d = await fresh.catch(() => null);
+    if (d) { dataCachePut(d); return applyData(Object.assign({}, d, { guides: await guidesP })); }
+  }
+  return loadLegacy();
+}
+async function loadLegacy() {
   // 데이터 출처: 확장 프로그램 안에서는 window.TR_PROVIDER(수집 DB 직접), 사이트에서는 data/*.json
   let rows, hotels, promos, guides, meta;
-  if (window.TR_SERVER?.url) { authFromHash(); await authEnsure(); await profilePull(); }
   if (window.TR_PROVIDER) { ({ rows, hotels, promos, guides, meta } = await window.TR_PROVIDER()); }
   else if (window.TR_SERVER?.url && await loadFromServer().then(d => { if (!d) return false; ({ rows, hotels, promos, meta } = d); return true; }).catch(() => false)) {
     guides = await fetch('guides.json').then(r => r.ok ? r.json() : Promise.reject()).catch(() => fetch('data/guides.json').then(r => r.json())).catch(() => ({}));
   }
   else { [rows, hotels, promos, guides, meta] = await Promise.all(['radar', 'hotels', 'promos', 'guides', 'meta'].map(n => fetch(`data/${n}.json`).then(r => r.json()))); try { meta.areaGeo = meta.areaGeo || await fetch('data/areas.json').then(r => r.json()); } catch (e) {} }
+  return applyData({ rows, hotels, promos, guides, meta });
+}
+function applyData({ rows, hotels, promos, guides, meta }) {
+  $('#loadingNote')?.remove();
+  rows = rows.map(r => Object.assign({}, r)); hotels = hotels.map(h => Object.assign({}, h));
   for (const h of hotels) if (h.image && !/^https?:/i.test(h.image)) h.image = (h.chain === 'hilton' ? 'https://www.hilton.com' : h.chain === 'ihg' ? 'https://digital.ihg.com' : h.chain === 'marriott' ? 'https://cache.marriott.com' : 'https://www.ahstatic.com') + (h.image.startsWith('/') ? '' : '/') + h.image;   // 상대 경로 사진 → 절대 주소
   // 보관본(img)이 있으면 그걸 먼저, 못 읽으면 호텔 서버 주소(image)로. 사이트는 data/ 옆의 img/ 폴더, 확장은 DB의 blob URL.
   D.rows = rows; D.hotels = new Map(hotels.map(h => [h.key, h])); D.promos = promos; D.guides = guides; D.meta = meta;
@@ -205,7 +235,7 @@ function route() {
   const hash = location.hash.replace(/^#\/?/, '') || 'radar'; const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
-  (views[name] || viewRadar)(arg); window.scrollTo({ top: 0 });
+  (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
   const EYE = { me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
@@ -1110,10 +1140,12 @@ applyTheme();
 // PWA: 서비스 워커는 가능한 환경에서만 (아티팩트 미리보기 등에서는 조용히 건너뜀)
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.ai|preview/.test(location.hostname)) {
   // 워커가 새 버전으로 바뀌면 한 번만 새로고침 → "폰이 옛 화면" 문제 해결
-  let reloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded || !navigator.serviceWorker.controller) return; reloaded = true; location.reload(); });
+  // 처음 방문(워커가 아직 없던 페이지)에선 새로고침하지 않는다 — 예전엔 이 때문에 첫 화면이 한 번 깜빡이며 다시 떴다
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded || !hadController) return; reloaded = true; location.reload(); });
   navigator.serviceWorker.register('sw.js?v=' + (document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '0')).then(r => r.update()).catch(() => {});
 }
-load().catch(e => { $('#cards').innerHTML = ''; $('#empty').hidden = false; $('#empty').textContent = '데이터를 불러오지 못했어요: ' + e.message; });
+load().catch(e => { $('#loadingNote')?.remove(); $('#cards').innerHTML = ''; $('#empty').hidden = false; $('#empty').textContent = '데이터를 불러오지 못했어요: ' + e.message; });
 // 창 폭이 720px 경계를 넘으면 앱 모드 ↔ 레저 모드 다시 그리기
 { let wasM = MOBILE(); window.addEventListener('resize', () => { const m = MOBILE(); if (m !== wasM) { wasM = m; if (!location.hash || /^#\/?radar/.test(location.hash)) viewRadar(); } }); }
 })();
