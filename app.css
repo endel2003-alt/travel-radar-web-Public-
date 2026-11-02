@@ -624,3 +624,9 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 
 .bcard .btv { font-family: var(--serif); font-size: 17px; color: var(--gold); margin: 6px 0 4px; }
 .bcard .btv .muted { font-family: var(--font); font-size: 11.5px; }
+#dlgEdit .field > span { align-self: flex-start; text-align: left; }
+#dlgEdit .eimg { display: flex; gap: 12px; align-items: flex-start; }
+#dlgEdit .eimg img { width: 120px; height: 80px; object-fit: cover; border: 1px solid var(--line); flex-shrink: 0; }
+#dlgEdit .eimg-r { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+#dlgEdit .efile { align-self: flex-start; cursor: pointer; }
+#dlgEdit #editFileName { text-transform: none; letter-spacing: 0; font-size: 12px; }

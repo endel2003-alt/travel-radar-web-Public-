@@ -258,13 +258,28 @@ $('#loginGoogle')?.addEventListener('click', () => { location.href = `${authBase
 // ---------- 운영자 편집 모드 ----------
 // 운영자(tr_is_owner)에게만 호텔 화면에 '호텔 정보 수정' 버튼. 저장은 서버 tr_overrides 에 → 매일 수집이 덮어쓰지 않는다.
 const EDIT_LABEL = { name: '이름', brand: '브랜드', stars: '성급', lounge: '라운지', city: '지역', img: '사진', note: '메모' };
-let editKey = null;
+let editKey = null; let editFile = null;
+// 사진 파일 → 브라우저에서 1280px WebP로 줄여 서버 사진 저장소 img/manual/ 에 올린다 (운영자만 허용, SQL 03)
+async function shrinkImage(file, max = 1280) {
+  const bmp = await createImageBitmap(file); const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();
+  return await new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('변환 실패')), 'image/webp', 0.85));
+}
+async function uploadHotelPhoto(key, file) {
+  if (!AUTH.s) throw new Error('로그인이 필요해요'); await authEnsure();
+  const blob = await shrinkImage(file); const name = `manual/${key.replace(/[^A-Za-z0-9]+/g, '-')}-${Date.now()}.webp`; const base = window.TR_SERVER.url.replace(/\/$/, '');
+  const r = await fetch(`${base}/storage/v1/object/img/${name}`, { method: 'POST', headers: { apikey: window.TR_SERVER.anon, Authorization: `Bearer ${AUTH.s.access_token}`, 'Content-Type': 'image/webp', 'x-upsert': 'true', 'Cache-Control': 'public, max-age=604800' }, body: blob });
+  if (!r.ok) { const t = await r.json().catch(() => ({})); throw new Error((t.message || t.error || 'HTTP ' + r.status) + (r.status === 403 || r.status === 400 ? ' (SQL 03을 실행했는지 확인)' : '')); }
+  return `${base}/storage/v1/object/public/img/${name}`;
+}
+$('#editFile')?.addEventListener('change', (e) => { const f = e.target.files[0]; if (!f) return; editFile = f; $('#editFileName').textContent = `${f.name} · 저장할 때 올라가요`; const pv = $('#editPreview'); pv.src = URL.createObjectURL(f); pv.hidden = false; $('#editForm').img.value = ''; });
 function openHotelEditor(key) {
   const h = D.hotels.get(key); const d = $('#dlgEdit'); if (!h || !d) return; editKey = key; const f = $('#editForm');
   $('#editTitle').textContent = h.name; $('#editMsg').textContent = '';
   f.name.value = h.name || ''; f.brand.value = h.brand || ''; f.city.value = h.city || ''; f.img.value = (h._edited?.img) || ''; f.note.value = h.note || '';
   f.stars.value = h._edited?.stars != null ? String(h._edited.stars) : ''; f.lounge.value = h._edited?.lounge === true ? 'yes' : h._edited?.lounge === false ? 'no' : '';
   $('#editAuto').textContent = `수집 값 · 성급 ${starsOf(Object.assign({}, h, { stars: h._edited?.stars != null ? null : h.stars }))?.n || '?'}성 · 라운지 ${hasLounge(Object.assign({}, h, { lounge: h._edited?.lounge != null ? undefined : h.lounge })) === true ? '있음' : hasLounge(h) === false ? '없음' : '브랜드 추정'}`;
+  editFile = null; $('#editFile').value = ''; $('#editFileName').textContent = ''; const pv = $('#editPreview'); if (hImg(h)) { pv.src = hImg(h); pv.hidden = false; } else pv.hidden = true;
   $('#editReset').hidden = !h._edited; d.showModal();
 }
 async function saveOverride(key, p) {
@@ -281,7 +296,9 @@ $('#editForm')?.addEventListener('submit', async (e) => {
   const p = Object.assign({}, h._edited || {});
   const txt = (k, v) => { v = v.trim(); if (!v) delete p[k]; else if (v !== (h._edited?.[k] ?? h[k] ?? '')) p[k] = v; else if (h._edited?.[k] == null) delete p[k]; };
   txt('name', f.name.value); txt('brand', f.brand.value); txt('city', f.city.value); txt('note', f.note.value);
-  const img = f.img.value.trim(); if (img) { if (!/^https:\/\//.test(img)) { msg.textContent = '사진 주소는 https:// 로 시작해야 해요'; return; } p.img = img; } else delete p.img;
+  let img = f.img.value.trim();
+  if (editFile) { try { msg.textContent = '사진 올리는 중…'; img = await uploadHotelPhoto(editKey, editFile); } catch (err) { msg.textContent = '사진 업로드 실패: ' + err.message; return; } }
+  if (img) { if (!/^https:\/\//.test(img)) { msg.textContent = '사진 주소는 https:// 로 시작해야 해요'; return; } p.img = img; } else delete p.img;
   if (f.stars.value) p.stars = +f.stars.value; else delete p.stars;
   if (f.lounge.value === 'yes') p.lounge = true; else if (f.lounge.value === 'no') p.lounge = false; else delete p.lounge;
   msg.textContent = '저장 중…'; $('#editSave').disabled = true;

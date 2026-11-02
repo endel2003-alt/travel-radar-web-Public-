@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611030044">
+<link rel="stylesheet" href="app.css?v=202611030214">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -105,7 +105,9 @@
       <label class="field"><span>성급</span><select name="stars"><option value="">자동 (수집·브랜드 기준)</option><option value="5">5성</option><option value="4">4성</option><option value="3">3성</option><option value="2">2성</option><option value="1">1성</option></select></label>
       <label class="field"><span>라운지</span><select name="lounge"><option value="">자동</option><option value="yes">있음</option><option value="no">없음</option></select></label>
       <label class="field"><span>지역 (표시용)</span><input name="city" autocomplete="off"></label>
-      <label class="field wide"><span>사진 주소 (비우면 보관 사진)</span><input name="img" type="url" placeholder="https://…" autocomplete="off"></label>
+      <div class="field wide"><span>사진 (파일 올리기 또는 주소 · 비우면 보관 사진)</span>
+        <div class="eimg"><img id="editPreview" alt="" hidden><div class="eimg-r"><label class="btn efile">파일 선택<input type="file" id="editFile" accept="image/*" hidden></label><span id="editFileName" class="muted small"></span>
+        <input name="img" type="url" placeholder="또는 사진 주소 https://…" autocomplete="off"></div></div></div>
       <label class="field wide"><span>메모 (호텔 화면에 표시)</span><textarea name="note" rows="2" placeholder="예: 2026년 리노베이션 완료, 클럽 라운지 18층"></textarea></label>
     </div>
     <p id="editAuto" class="muted small" style="margin:10px 0 0"></p>
@@ -164,8 +166,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611030044"></script>
-<script src="config.js?v=202611030044"></script>
-<script src="app.js?v=202611030044"></script>
+<script src="compare.js?v=202611030214"></script>
+<script src="config.js?v=202611030214"></script>
+<script src="app.js?v=202611030214"></script>
 </body>
 </html>
