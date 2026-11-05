@@ -137,16 +137,28 @@ async function loadLegacy() {
 // → 포인트·특가 절약액이 부풀어 티어 가치 1위로 올라온다. 호텔별 평소 1박 정가(중앙값)의 2배를 넘으면 평소 값으로 보정.
 // 스위트 업그레이드(SUITE)는 원래 객실 차액이 정가라 제외. 기준: 평소 1박 정가(중앙값)의 2배 초과.
 function fixOddRefs(rows) {
-  const per = new Map();
-  for (const r of rows) { if (r.b === 'SUITE' || !r.ref) continue; const v = r.ref / (r.n || 1); (per.get(r.h) || per.set(r.h, []).get(r.h)).push(v); }
-  const med = new Map(); for (const [k, a] of per) { if (a.length < 4) continue; a.sort((x, y) => x - y); med.set(k, a[Math.floor(a.length / 2)]); }
-  for (const r of rows) {
-    if (r.b === 'SUITE' || !r.ref) continue; const m = med.get(r.h); if (!m) continue; const n = r.n || 1;
-    if (r.ref / n > m * 2) {
-      const k = (m * n) / r.ref; r.ref0 = r.ref; r.ref = Math.round(m * n); r.ap = 1; r.odd = 1;
-      // 바우처·무료박은 내 비용도 같은 (비정상) 요금에서 나왔으니 같은 비율로 줄인다. 포인트·특가는 내 비용이 따로 정해져 있어 정가만 보정.
-      if (r.b === 'FREE_NIGHT' && !r.pt) { if (r.my != null) r.my = Math.round(r.my * k); if (r.sv != null) r.sv = Math.round(r.sv * k); }
-      else if (r.my != null) r.sv = r.ref - r.my;
+  // 기준 = 같은 호텔·같은 혜택 종류에서 같은 요일의 앞뒤 주 중앙값(없으면 앞뒤 4일). 성수기 계단식 인상·주말 요금은 안 걸리고,
+  // 일반실 매진으로 하루만 튀는 값만 보정한다.
+  const groups = new Map();
+  for (const r of rows) { if (r.b === 'SUITE' || !r.ref) continue; const k = `${r.h}|${r.br || r.b}`; (groups.get(k) || groups.set(k, []).get(k)).push(r); }
+  const day = (d) => Math.round(Date.parse(d + 'T00:00:00Z') / 86400e3);
+  for (const list of groups.values()) {
+    if (list.length < 4) continue; list.sort((x, y) => x.d.localeCompare(y.d));
+    const per = list.map(r => ({ r, t: day(r.d), v: r.ref / (r.n || 1) }));
+    for (let i = 0; i < per.length; i++) {
+      const me = per[i];
+      // 두 기준을 모두 넘어야 이상치: ① 같은 요일의 앞뒤 주(±7·14·21일) 중앙값의 2배 — 주말 요금이 평일의 2~3배인 리조트 보호
+      //                               ② 앞뒤 3일 중앙값의 2배 — 성수기 계단식 인상(이웃 날짜도 같이 높음) 보호
+      const medOf = (a) => { a.sort((x, y) => x - y); return a[Math.floor(a.length / 2)]; };
+      const wk = per.filter((o, j) => j !== i && [7, 14, 21].includes(Math.abs(o.t - me.t))).map(o => o.v);
+      const near = per.filter((o, j) => j !== i && Math.abs(o.t - me.t) <= 3).map(o => o.v);
+      if (wk.length < 2 || near.length < 2) continue;
+      const m = Math.max(medOf(wk), medOf(near)); const r = me.r; const n = r.n || 1;
+      if (me.v > m * 2.0) {
+        const k = (m * n) / r.ref; r.ref0 = r.ref; r.ref = Math.round(m * n); r.ap = 1; r.odd = 1;
+        if (r.b === 'FREE_NIGHT' && !r.pt) { if (r.my != null) r.my = Math.round(r.my * k); if (r.sv != null) r.sv = Math.round(r.sv * k); }
+        else if (r.my != null) r.sv = r.ref - r.my;
+      }
     }
   }
 }
@@ -225,6 +237,7 @@ async function profilePush() {
 function renderAuth() {
   const u = authUser(); const pro = !!D.meta?.pro;
   for (const el of document.querySelectorAll('.authBtn')) { el.hidden = !window.TR_SERVER?.url; el.innerHTML = u ? `<span class="who">${esc(u.email.split('@')[0])}</span>${pro ? '<b class="pro">PRO</b>' : ''}` : '로그인'; el.title = u ? u.email : ''; }
+  const ck = $('#checkLink'); if (ck) ck.hidden = !D.meta?.owner; const mck = $('#moreCheck'); if (mck) mck.hidden = !D.meta?.owner;
   const m = $('#moreAuth'); if (m) m.textContent = u ? `Account — ${u.email}${pro ? ' · PRO' : ''} · 로그아웃` : 'Login — 이메일로 로그인';
   for (const lim of document.querySelectorAll('.limitNote')) { const t = limitText(); lim.hidden = !t; lim.innerHTML = t; }
 }
@@ -433,15 +446,50 @@ function viewPlan() {
   if (PLAN.last) go();
 }
 
+
+// ---------- 운영자 데이터 점검 ----------
+// 의심스러운 데이터를 한 화면에: 정가 이상치(보정된 행) · 사진 없는 호텔 · 지역 미배정 · 이름 의심 · 체인별 수집 상태. 각 줄에서 호텔 편집으로 바로.
+function viewCheck() {
+  const el = $('#v-check');
+  if (!D.meta?.owner) { el.innerHTML = '<h1>데이터 점검</h1><div class="empty">운영자만 볼 수 있어요.</div>'; return; }
+  const H = [...D.hotels.values()]; const rows = D.rows;
+  const byChain = {}; for (const r of rows) byChain[r.chain] = (byChain[r.chain] || 0) + 1;
+  const hByChain = {}; for (const h of H) hByChain[h.chain] = (hByChain[h.chain] || 0) + 1;
+  const hl = (h) => `<a href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a> <span class="muted small">${CHAIN[h.chain]} · ${esc(h.country || h.cc || '')} ${esc(h.city || '')}</span>`;
+  // 1) 정가 이상치 (사이트에서 보정한 행)
+  const odd = rows.filter(r => r.odd).sort((a, b) => (b.ref0 / (b.n || 1)) / (b.ref / (b.n || 1)) - (a.ref0 / (a.n || 1)) / (a.ref / (a.n || 1)));
+  const oddBy = new Map(); for (const r of odd) (oddBy.get(r.h) || oddBy.set(r.h, []).get(r.h)).push(r);
+  // 2) 사진 없음
+  const noImg = H.filter(h => !hImg(h));
+  // 3) 지역 미배정
+  const noCity = H.filter(h => !h.city || h.city === '기타');
+  // 4) 이름 의심: 코드 그대로·"단계"·너무 짧음·한글 없음(일본·동남아는 영문 허용)
+  const badName = H.filter(h => !h.name || h.name === h.id || /단계|객실 선택/.test(h.name) || h.name.length < 4);
+  // 5) 혜택 없는 호텔
+  const hotelsWithRows = new Set(rows.map(r => r.h)); const noRows = H.filter(h => !hotelsWithRows.has(h.key));
+  // 6) 수정됨
+  const edited = H.filter(h => h._edited);
+  const sec = (title, n, body, open = false) => `<details ${open ? 'open' : ''}><summary><b>${title}</b> <span class="muted">${n}</span></summary>${body}</details>`;
+  const list = (arr, f, max = 80) => arr.length ? `<ul class="chk">${arr.slice(0, max).map(f).join('')}</ul>${arr.length > max ? `<p class="muted small">… 외 ${arr.length - max}곳</p>` : ''}` : '<p class="muted small">없음</p>';
+  el.innerHTML = `<h1>데이터 점검</h1><p class="lead">운영자 전용. 의심스러운 데이터를 모아 보여줘요. 호텔 이름을 누르면 바로 수정할 수 있어요. 마지막 수집 ${D.meta.collectedAt ? new Date(D.meta.collectedAt).toLocaleString('ko-KR') : '–'} · 데이터 범위 ${D.meta.dateFrom || ''} – ${D.meta.dateTo || ''}</p>
+    <div class="kpis">${['accor', 'ihg', 'marriott', 'hilton'].map(c => `<div class="kpi ${byChain[c] ? '' : 'warn'}"><b>${(byChain[c] || 0).toLocaleString()}</b><span>${CHAIN[c]} 혜택 · 호텔 ${hByChain[c] || 0}</span></div>`).join('')}<div class="kpi"><b>${rows.length.toLocaleString()}</b><span>전체 행</span></div></div>
+    ${sec('정가 이상치 (하루만 2배 넘게 튀어 보정됨)', `${odd.length}행 · ${oddBy.size}곳`, list([...oddBy.entries()].sort((a, b) => b[1].length - a[1].length), ([k, rs]) => { const h = D.hotels.get(k) || { key: k, name: k }; const worst = rs[0]; return `<li>${hl(h)} <span class="small">· ${rs.length}행 · 예: ${worst.d.slice(5).replace('-', '.')} ${badgeLabel(worst)} 정가 ${won(worst.ref0)} → ${won(worst.ref)}</span></li>`; }), true)}
+    ${sec('사진 없는 호텔', noImg.length, list(noImg, h => `<li>${hl(h)}</li>`))}
+    ${sec('지역 미배정 (기타)', noCity.length, list(noCity, h => `<li>${hl(h)} <span class="small muted">· 수집 도시 "${esc(h.city0 || '')}"${h.lat ? ` · ${h.lat.toFixed(2)}, ${h.lng.toFixed(2)}` : ' · 좌표 없음'}</span></li>`))}
+    ${sec('이름 의심', badName.length, list(badName, h => `<li>${hl(h)} <span class="small muted">· "${esc(h.name)}"</span></li>`))}
+    ${sec('혜택이 하나도 없는 호텔', noRows.length, list(noRows, h => `<li>${hl(h)}</li>`))}
+    ${sec('운영자가 수정한 호텔', edited.length, list(edited, h => `<li>${hl(h)} <span class="small muted">· ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span></li>`))}`;
+}
+
 // ---------- 라우터 ----------
-const views = { radar: viewRadar, me: viewMe, plan: viewPlan, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { radar: viewRadar, me: viewMe, plan: viewPlan, check: viewCheck, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || 'radar'; const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { plan: 'Trip planner', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { plan: 'Trip planner', check: 'Owner · Data check', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
@@ -878,7 +926,7 @@ function viewBest() {
   if (!mine.length) note = `<p class="note">아직 불러온 데이터가 없어요. 잠시 뒤 다시 열어 주세요.</p>`;
   const pct = percentiles(mine);
   const byC = {}; for (const r of mine) { if (!r.cc) continue; (byC[r.cc] = byC[r.cc] || []).push(r); }
-  const ORDER = ['KR', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
+  const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
   const all = bestOf(mine, pct); const overall = mixChains(all, 5);
   const KINDS = [['SUITE', '스위트 업그레이드', '스위트 vs 일반 객실 차액이 큰 곳'], ['FREE_NIGHT', '무료박', 'IHG 앰배서더 주말·아코르 Stay Plus·메리어트/힐튼 5박 무료'], ['POINTS', '포인트 가치', '포인트 1pt가 가장 비싸게 쓰이는 곳'], ['SALE', '세일', '회원 전용 특가']];
   const sections = KINDS.map(([b, title, sub]) => { const list = mixChains(bestOf(mine.filter(r => r.b === b), pct), 3, 2); return list.length ? `<h2>${title} <span class="muted small">${sub}</span></h2><div class="bgrid">${list.map(bestCard).join('')}</div>` : ''; }).join('');
@@ -977,7 +1025,7 @@ const MAP = { map: null, layer: null, bounds: {} };
 // 좌표 없는 호텔은 지역 중심에 살짝 흩어서(대략 위치) 놓는다
 function hotelPos(h) {
   if (h.lat != null && h.lng != null && Math.abs(h.lat) <= 90) return { lat: h.lat, lng: h.lng, approx: false };
-  const CC = { KR: [36.5, 127.8, 60], TH: [13.75, 100.5, 60], VN: [16.0, 108.0, 60], SG: [1.35, 103.82, 10], HK: [22.32, 114.17, 10] };
+  const CC = { KR: [36.5, 127.8, 60], JP: [36.2, 138.3, 80], TH: [13.75, 100.5, 60], VN: [16.0, 108.0, 60], SG: [1.35, 103.82, 10], HK: [22.32, 114.17, 10] };
   let a = ((D.meta.areaGeo || {})[h.cc] || []).find(x => x.name === h.city); if (!a && CC[h.cc]) a = { lat: CC[h.cc][0], lng: CC[h.cc][1], r: CC[h.cc][2] }; if (!a) return null;
   let seed = 0; for (const ch of h.key) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0; const ang = (seed % 360) * Math.PI / 180, dist = 0.004 + ((seed >> 9) % 100) / 100 * Math.min(a.r || 20, 25) * 0.004;
   return { lat: a.lat + Math.sin(ang) * dist, lng: a.lng + Math.cos(ang) * dist / Math.cos(a.lat * Math.PI / 180), approx: true };
@@ -1001,7 +1049,7 @@ function viewMap() {
   } else { chips.querySelectorAll('[data-mb]').forEach(c => c.classList.toggle('on', ui.benefits.has(c.dataset.mb))); chips.querySelectorAll('[data-mc]').forEach(c => c.classList.toggle('on', ui.chains.has(c.dataset.mc))); }
   if (!MAP.map) {
     MAP.map = L.map('map', { worldCopyJump: true, maxZoom: 19 }).setView([15, 108], 4); osmTiles().addTo(MAP.map); MAP.layer = L.layerGroup().addTo(MAP.map);
-    const ORDER = ['KR', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
+    const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
     $('#mapJump').innerHTML = '<button data-cc="">전체</button>' + ORDER.filter(cc => (D.meta.countries || []).some(c => c.cc === cc)).map(cc => `<button data-cc="${cc}">${label(cc)}</button>`).join('');
     $('#mapJump').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const bb = MAP.bounds[b.dataset.cc || 'ALL']; if (bb && bb.isValid()) MAP.map.fitBounds(bb, { padding: [30, 30], maxZoom: 12 }); }));
   }
@@ -1155,7 +1203,7 @@ function viewHotels() {
   const typical = (k) => { const a = (prices[k] || []).slice().sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };   // 중앙값
   const byC = {};
   for (const h of D.hotels.values()) { if (!h.cc) continue; const c = byC[h.cc] = byC[h.cc] || { label: h.country, cities: {} }; (c.cities[h.city || '기타'] = c.cities[h.city || '기타'] || []).push(h); }
-  const ORDER = ['KR', 'TH', 'VN', 'SG', 'HK'];
+  const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK'];
   const theme = ui.theme || ''; if (theme) for (const c of Object.values(byC)) for (const k of Object.keys(c.cities)) { c.cities[k] = c.cities[k].filter(h => hotelTheme(h).includes(theme)); if (!c.cities[k].length) delete c.cities[k]; }
   const chips = `<div class="chips" style="margin:-4px 0 12px"><button class="chip ${theme ? '' : 'on'}" data-theme="">전체</button>${THEMES.map(([n]) => `<button class="chip ${theme === n ? 'on' : ''}" data-theme="${n}">${n}</button>`).join('')}<span class="muted small">호텔명·브랜드 키워드로 고른 테마라 빠지는 곳이 있을 수 있어요</span></div>`;
   el.innerHTML = `<h1>호텔</h1><p class="lead">국가 · 도시별로 묶고, 각 도시 안에서는 1박 기준가(비교 기준 요금의 중앙값)가 비싼 호텔부터 보여드려요. 숫자는 다음 30일 안에 가능한 혜택 날짜 수.</p>` + chips +

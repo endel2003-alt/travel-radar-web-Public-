@@ -630,3 +630,13 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 #dlgEdit .eimg-r { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 #dlgEdit .efile { align-self: flex-start; cursor: pointer; }
 #dlgEdit #editFileName { text-transform: none; letter-spacing: 0; font-size: 12px; }
+
+/* ---------- 데이터 점검 ---------- */
+#v-check details { border-top: 1px solid var(--line); padding: 12px 0; }
+#v-check summary { cursor: pointer; font-size: 15px; padding: 4px 0; }
+#v-check summary b { font-family: var(--serif); font-weight: 500; font-size: 18px; }
+#v-check .chk { list-style: none; margin: 10px 0 0; padding: 0; columns: 2; column-gap: 32px; }
+#v-check .chk li { break-inside: avoid; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; line-height: 1.5; }
+#v-check .chk li a { color: var(--fg); font-weight: 600; }
+#v-check .kpi.warn b { color: #e2735f; }
+@media (max-width: 800px) { #v-check .chk { columns: 1; } }
