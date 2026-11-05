@@ -561,15 +561,62 @@ function viewAlerts() {
   markAlertsRead();
 }
 
+
+// ---------- 데이터 뉴스 ----------
+// 외부 기사가 아니라 우리 수집 데이터에서 나오는 소식: 새로 열린 혜택 · 포인트가/현금 하락 · 마감 임박 · 새로 들어온 호텔 · 어제 대비 규모
+function newsItems() {
+  const now = Date.now(); const h48 = now - 48 * 3600e3; const today = new Date(now + 9 * 3600e3).toISOString().slice(0, 10);
+  const H = D.hotels; const name = (k) => H.get(k)?.name || k; const city = (k) => H.get(k)?.city || '';
+  const rows = D.rows; const mine = hasProfile() ? rows.filter(eligible) : rows;
+  const how = (r) => r.br === 'SNU' ? 'SNU 스위트' : r.br === 'STAY_PLUS' ? 'Stay Plus 1+1' : r.br === 'AMB' ? '앰배서더 주말 1+1' : r.br === 'FIVE4' ? '포인트 5박 무료' : r.b === 'POINTS' ? '포인트' : r.b === 'SALE' ? '회원 특가' : r.b === 'SUITE' ? '스위트' : BEN[r.b]?.label || '';
+  const dstr = (d) => `${d.slice(5).replace('-', '.')} ${DOW[dow(d)]}`;
+  const link = (r) => `<a href="#hotel/${encodeURIComponent(r.h)}">${esc(name(r.h))}</a>`;
+  const out = [];
+  // 1) 새로 들어온 호텔 (모든 행이 48시간 안에 처음 보임)
+  const byH = new Map(); for (const r of rows) (byH.get(r.h) || byH.set(r.h, []).get(r.h)).push(r);
+  const newHotels = [...byH.entries()].filter(([, rs]) => rs.length >= 3 && rs.every(r => r.first && r.first >= h48)).map(([k]) => H.get(k)).filter(Boolean);
+  if (newHotels.length) { const byC = {}; for (const h of newHotels) (byC[h.country || h.cc] = byC[h.country || h.cc] || []).push(h);
+    out.push({ kind: 'new-hotels', title: `새로 들어온 호텔 ${newHotels.length}곳`, sub: Object.entries(byC).map(([c, a]) => `${c} ${a.length}`).join(' · '), items: newHotels.slice(0, 12).map(h => `<a href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a> <span class="muted small">${esc(h.city || '')}</span>`), more: newHotels.length > 12 ? newHotels.length - 12 : 0 }); }
+  // 2) 새로 열린 혜택 (48시간) — 희소 혜택(스위트·1+1) 우선, 티어 가치 순
+  const freshRows = mine.filter(r => r.first && r.first >= h48 && !newHotels.some(h => h.key === r.h));
+  if (freshRows.length) { const g = groupHotels(freshRows).sort((a, b) => b.tierValue - a.tierValue);
+    out.push({ kind: 'fresh', title: `새로 열린 혜택 ${freshRows.length}건 · ${g.length}곳`, sub: ['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE'].map(b => { const n = freshRows.filter(r => r.b === b).length; return n ? `${BEN[b].label} ${n}` : ''; }).filter(Boolean).join(' · '),
+      items: g.slice(0, 10).map(o => `${link(o.best)} <span class="small">${dstr(o.best.d)} · <b>${how(o.best)}</b>${o.best.pt ? ` ${o.best.pt.toLocaleString()}pt` : o.best.my != null ? ` ${won(o.best.my)}` : ''}${o.rows.length > 1 ? ` 외 ${o.rows.length - 1}일` : ''}</span>`), more: Math.max(0, g.length - 10) }); }
+  // 3) 포인트가 내림 (최근 7일 변동)
+  const ptDown = rows.filter(r => r.ca && r.pp && r.pt && r.pp > r.pt).map(r => ({ r, pct: (r.pp - r.pt) / r.pp })).sort((a, b) => b.pct - a.pct);
+  const seenP = new Set(); const ptList = ptDown.filter(x => !seenP.has(x.r.h) && seenP.add(x.r.h)).slice(0, 10);
+  if (ptList.length) out.push({ kind: 'pt-down', title: `포인트가 내린 곳 ${seenP.size}곳`, sub: '최근 7일, 가장 많이 내린 날 기준', items: ptList.map(({ r, pct }) => `${link(r)} <span class="small">${dstr(r.d)} · ${r.pp.toLocaleString()} → <b>${r.pt.toLocaleString()}pt</b> <span class="chg dn">▼${Math.round(pct * 100)}%</span></span>`) });
+  // 4) 현금 내림
+  const cashDown = rows.filter(r => r.ca && !r.pt && r.pc != null && r.my != null && r.pc > r.my).map(r => ({ r, pct: (r.pc - r.my) / r.pc })).sort((a, b) => b.pct - a.pct);
+  const seenC = new Set(); const cashList = cashDown.filter(x => !seenC.has(x.r.h) && seenC.add(x.r.h)).slice(0, 10);
+  if (cashList.length) out.push({ kind: 'cash-down', title: `회원가 내린 곳 ${seenC.size}곳`, sub: '최근 7일', items: cashList.map(({ r, pct }) => `${link(r)} <span class="small">${dstr(r.d)} · ${how(r)} ${won(r.pc)} → <b>${won(r.my)}</b> <span class="chg dn">▼${Math.round(pct * 100)}%</span></span>`) });
+  // 5) 마감 임박: 3일 안 체크인인 희소 혜택
+  const soonTo = addDays(today, 3); const soon = mine.filter(r => (r.b === 'SUITE' || r.b === 'FREE_NIGHT') && r.d >= today && r.d <= soonTo).sort((a, b) => (b.sv || 0) - (a.sv || 0));
+  const seenS = new Set(); const soonList = soon.filter(r => !seenS.has(r.h) && seenS.add(r.h)).slice(0, 10);
+  if (soonList.length) out.push({ kind: 'soon', title: `이번 주 바로 갈 수 있는 스위트·1+1 ${seenS.size}곳`, sub: '3일 안 체크인', items: soonList.map(r => `${link(r)} <span class="small">${dstr(r.d)} · <b>${how(r)}</b>${r.sv ? ` · 절약 ${won(r.sv)}` : ''}</span>`) });
+  // 6) 포인트가 오름 (참고)
+  const ptUp = rows.filter(r => r.ca && r.pp && r.pt && r.pp < r.pt).map(r => ({ r, pct: (r.pt - r.pp) / r.pp })).sort((a, b) => b.pct - a.pct);
+  const seenU = new Set(); const upList = ptUp.filter(x => !seenU.has(x.r.h) && seenU.add(x.r.h)).slice(0, 6);
+  if (upList.length) out.push({ kind: 'pt-up', title: `포인트가 오른 곳 ${seenU.size}곳`, sub: '최근 7일 · 서두르거나 다른 날짜로', items: upList.map(({ r, pct }) => `${link(r)} <span class="small">${dstr(r.d)} · ${r.pp.toLocaleString()} → <b>${r.pt.toLocaleString()}pt</b> <span class="chg up">▲${Math.round(pct * 100)}%</span></span>`) });
+  return out;
+}
+function viewNews() {
+  const el = $('#v-news'); const items = newsItems();
+  const snaps = (D.meta.snapshots || []).slice(-2); const diff = snaps.length === 2 ? snaps[1].total - snaps[0].total : null;
+  const head = `수집 ${D.meta.collectedAt ? new Date(D.meta.collectedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''} · 혜택 ${D.rows.length.toLocaleString()}건${diff != null ? ` (지난 수집 대비 ${diff >= 0 ? '+' : ''}${diff.toLocaleString()})` : ''} · 호텔 ${D.hotels.size}곳${hasProfile() ? ' · 내 티어 기준' : ''}`;
+  el.innerHTML = `<h1>오늘의 소식</h1><p class="lead">기사가 아니라 <b>매일 새로 수집한 데이터</b>에서 나오는 변화예요. 새로 열린 혜택, 내린 포인트가, 이번 주 바로 갈 수 있는 곳. ${head}</p>
+    ${items.length ? items.map(it => `<article class="ncard ${it.kind}"><h2>${esc(it.title)}</h2>${it.sub ? `<p class="muted small">${esc(it.sub)}</p>` : ''}<ol>${it.items.map(x => `<li>${x}</li>`).join('')}</ol>${it.more ? `<p class="muted small">… 외 ${it.more}곳</p>` : ''}</article>`).join('') : '<div class="empty">아직 변화가 없어요. 수집이 이틀 이상 쌓이면 여기에 소식이 생겨요.</div>'}`;
+}
+
 // ---------- 라우터 ----------
-const views = { radar: viewRadar, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { radar: viewRadar, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, news: viewNews, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || 'radar'; const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { news: 'Daily data news', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }

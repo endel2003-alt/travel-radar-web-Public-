@@ -660,3 +660,12 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 .alist .at { color: var(--muted); font-size: 12px; padding-top: 2px; }
 #v-alerts h2 { display: flex; align-items: center; gap: 8px; }
 @media (max-width: 560px) { #dlgWatch .egrid { grid-template-columns: 1fr; } }
+
+/* ---------- 오늘의 소식 ---------- */
+.ncard { border-top: 1px solid var(--line); padding: 18px 0 10px; }
+.ncard h2 { margin: 0 0 2px; font-family: var(--serif); font-weight: 500; font-size: 22px; }
+.ncard ol { margin: 10px 0 0; padding-left: 22px; columns: 2; column-gap: 36px; }
+.ncard li { break-inside: avoid; padding: 5px 0; font-size: 14px; line-height: 1.5; }
+.ncard li a { color: var(--fg); font-weight: 600; }
+.ncard.fresh h2, .ncard.soon h2 { color: var(--gold); }
+@media (max-width: 800px) { .ncard ol { columns: 1; } }
