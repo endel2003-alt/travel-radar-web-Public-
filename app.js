@@ -108,7 +108,7 @@ async function load() {
   if (window.TR_SERVER?.url && !window.TR_PROVIDER) {
     authFromHash(); await authEnsure();
     const guidesP = loadGuides(); const cached = await dataCacheGet(); const prof0 = JSON.stringify(profile);
-    const fresh = Promise.all([profilePull(), loadFromServer()]).then(([, d]) => d);
+    const fresh = Promise.all([profilePull(), loadFromServer()]).then(([, d]) => d); loadWatches();
     if (cached?.rows) {
       applyData(Object.assign({}, cached, { guides: await guidesP }));
       fresh.then(async (d) => {
@@ -481,15 +481,95 @@ function viewCheck() {
     ${sec('운영자가 수정한 호텔', edited.length, list(edited, h => `<li>${hl(h)} <span class="small muted">· ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span></li>`))}`;
 }
 
+
+// ---------- 관심 목록 + 알림 ----------
+// 관심(tr_watches)은 사용자가 걸어두는 조건, 알림(tr_alerts)은 수집기가 새 데이터와 맞춰 넣는다. 사이트는 읽고(읽음 처리), 관심을 추가·삭제만 한다.
+const WATCH = { list: [], alerts: [], unread: 0 };
+const restUrl = (p) => `${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1/${p}`;
+async function loadWatches() {
+  if (!AUTH.s || !window.TR_SERVER?.url) { WATCH.list = []; WATCH.alerts = []; WATCH.unread = 0; renderBell(); return; }
+  try { await authEnsure();
+    const [w, a] = await Promise.all([
+      fetch(restUrl('tr_watches?select=*&active=eq.true&order=created_at.desc'), { headers: restHeaders() }).then(r => r.ok ? r.json() : []),
+      fetch(restUrl('tr_alerts?select=*&order=created_at.desc&limit=200'), { headers: restHeaders() }).then(r => r.ok ? r.json() : [])]);
+    WATCH.list = w; WATCH.alerts = a; WATCH.unread = a.filter(x => !x.read_at).length;
+  } catch (e) {}
+  renderBell();
+}
+function renderBell() {
+  for (const el of document.querySelectorAll('.bellBtn')) { el.hidden = !AUTH.s; el.innerHTML = `알림${WATCH.unread ? `<b class="bdg">${WATCH.unread}</b>` : ''}`; }
+  const m = $('#moreAlerts'); if (m) { m.hidden = !AUTH.s; m.textContent = `Alerts — 알림${WATCH.unread ? ` (${WATCH.unread})` : ''} · 관심 ${WATCH.list.length}`; }
+}
+async function markAlertsRead() {
+  const ids = WATCH.alerts.filter(a => !a.read_at).map(a => a.id); if (!ids.length) return;
+  try { await fetch(restUrl(`tr_alerts?id=in.(${ids.join(',')})`), { method: 'PATCH', headers: restHeaders(), body: JSON.stringify({ read_at: new Date().toISOString() }) }); for (const a of WATCH.alerts) a.read_at = a.read_at || new Date().toISOString(); WATCH.unread = 0; renderBell(); } catch (e) {}
+}
+async function addWatch(p) {
+  await authEnsure();
+  const r = await fetch(restUrl('rpc/tr_add_watch'), { method: 'POST', headers: restHeaders(), body: JSON.stringify({ p }) });
+  if (!r.ok) { const t = await r.json().catch(() => ({})); throw new Error((t.message || t.hint || ('HTTP ' + r.status)).replace(/^.*?: /, '')); }
+  await loadWatches();
+}
+async function removeWatch(id) { await authEnsure(); await fetch(restUrl(`tr_watches?id=eq.${id}`), { method: 'DELETE', headers: restHeaders() }); await loadWatches(); }
+// "열리면 알려줘" 창: 호텔 화면(호텔 고정) 또는 검색 화면(지금 조건: 지역·날짜·혜택)
+function openWatchDialog(preset) {
+  const d = $('#dlgWatch'); if (!d) return;
+  if (!AUTH.s) { openLogin(); return; }
+  const f = $('#watchForm'); f.reset(); $('#watchMsg').textContent = '';
+  $('#watchTarget').textContent = preset.hotel_key ? `호텔 · ${preset.hn}` : preset.cc ? `지역 · ${preset.where}` : '전체 지역';
+  f.hotel_key.value = preset.hotel_key || ''; f.cc.value = preset.cc || ''; f.city.value = preset.city || '';
+  f.date_from.value = preset.date_from || ''; f.date_to.value = preset.date_to || '';
+  for (const cb of f.querySelectorAll('input[name=b]')) cb.checked = !preset.b || preset.b.includes(cb.value);
+  f.maxPt.value = preset.maxPt || ''; f.maxMy.value = preset.maxMy || ''; f.label.value = preset.label || '';
+  d.showModal();
+}
+$('#watchForm')?.addEventListener('submit', async (e) => {
+  e.preventDefault(); const f = e.target; const msg = $('#watchMsg'); const b = [...f.querySelectorAll('input[name=b]:checked')].map(x => x.value);
+  if (!b.length) { msg.textContent = '혜택을 하나 이상 고르세요'; return; }
+  const cond = { b }; if (+f.maxPt.value) cond.maxPt = +f.maxPt.value; if (+f.maxMy.value) cond.maxMy = Math.round(+f.maxMy.value);
+  const p = { hotel_key: f.hotel_key.value, cc: f.cc.value, city: f.city.value, date_from: f.date_from.value || null, date_to: f.date_to.value || null, cond, label: f.label.value || $('#watchTarget').textContent };
+  msg.textContent = '저장 중…'; $('#watchSave').disabled = true;
+  try { await addWatch(p); $('#dlgWatch').close(); if (location.hash === '#alerts') viewAlerts(); } catch (err) { msg.textContent = err.message; }
+  $('#watchSave').disabled = false;
+});
+document.addEventListener('click', (e) => {
+  const w = e.target.closest('[data-watch-hotel]'); if (w) { e.preventDefault(); const h = D.hotels.get(w.dataset.watchHotel); if (h) openWatchDialog({ hotel_key: h.key, hn: h.name }); return; }
+  const q = e.target.closest('[data-watch-query]'); if (q) { e.preventDefault(); const whereV = $('#fWhere')?.value || ''; const [k, cc, city] = whereV.split(':'); const whereT = $('#fWhere')?.selectedOptions?.[0]?.textContent || '전체';
+    openWatchDialog({ cc: cc || '', city: k === 't' ? city : '', where: whereT, date_from: $('#fFrom')?.value, date_to: $('#fTo')?.value, b: ui.benefits.size < 4 ? [...ui.benefits] : null }); return; }
+  const b = e.target.closest('.bellBtn, #moreAlerts'); if (b) { e.preventDefault(); $('#dlgMore')?.open && $('#dlgMore').close(); location.hash = '#alerts'; return; }
+  const del = e.target.closest('[data-del-watch]'); if (del) { e.preventDefault(); if (confirm('이 관심을 지울까요?')) removeWatch(del.dataset.delWatch).then(() => viewAlerts()); }
+});
+function alertText(a) {
+  const x = a.data || {};
+  if (a.kind === 'voucher') return `<b>${esc(x.name)} ${x.count}장</b>이 <b>${esc(x.exp)}</b>에 만료돼요 (${x.days}일 남음). 쓸 수 있는 곳을 <a href="#radar">지금 확인</a>하세요.`;
+  const how = x.br === 'SNU' ? 'SNU 스위트' : x.br === 'STAY_PLUS' ? 'Stay Plus 1+1' : x.br === 'AMB' ? '앰배서더 주말 1+1' : x.br === 'FIVE4' ? '포인트 5박 무료' : x.b === 'POINTS' ? '포인트' : x.b === 'SALE' ? '회원 특가' : x.b === 'SUITE' ? '스위트' : '혜택';
+  const cost = x.pt ? `${x.pt.toLocaleString()}pt` : x.my != null ? won(x.my) : '';
+  return `<a href="#hotel/${encodeURIComponent(x.h)}"><b>${esc(x.hn)}</b></a> ${x.d.slice(5).replace('-', '.')} ${DOW[dow(x.d)]}${x.n > 1 ? ` · ${x.n}박` : ''} — <b>${how}</b> 열림${cost ? ` · ${cost}` : ''}${x.sv ? ` · 절약 ${won(x.sv)}` : ''}${x.label ? ` <span class="muted small">(${esc(x.label)})</span>` : ''}`;
+}
+function viewAlerts() {
+  const el = $('#v-alerts');
+  if (!AUTH.s) { el.innerHTML = `<h1>알림</h1><div class="empty"><a href="#" data-login>로그인</a>하면 관심 호텔이 열릴 때 알려드려요.</div>`; return; }
+  const ws = WATCH.list, as = WATCH.alerts; const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const wline = (w) => { const h = w.hotel_key ? D.hotels.get(w.hotel_key) : null; const target = h ? `<a href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a>` : w.city ? esc(w.city) : w.cc ? esc((D.meta.countries || []).find(c => c.cc === w.cc)?.label || w.cc) : '전체 지역';
+    const c = w.cond || {}; const bits = [(c.b || []).map(b => BEN[b]?.label || b).join('·'), c.maxPt ? `≤${c.maxPt.toLocaleString()}pt` : '', c.maxMy ? `≤${won(c.maxMy)}/박` : '', w.date_from || w.date_to ? `${(w.date_from || '').slice(5)}~${(w.date_to || '').slice(5)}` : '아무 때나'].filter(Boolean).join(' · ');
+    return `<li><span>${target} <span class="muted small">${bits}</span></span><a href="#" class="lnk small" data-del-watch="${w.id}">지우기</a></li>`; };
+  el.innerHTML = `<h1>알림</h1><p class="lead">관심으로 걸어둔 조건이 새 수집에서 <b>처음 열리는 순간</b> 여기에 쌓여요. 바우처 만료도 60·30·14·7일 전에 알려드려요. ${D.meta?.pro ? '' : '무료는 관심 1개, <b>PRO</b>는 무제한이에요.'}</p>
+    <h2>내 관심 <span class="muted small">${ws.length}</span> <button type="button" class="btn" data-watch-query style="margin-left:12px">지금 검색 조건으로 추가</button></h2>
+    ${ws.length ? `<ul class="wlist">${ws.map(wline).join('')}</ul>` : '<p class="muted">아직 없어요. 호텔 화면의 "열리면 알려줘"나 위 버튼으로 추가하세요.</p>'}
+    <h2>최근 알림 <span class="muted small">${as.length}</span></h2>
+    ${as.length ? `<ul class="alist">${as.map(a => `<li class="${a.read_at ? '' : 'new'}"><span class="at">${new Date(a.created_at).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</span><span>${alertText(a)}</span></li>`).join('')}</ul>` : '<p class="muted">아직 알림이 없어요. 다음 수집(매일 새벽)부터 조건이 맞으면 생겨요.</p>'}`;
+  markAlertsRead();
+}
+
 // ---------- 라우터 ----------
-const views = { radar: viewRadar, me: viewMe, plan: viewPlan, check: viewCheck, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { radar: viewRadar, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || 'radar'; const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { plan: 'Trip planner', check: 'Owner · Data check', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
@@ -1175,7 +1255,7 @@ function viewHotel(key) {
   }
   const gid = h.chain || 'accor'; const tb = tierBenefits(h); const tier = myTier(h.chain);
   el.innerHTML = `<p><a href="#hotels">← 호텔 목록</a></p>
-    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
+    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button></p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
       ${tier ? `<div class="band ${h.chain}" style="margin:8px 0"><b>${esc(tierKo(tier))}인 당신은</b>${(tb || []).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : b.s === 'maybe' ? '△' : '✗'}${b.note ? ` <em>${esc(b.note)}</em>` : ''}</span>`).join('')}</div>` : ''}<div class="stats"><div class="stat"><b>${rows.length}</b><span>혜택 날짜</span></div><div class="stat"><b style="color:var(--suite)">${c.SUITE}</b><span>스위트</span></div><div class="stat"><b style="color:var(--free)">${c.FREE_NIGHT}</b><span>무료박</span></div><div class="stat"><b style="color:var(--points)">${c.POINTS}</b><span>포인트</span></div><div class="stat"><b style="color:var(--sale)">${c.SALE}</b><span>세일</span></div></div></div>
     ${h.lat != null && h.lng != null && window.L ? '<div class="hmap" id="hmap"></div>' : ''}
     <h2>다음 30일 가능한 혜택</h2>
