@@ -19,6 +19,8 @@ const NARROW = () => window.matchMedia('(max-width: 860px)').matches;
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const BEN = { SUITE: { label: '스위트', icon: '' }, FREE_NIGHT: { label: '무료박', icon: '' }, POINTS: { label: '포인트', icon: '' }, SALE: { label: '세일', icon: '' } };
 const CHAIN = { accor: 'Accor', ihg: 'IHG', marriott: 'Marriott', hilton: 'Hilton' };
+// 식스센스 예약 페이지 경로(sixsenses.com/en/hotels-resorts/asia-the-pacific/{나라}/{여기}/accommodation/). 이름으로 만든 슬러그가 안 맞는 곳만 적는다
+const SIXS_PATH = { CXRNV: 'ninh-van-bay' };
 const RAW = { SNU: 'Suite Night Upgrade', STAY_PLUS: 'Stay Plus', RED_HOT: 'Red Hot Room', POINTS: 'Reward Night', POINTS_SUITE: '스위트 포인트 룸', AMB: 'Ambassador 무료 주말', FIVE4: '5박 중 1박 무료 (Stay for 5 Pay for 4)', SALE: '회원 특가', 'marriott:POINTS': '포인트 숙박 (Standard Room)' };
 const FREE_SHORT = { STAY_PLUS: '2박 중 1박 무료', AMB: '주말 2박 중 1박 무료', FIVE4: '5박 중 1박 무료' };
 const badgeLabel = (r) => r.b === 'FREE_NIGHT' ? (FREE_SHORT[r.br] || BEN.FREE_NIGHT.label) : BEN[r.b].label;
@@ -75,6 +77,14 @@ function link(r) {
     return `https://www.hilton.com/ko/book/reservation/rooms/?${q}`;
   }
   if (h.chain !== 'ihg') return '#';
+  if (/six senses|식스 ?센스/i.test(`${h.brand || ''} ${h.name || ''}`)) {
+    // 식스센스는 ihg.com 에 호텔 페이지가 없어 redirect 가 /explore 로 떨어진다 → sixsenses.com 예약 페이지로 직접 (호텔 코드 + 날짜)
+    const us = (d) => `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}`;
+    const CTRY = { VN: 'vietnam', TH: 'thailand', JP: 'japan', SG: 'singapore', KR: 'south-korea', HK: 'hong-kong' };
+    const prop = SIXS_PATH[h.id] || `${h.name || ''}`.replace(/six senses|식스 ?센스/i, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const q = new URLSearchParams({ Hotel: h.id, Arrive: us(r.d), Depart: us(out), Rooms: '1', Adult: '2', Child: '0' });
+    return `https://www.sixsenses.com/en/hotels-resorts/asia-the-pacific/${CTRY[h.cc] || 'vietnam'}/${prop}/accommodation/?${q}`;
+  }
   const di = new Date(r.d + 'T00:00:00Z'), doo = new Date(out + 'T00:00:00Z');
   const my = (d) => String(d.getUTCMonth()).padStart(2, '0') + d.getUTCFullYear();
   const q = new URLSearchParams({ path: 'hd', brandCode: h.bc || '6C', localeCode: 'ko', regionCode: 'kr', hotelCode: h.id, checkInDate: String(di.getUTCDate()), checkInMonthYear: my(di), checkOutDate: String(doo.getUTCDate()), checkOutMonthYear: my(doo), rateCode: r.br === 'AMB' ? 'IBAMB' : 'IVANI', adultCount: '2', childCount: '0', roomCount: '1' });
