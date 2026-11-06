@@ -954,9 +954,9 @@ async function shareCard(hotelKey, rowKey) {
   try { await document.fonts?.load(`600 62px ${SERIF}`); await document.fonts?.load(`500 28px ${SANS}`); } catch (e) {}
   x.fillStyle = BG; x.fillRect(0, 0, W, H);
   const im = await loadImg(hImg(h) && !NO_EXT_IMG ? hImg(h) : null); const PH = 760;
-  if (im) { const s = Math.max(W / im.width, PH / im.height); const dw = im.width * s, dh = im.height * s; try { x.drawImage(im, (W - dw) / 2, (PH - dh) / 2, dw, dh); } catch (e) {} }
+  if (im) { const s = Math.max(W / im.width, (PH + 80) / im.height); const dw = im.width * s, dh = im.height * s; try { x.drawImage(im, (W - dw) / 2, (PH + 80 - dh) / 2, dw, dh); } catch (e) {} }
   else { const g = x.createLinearGradient(0, 0, W, PH); g.addColorStop(0, '#1c2640'); g.addColorStop(1, '#0a0f1e'); x.fillStyle = g; x.fillRect(0, 0, W, PH); }
-  const g2 = x.createLinearGradient(0, PH * .35, 0, PH); g2.addColorStop(0, 'rgba(16,23,42,0)'); g2.addColorStop(1, BG); x.fillStyle = g2; x.fillRect(0, 0, W, PH);
+  const g2 = x.createLinearGradient(0, PH * .35, 0, PH); g2.addColorStop(0, 'rgba(16,23,42,0)'); g2.addColorStop(1, BG); x.fillStyle = g2; x.fillRect(0, 0, W, PH); x.fillStyle = BG; x.fillRect(0, PH - 1, W, H - PH + 1);
   const g3 = x.createLinearGradient(0, 0, 0, 260); g3.addColorStop(0, 'rgba(16,23,42,.75)'); g3.addColorStop(1, 'rgba(16,23,42,0)'); x.fillStyle = g3; x.fillRect(0, 0, W, 260);
   // 상단 브랜드
   x.fillStyle = GOLD; x.beginPath(); x.roundRect(64, 64, 72, 72, 18); x.fill(); x.strokeStyle = BG; x.lineWidth = 7; x.lineCap = 'round'; x.lineJoin = 'round';
@@ -980,9 +980,11 @@ async function shareCard(hotelKey, rowKey) {
   } else { y += 60; x.fillStyle = MUTED; x.font = `500 30px ${SANS}`; x.fillText('이 기간엔 수집된 티어 혜택 요금이 없어요', 64, y); }
   // 내 티어 혜택
   // 내 티어 혜택 (아래에서 위로 고정 배치 — 본문이 길어도 겹치지 않게)
-  if (tier && o.benefits?.length) { x.fillStyle = MUTED; x.font = `500 24px ${SANS}`; x.fillText(`${tierKo(tier)}인 당신은`, 64, H - 164); x.fillStyle = FG; x.font = `500 28px ${SANS}`; const line = o.benefits.filter(b => b.s !== 'no').slice(0, 5).map(b => `${b.label} ${b.s === 'ok' ? '✓' : '△'}`).join('   ·   '); x.fillText(wrapText(x, line, W - 128, 1)[0] || '', 64, H - 120); }
+  if (tier && o.benefits?.length) { const line = o.benefits.filter(b => b.s !== 'no').slice(0, 5).map(b => `${b.label} ${b.s === 'ok' ? '✓' : '△'}`).join('   ·   '); const tight = y + 70 > H - 186;   // 본문이 길면(호텔명 2줄) 라벨 없이 한 줄만
+    if (!tight) { x.fillStyle = MUTED; x.font = `500 24px ${SANS}`; x.fillText(`${tierKo(tier)}인 당신은`, 64, H - 186); }
+    x.fillStyle = FG; x.font = `500 28px ${SANS}`; x.fillText((tight ? `${tierKo(tier)}:  ` : '') + (wrapText(x, line, W - 128 - (tight ? 140 : 0), 1)[0] || ''), 64, H - 142); }
   // 하단
-  x.fillStyle = 'rgba(201,189,160,.35)'; x.fillRect(64, H - 84, W - 128, 1); x.fillStyle = MUTED; x.font = `500 21px ${SANS}`; x.fillText('개인 수집 데이터 · 예약은 각 체인 공식 사이트에서 본인 계정으로', 64, H - 44); x.fillStyle = GOLD; x.font = `600 21px ${SANS}`; const url = (location.origin + location.pathname).replace(/^https?:\/\//, '').replace(/\/(index\.html)?$/, ''); x.fillText(url, W - 64 - x.measureText(url).width, H - 44);
+  x.fillStyle = 'rgba(201,189,160,.35)'; x.fillRect(64, H - 100, W - 128, 1); x.fillStyle = MUTED; x.font = `500 21px ${SANS}`; x.fillText('개인 수집 데이터 · 예약은 각 체인 공식 사이트에서 본인 계정으로', 64, H - 62); x.fillStyle = GOLD; x.font = `600 21px ${SANS}`; const url = (location.origin + location.pathname).replace(/^https?:\/\//, '').replace(/\/(index\.html)?$/, ''); x.fillText(url, 64, H - 28);
   const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (!blob) return;
   const file = new File([blob], `travel-radar-${(h.name || 'hotel').replace(/[^\w가-힣]+/g, '-').slice(0, 40)}.png`, { type: 'image/png' });
   const pageUrl = `${location.origin}${location.pathname}#hotel/${encodeURIComponent(h.key)}`;
