@@ -176,6 +176,16 @@ function applyData({ rows, hotels, promos, guides, meta }) {
   $('#loadingNote')?.remove();
   rows = rows.map(r => Object.assign({}, r)); hotels = hotels.map(h => Object.assign({}, h));
   for (const h of hotels) if (h.image && !/^https?:/i.test(h.image)) h.image = (h.chain === 'hilton' ? 'https://www.hilton.com' : h.chain === 'ihg' ? 'https://digital.ihg.com' : h.chain === 'marriott' ? 'https://cache.marriott.com' : 'https://www.ahstatic.com') + (h.image.startsWith('/') ? '' : '/') + h.image;   // 상대 경로 사진 → 절대 주소
+  // IHG는 호텔 이름이 브랜드 없이 오는 경우가 많다("Kobe", "Grand Stanford Hong Kong") → 이름에 브랜드가 없으면 앞에 붙인다. 운영자가 이름을 직접 고친 호텔은 그대로
+  const BRAND_RE = [[/intercontinental|인터[콘컨]티넨탈|\bIC\b/i], [/holiday inn|홀리데이 ?인/i], [/crowne plaza|크라운 ?플라자/i], [/\bvoco\b|보코/i], [/indigo|인디고/i], [/kimpton|킴튼/i], [/six senses|식스 ?센스/i], [/regent|리젠트/i], [/staybridge|스테이브리지/i], [/garner|가너/i], [/candlewood|캔들우드/i], [/\bavid\b|에이비드/i], [/\beven\b/i]];
+  for (const h of hotels) {
+    if (h.chain !== 'ihg' || !h.brand || !h.name || h._edited?.name) continue;
+    const b = h.brand.replace(/\s*hotels?( & resorts)?$/i, '').trim(); if (!b) continue;
+    if (/vignette/i.test(b)) { if (!/vignette|비녜트/i.test(h.name)) h.name = `${h.name}, Vignette Collection`; continue; }
+    const re = BRAND_RE.find(([r]) => r.test(b))?.[0];
+    const has = re ? re.test(h.name) : h.name.toLowerCase().includes(b.toLowerCase());
+    if (!has) h.name = `${b} ${h.name}`;
+  }
   // 보관본(img)이 있으면 그걸 먼저, 못 읽으면 호텔 서버 주소(image)로. 사이트는 data/ 옆의 img/ 폴더, 확장은 DB의 blob URL.
   D.rows = rows; D.hotels = new Map(hotels.map(h => [h.key, h])); D.promos = promos; D.guides = guides; D.meta = meta;
   // 확장 안에서 계정 정보가 있고 프로필을 아직 안 적었으면 계정 값으로 채워 준다
