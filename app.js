@@ -643,7 +643,7 @@ function route() {
 window.addEventListener('hashchange', route);
 
 // ---------- 홈 = 내 티어로 검색 (시안 E) ----------
-const ui = { benefits: new Set(['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE']), chains: new Set(['accor', 'ihg', 'marriott', 'hilton']), limit: 300, view: 'cards', cardLimit: 24 };
+const ui = { benefits: new Set(['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE']), chains: new Set(['accor', 'ihg', 'marriott', 'hilton']), limit: 300, view: 'cards', cardLimit: 24, mLimit: 24 };
 try { ui.view = localStorage.getItem('tr_view') || 'cards'; } catch (e) {}
 const TIER_KEY = { accor: 'accorTier', ihg: 'ihgTier', marriott: 'marriottTier', hilton: 'hiltonTier' };
 const myTier = (chain) => profile[TIER_KEY[chain]] || '';
@@ -923,7 +923,8 @@ function mobileHome(rows, groups) {
     <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
     ${soonHtml}
     <div class="mlab">전체 ${groups.length.toLocaleString()}곳 · 가장 이득 순</div>
-    <div class="mlist">${groups.slice(0, ui.cardLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('')}</div>`;
+    <div class="mlist" id="mList">${groups.slice(0, ui.mLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('')}</div>
+    ${groups.length > ui.mLimit ? `<button type="button" class="mmore" id="mMore">호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기</button>` : ''}`;
 }
 function resTitle(rows, groups) {
   const qp = lastQ || {}; const where = $('#fWhere'); const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '').replace(' 전체', '') : (qp.city || '');
@@ -957,7 +958,9 @@ function viewRadar() {
   $('#tierBar').innerHTML = tierBarHtml();
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
-  const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups); const inp = mApp.querySelector('#mSearch input'); mApp.querySelector('#mSearch').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = inp.value; viewRadar(); inp.blur(); }); mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); }); mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = $('#fText'); const c = b.dataset.mq; t.value = t.value.includes(c) ? t.value.replace(c, '').replace(/\s+/g, ' ').trim() : (t.value + ' ' + c).trim(); viewRadar(); })); } }
+  const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups); const inp = mApp.querySelector('#mSearch input'); mApp.querySelector('#mSearch').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = inp.value; viewRadar(); inp.blur(); }); mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); }); mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = $('#fText'); const c = b.dataset.mq; t.value = t.value.includes(c) ? t.value.replace(c, '').replace(/\s+/g, ' ').trim() : (t.value + ' ' + c).trim(); viewRadar(); }));
+      // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
+      mApp.querySelector('#mMore')?.addEventListener('click', () => { const from = ui.mLimit; ui.mLimit += 24; mApp.querySelector('#mList').insertAdjacentHTML('beforeend', groups.slice(from, ui.mLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const b = mApp.querySelector('#mMore'); if (groups.length > ui.mLimit) b.textContent = `호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기`; else b.remove(); }); } }
   $('#cards').hidden = !isCards || mob; $('#tableWrap').hidden = isCards;
   document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
   const none = isCards ? noBenefitHotels(groups) : [];
@@ -1034,7 +1037,7 @@ function renderRail(rows) {
   el.innerHTML = out.join('');
   el.querySelectorAll('.mini i[data-d]').forEach(i => i.addEventListener('click', () => { $('#fFrom').value = i.dataset.d; $('#fTo').value = i.dataset.d; viewRadar(); }));
 }
-['#fFrom', '#fTo', '#fWhere', '#fText', '#fWeekend', '#fMine', '#fSort'].forEach(s => $(s).addEventListener('input', () => { ui.limit = 300; ui.cardLimit = 24; if (location.hash && !/^#\/?radar/.test(location.hash) && location.hash !== '') { if (s === '#fText') location.hash = '#radar'; } viewRadar(); }));
+['#fFrom', '#fTo', '#fWhere', '#fText', '#fWeekend', '#fMine', '#fSort'].forEach(s => $(s).addEventListener('input', () => { ui.limit = 300; ui.cardLimit = 24; ui.mLimit = 24; if (location.hash && !/^#\/?radar/.test(location.hash) && location.hash !== '') { if (s === '#fText') location.hash = '#radar'; } viewRadar(); }));
 $('#searchForm').addEventListener('submit', (e) => { e.preventDefault(); location.hash = '#radar'; viewRadar(); $('#fText').blur(); });
 $('#fClear').addEventListener('click', () => { $('#fText').value = ''; viewRadar(); });
 document.querySelectorAll('#quick .chip').forEach(c => c.addEventListener('click', () => { const t = $('#fText'); const q = c.dataset.q; t.value = t.value.includes(q) ? t.value.replace(q, '').replace(/\s+/g, ' ').trim() : (t.value + ' ' + q).trim(); viewRadar(); }));

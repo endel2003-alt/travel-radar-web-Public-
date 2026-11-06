@@ -674,3 +674,5 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 .lrow.none { opacity: .62; }
 .lrow.none:hover { opacity: 1; }
 .lrow.none .lb b { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+/* 모바일 홈 — 전체 목록 더 보기 */
+.mmore { display: block; width: calc(100% - 40px); margin: 14px 20px 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--gold); font-size: 14px; letter-spacing: .04em; }
