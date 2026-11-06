@@ -706,3 +706,13 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 .ndata summary { cursor: pointer; font-size: 14px; color: var(--muted); letter-spacing: .03em; }
 .ndata[open] summary { margin-bottom: 14px; }
 @media (max-width: 720px) { .nlist { grid-template-columns: 1fr; } }
+/* 공유 창 (PC) */
+dialog.share { max-width: 440px; }
+dialog.share .dlgBody { display: flex; flex-direction: column; gap: 12px; padding: 18px 20px 20px; }
+dialog.share .dlgHead { display: flex; justify-content: space-between; align-items: center; }
+dialog.share .dlgHead b { font-family: var(--serif); font-size: 20px; font-weight: 500; }
+dialog.share .x { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
+dialog.share img { width: 100%; border-radius: 10px; border: 1px solid var(--line); }
+dialog.share .dlgBtns { display: flex; gap: 8px; flex-wrap: wrap; }
+dialog.share .dlgBtns .btn { flex: 1; text-align: center; text-decoration: none; }
+footer .bver { margin-left: auto; font-size: 11px; color: var(--muted); opacity: .7; letter-spacing: .04em; }

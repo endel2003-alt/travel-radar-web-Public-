@@ -985,9 +985,23 @@ async function shareCard(hotelKey, rowKey) {
   x.fillStyle = 'rgba(201,189,160,.35)'; x.fillRect(64, H - 84, W - 128, 1); x.fillStyle = MUTED; x.font = `500 21px ${SANS}`; x.fillText('개인 수집 데이터 · 예약은 각 체인 공식 사이트에서 본인 계정으로', 64, H - 44); x.fillStyle = GOLD; x.font = `600 21px ${SANS}`; const url = (location.origin + location.pathname).replace(/^https?:\/\//, '').replace(/\/(index\.html)?$/, ''); x.fillText(url, W - 64 - x.measureText(url).width, H - 44);
   const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (!blob) return;
   const file = new File([blob], `travel-radar-${(h.name || 'hotel').replace(/[^\w가-힣]+/g, '-').slice(0, 40)}.png`, { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: h.name, text: `${h.name} · Travel Radar` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  const pageUrl = `${location.origin}${location.pathname}#hotel/${encodeURIComponent(h.key)}`;
+  // 휴대폰: 공유 시트(카톡·인스타로 바로). PC: 공유창은 파일을 앱으로 넘길 뿐 붙여넣기가 안 되니 미리보기 + 이미지 복사 / 링크 복사 / 저장
+  const phone = /Android|iPhone|iPad/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && innerWidth < 900);
+  if (phone && navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: h.name, text: `${h.name} · Travel Radar\n${pageUrl}` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  openShareDialog(blob, file.name, pageUrl, h.name);
 }
+function openShareDialog(blob, name, pageUrl, title) {
+  let dlg = $('#dlgShare');
+  if (!dlg) { document.body.insertAdjacentHTML('beforeend', `<dialog id="dlgShare" class="dlg share"><div class="dlgBody"><div class="dlgHead"><b>이미지로 공유</b><button type="button" class="x" data-close>✕</button></div><img id="shareImg" alt=""><p class="muted small" id="shareNote">이미지를 복사한 뒤 카톡·메신저 대화창에 붙여넣기(Ctrl+V) 하세요.</p><div class="dlgBtns"><button type="button" class="btn" id="shareCopy">이미지 복사</button><button type="button" class="btn ghost" id="shareLink">링크 복사</button><a class="btn ghost" id="shareDl" download>PNG 저장</a></div></div></dialog>`); dlg = $('#dlgShare'); dlg.addEventListener('click', (e) => { if (e.target === dlg || e.target.closest('[data-close]')) dlg.close(); }); }
+  const url = URL.createObjectURL(blob); const img = $('#shareImg'); if (img.dataset.url) URL.revokeObjectURL(img.dataset.url); img.src = url; img.dataset.url = url; const dl = $('#shareDl'); dl.href = url; dl.download = name;
+  const note = $('#shareNote'); const say = (t) => { note.textContent = t; };
+  $('#shareCopy').onclick = async () => { if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') return say('이 브라우저는 이미지 복사를 지원하지 않아요. "PNG 저장" 뒤 갤러리에서 공유하세요.'); try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); say('이미지를 복사했어요. 대화창에 Ctrl+V 로 붙여넣으세요.'); } catch (e) { say('이 브라우저에선 이미지 복사가 막혀 있어요. "PNG 저장" 후 파일을 끌어다 넣어 주세요.'); } };
+  $('#shareLink').onclick = async () => { try { await navigator.clipboard.writeText(`${title} · Travel Radar\n${pageUrl}`); say('호텔 페이지 링크를 복사했어요. (이 사이트는 로그인한 멤버만 볼 수 있어요)'); } catch (e) { say(pageUrl); } };
+  say('이미지를 복사한 뒤 카톡·메신저 대화창에 붙여넣기(Ctrl+V) 하세요.'); dlg.showModal();
+}
+// 배포 확인용 빌드 버전(푸터): app.js?v=YYYYMMDDHHMM → "build 11.06 16:03"
+{ const m = /app\.js\?v=(\d{12})/.exec([...document.scripts].map(x => x.src).join(' ')); const el = document.getElementById('buildVer'); if (m && el) el.textContent = `build ${m[1].slice(4, 6)}.${m[1].slice(6, 8)} ${m[1].slice(8, 10)}:${m[1].slice(10, 12)}`; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (!b) return; e.preventDefault(); b.classList.add('busy'); shareCard(b.dataset.share, b.dataset.shareRow || '').finally(() => b.classList.remove('busy')); });
 function tierBarHtml() {
   const chips = ['accor', 'ihg', 'marriott', 'hilton'].map(c => { const t = myTier(c); const on = ui.chains.has(c); return `<button class="tchip ${c} ${on ? 'on' : ''} ${t ? '' : 'none'}" data-tc="${c}" title="${on ? '이 체인 숨기기' : '이 체인 보이기'}">${CHAIN[c]} ${t ? `<b>${esc(tierKo(t))}</b>${c === 'accor' && profile.explorer ? ' +Explorer' : ''}${c === 'ihg' && profile.ambassador ? ' +Amb' : ''}` : '<span class="muted">—</span>'}</button>`; }).join('');
