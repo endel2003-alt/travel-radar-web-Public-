@@ -848,6 +848,28 @@ function cardHtml(o, i) {
     <span class="la"><a href="#hotel/${encodeURIComponent(h.key)}">달력</a>${o.best ? `<a href="${esc(link(o.best))}" target="_blank" rel="noopener">예약 ↗</a>` : ''}</span>
   </article>`;
 }
+// 이 조건(기간·지역·체인·검색어)에서 혜택 행이 하나도 없는 호텔 — 목록 끝에 "혜택 없음"으로 보여 준다 (호텔이 빠진 게 아니라 혜택이 없는 것임을 알 수 있게)
+function noBenefitHotels(groups) {
+  const have = new Set(groups.map(o => o.h.key)); const where = $('#fWhere').value; const qp = lastQ || {}; const t = (qp.text || []).join(' ');
+  const inWhere = (h) => !where || (where.startsWith('c:') ? h.cc === where.slice(2) : (() => { const [, cc, city] = where.split(':'); return h.cc === cc && h.city === city; })());
+  return [...D.hotels.values()].filter(h => !have.has(h.key) && h.name && ui.chains.has(h.chain) && inWhere(h) && (!qp.chains?.size || qp.chains.has(h.chain)) && (!qp.city || h.city === qp.city)
+    && (!t || `${h.name} ${h.city || ''} ${h.brand || ''}`.toLowerCase().includes(t)) && !(qp.lounge && hasLounge(h) === false))
+    .sort((a, b) => (a.country || '').localeCompare(b.country || '', 'ko') || (a.city || '').localeCompare(b.city || '', 'ko') || a.name.localeCompare(b.name, 'ko'));
+}
+function noneCardHtml(h, i) {
+  const mine = $('#fMine').checked; const tier = myTier(h.chain);
+  const why = mine && hasProfile() ? '이 기간엔 내 티어로 쓸 수 있는 혜택이 없어요' : '이 기간엔 수집된 티어 혜택 요금이 없어요';
+  return `<article class="lrow none">
+    <span class="num">${String(i + 1).padStart(2, '0')}</span>
+    <span class="ld"><span class="muted">—</span></span>
+    <a class="li ${hImg(h) && !NO_EXT_IMG ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(h.key)}">${hImg(h) && !NO_EXT_IMG ? `<img src="${esc(hImg(h))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}', 'parent')">` : ''}</a>
+    <span class="lh"><a class="hname" href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a><span class="muted">${starsHtml(h)}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</span></span>
+    <span class="lf">${tier ? (tierBenefits(h) || []).filter(b => b.s !== 'no').slice(0, 3).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : '△'}</span>`).join('') : ''}</span>
+    <span class="lb"><b class="muted">혜택 없음</b><span class="sub">${why}</span></span>
+    <span class="lv"></span>
+    <span class="la"><a href="#hotel/${encodeURIComponent(h.key)}">달력</a></span>
+  </article>`;
+}
 function tierBarHtml() {
   const chips = ['accor', 'ihg', 'marriott', 'hilton'].map(c => { const t = myTier(c); const on = ui.chains.has(c); return `<button class="tchip ${c} ${on ? 'on' : ''} ${t ? '' : 'none'}" data-tc="${c}" title="${on ? '이 체인 숨기기' : '이 체인 보이기'}">${CHAIN[c]} ${t ? `<b>${esc(tierKo(t))}</b>${c === 'accor' && profile.explorer ? ' +Explorer' : ''}${c === 'ihg' && profile.ambassador ? ' +Amb' : ''}` : '<span class="muted">—</span>'}</button>`; }).join('');
   return `<span class="tl">${hasProfile() ? 'My tier' : 'No tier yet'}</span>${chips}<button class="lnk" data-open-profile>${hasProfile() ? '수정' : '내 티어 넣기'}</button>`;
@@ -938,9 +960,14 @@ function viewRadar() {
   const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups); const inp = mApp.querySelector('#mSearch input'); mApp.querySelector('#mSearch').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = inp.value; viewRadar(); inp.blur(); }); mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); }); mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = $('#fText'); const c = b.dataset.mq; t.value = t.value.includes(c) ? t.value.replace(c, '').replace(/\s+/g, ' ').trim() : (t.value + ' ' + c).trim(); viewRadar(); })); } }
   $('#cards').hidden = !isCards || mob; $('#tableWrap').hidden = isCards;
   document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('on', b.dataset.view === ui.view));
-  if (isCards) { $('#cards').innerHTML = `<div class="lhead"><span>No.</span><span>Date</span><span></span><span>Hotel</span><span>For you</span><span>Best way</span><span>Tier value</span><span></span></div>` + groups.slice(0, ui.cardLimit).map((o, i) => cardHtml(o, i)).join(''); $('#more').hidden = groups.length <= ui.cardLimit; $('#more button').textContent = `호텔 ${(groups.length - ui.cardLimit).toLocaleString()}곳 더 보기`; }
+  const none = isCards ? noBenefitHotels(groups) : [];
+  if (isCards) {
+    const all = groups.concat(none.map(h => ({ none: true, h }))); const show = all.slice(0, ui.cardLimit); const firstNone = show.findIndex(o => o.none);
+    $('#cards').innerHTML = `<div class="lhead"><span>No.</span><span>Date</span><span></span><span>Hotel</span><span>For you</span><span>Best way</span><span>Tier value</span><span></span></div>` + show.map((o, i) => (o.none ? (i === firstNone ? `<div class="lsep">혜택 없는 호텔 ${none.length.toLocaleString()}곳 — 이 기간·조건에선 티어 혜택 요금이 안 잡힌 곳</div>` : '') + noneCardHtml(o.h, i) : cardHtml(o, i))).join('');
+    $('#more').hidden = all.length <= ui.cardLimit; $('#more button').textContent = `호텔 ${(all.length - ui.cardLimit).toLocaleString()}곳 더 보기`;
+  }
   else { $('#tbody').innerHTML = rows.slice(0, ui.limit).map(r => rowHtml(r)).join(''); $('#more').hidden = rows.length <= ui.limit; $('#more button').textContent = `${(rows.length - ui.limit).toLocaleString()}건 더 보기`; }
-  $('#empty').hidden = rows.length > 0 || mob;
+  $('#empty').hidden = rows.length > 0 || none.length > 0 || mob;
   $('#fSummary').textContent = [$('#fWeekend').checked ? '금·토' : '', $('#fMine').checked ? '내 것만' : '', ui.benefits.size < 4 ? `혜택 ${ui.benefits.size}종` : '', ].filter(Boolean).join(' · ');
   renderProfileBtn(); renderRail(rows);
   $('#fClear').hidden = !$('#fText').value;
