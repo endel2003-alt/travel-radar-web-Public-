@@ -953,7 +953,12 @@ async function shareCard(hotelKey, rowKey) {
   const GOLD = '#d4a84b', FG = '#ece7da', MUTED = '#a39f93', BG = '#10172a';
   try { await document.fonts?.load(`600 62px ${SERIF}`); await document.fonts?.load(`500 28px ${SANS}`); } catch (e) {}
   x.fillStyle = BG; x.fillRect(0, 0, W, H);
-  const im = await loadImg(hImg(h) && !NO_EXT_IMG ? hImg(h) : null); const PH = 760;
+  const im = await loadImg(hImg(h) && !NO_EXT_IMG ? hImg(h) : null);
+  // 본문 높이를 먼저 재서 사진 높이를 정한다 (호텔명 2줄·혜택 줄이 있어도 겹치지 않게). 푸터 100px 고정
+  x.font = `600 62px ${SERIF}`; const nameLines = wrapText(x, h.name, W - 128, 2); const benLine = tier && o.benefits?.length ? o.benefits.filter(b => b.s !== 'no').slice(0, 5).map(b => `${b.label} ${b.s === 'ok' ? '✓' : '△'}`).join('   ·   ') : '';
+  const hasSub = r ? (r.pt ? r.my != null : !!r.ref) : false;
+  const bodyH = 24 + nameLines.length * 72 + 70 + (r ? 54 + 46 + 100 + (hasSub ? 44 : 0) + 64 + 20 : 60) + (benLine ? 64 + 44 : 0);
+  const PH = Math.max(520, Math.min(760, H - 120 - bodyH + 40));   // 본문 시작 = PH - 120, 끝 ≤ 푸터 선(H-100) 위 20px
   if (im) { const s = Math.max(W / im.width, (PH + 80) / im.height); const dw = im.width * s, dh = im.height * s; try { x.drawImage(im, (W - dw) / 2, (PH + 80 - dh) / 2, dw, dh); } catch (e) {} }
   else { const g = x.createLinearGradient(0, 0, W, PH); g.addColorStop(0, '#1c2640'); g.addColorStop(1, '#0a0f1e'); x.fillStyle = g; x.fillRect(0, 0, W, PH); }
   const g2 = x.createLinearGradient(0, PH * .35, 0, PH); g2.addColorStop(0, 'rgba(16,23,42,0)'); g2.addColorStop(1, BG); x.fillStyle = g2; x.fillRect(0, 0, W, PH); x.fillStyle = BG; x.fillRect(0, PH - 1, W, H - PH + 1);
@@ -965,7 +970,7 @@ async function shareCard(hotelKey, rowKey) {
   if (tier) { const t = `${CHAIN[h.chain]} ${tierKo(tier)}`; x.font = `600 22px ${SANS}`; const tw = x.measureText(t).width + 40; x.fillStyle = 'rgba(16,23,42,.72)'; x.beginPath(); x.roundRect(W - 64 - tw, 72, tw, 48, 24); x.fill(); x.fillStyle = GOLD; x.fillText(t, W - 64 - tw + 20, 104); }
   // 호텔
   let y = PH - 120; x.fillStyle = GOLD; x.font = `500 22px ${SANS}`; x.fillText([starsOf(h) ? '★'.repeat(Math.floor(starsOf(h).n)) : '', (h.brand || '').toUpperCase(), CHAIN[h.chain].toUpperCase(), ((h.country || '') + ' ' + (h.city || '')).trim()].filter(Boolean).join('  ·  '), 64, y);
-  y += 24; x.fillStyle = FG; x.font = `600 62px ${SERIF}`; for (const l of wrapText(x, h.name, W - 128, 2)) { y += 72; x.fillText(l, 64, y); }
+  y += 24; x.fillStyle = FG; x.font = `600 62px ${SERIF}`; for (const l of nameLines) { y += 72; x.fillText(l, 64, y); }
   // 날짜·혜택
   y += 70; x.strokeStyle = 'rgba(201,189,160,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(64, y); x.lineTo(W - 64, y); x.stroke();
   if (r) {
@@ -978,11 +983,8 @@ async function shareCard(hotelKey, rowKey) {
     const pct = r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0; const pills = []; if (r.sv) pills.push(`혜택 ${won(r.sv)}`); if (pct) pills.push(`정가 대비 −${pct}%`); if (tier && o.tierValue) pills.push(`티어 가치 +${won(o.tierValue)}`);
     let px = 64; y += 64; for (const pt of pills) { x.font = `600 26px ${SANS}`; const w = x.measureText(pt).width + 44; x.fillStyle = 'rgba(212,168,75,.16)'; x.beginPath(); x.roundRect(px, y - 36, w, 54, 27); x.fill(); x.fillStyle = GOLD; x.fillText(pt, px + 22, y); px += w + 14; }
   } else { y += 60; x.fillStyle = MUTED; x.font = `500 30px ${SANS}`; x.fillText('이 기간엔 수집된 티어 혜택 요금이 없어요', 64, y); }
-  // 내 티어 혜택
-  // 내 티어 혜택 (아래에서 위로 고정 배치 — 본문이 길어도 겹치지 않게)
-  if (tier && o.benefits?.length) { const line = o.benefits.filter(b => b.s !== 'no').slice(0, 5).map(b => `${b.label} ${b.s === 'ok' ? '✓' : '△'}`).join('   ·   '); const tight = y + 70 > H - 186;   // 본문이 길면(호텔명 2줄) 라벨 없이 한 줄만
-    if (!tight) { x.fillStyle = MUTED; x.font = `500 24px ${SANS}`; x.fillText(`${tierKo(tier)}인 당신은`, 64, H - 186); }
-    x.fillStyle = FG; x.font = `500 28px ${SANS}`; x.fillText((tight ? `${tierKo(tier)}:  ` : '') + (wrapText(x, line, W - 128 - (tight ? 140 : 0), 1)[0] || ''), 64, H - 142); }
+  // 내 티어 혜택 (본문 흐름대로 이어서)
+  if (benLine) { y += 64; x.fillStyle = MUTED; x.font = `500 24px ${SANS}`; x.fillText(`${tierKo(tier)}인 당신은`, 64, y); y += 44; x.fillStyle = FG; x.font = `500 28px ${SANS}`; x.fillText(wrapText(x, benLine, W - 128, 1)[0] || '', 64, y); }
   // 하단
   x.fillStyle = 'rgba(201,189,160,.35)'; x.fillRect(64, H - 100, W - 128, 1); x.fillStyle = MUTED; x.font = `500 21px ${SANS}`; x.fillText('개인 수집 데이터 · 예약은 각 체인 공식 사이트에서 본인 계정으로', 64, H - 62); x.fillStyle = GOLD; x.font = `600 21px ${SANS}`; const url = (location.origin + location.pathname).replace(/^https?:\/\//, '').replace(/\/(index\.html)?$/, ''); x.fillText(url, 64, H - 28);
   const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (!blob) return;
