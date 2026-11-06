@@ -676,3 +676,33 @@ body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
 .lrow.none .lb b { font-family: var(--serif); font-size: 17px; font-weight: 500; }
 /* 모바일 홈 — 전체 목록 더 보기 */
 .mmore { display: block; width: calc(100% - 40px); margin: 14px 20px 8px; padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--gold); font-size: 14px; letter-spacing: .04em; }
+/* 공휴일·연휴 표시 */
+.hol { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 6px; background: rgba(224, 92, 92, .16); color: #e88; font-style: normal; font-size: 11px; letter-spacing: .02em; vertical-align: middle; }
+.hol.lw { background: rgba(212, 168, 75, .16); color: var(--gold); }
+.hol.w { background: rgba(255, 255, 255, .18); color: #fff; }
+.cal .cell.hol .dn { color: #e88; font-weight: 700; }
+.cal .cell .hn { display: block; font-size: 9px; color: #e88; line-height: 1.1; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ±3일 유연 힌트 */
+.flex { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.flex b { color: var(--free, #6fcf97); font-weight: 600; }
+.flex small { margin-left: 4px; opacity: .8; }
+.flex.w { color: rgba(255, 255, 255, .85); margin-top: 6px; }
+.flex.w b { color: #8ff0b4; }
+/* 공유 버튼 진행 중 */
+[data-share].busy { opacity: .5; pointer-events: none; }
+/* 호텔 소식 (뉴스레터) */
+.nfilt { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+.nlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.nitem { display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; text-decoration: none; border-left-width: 4px; transition: transform .12s, border-color .12s; }
+.nitem:hover { transform: translateY(-2px); border-color: var(--gold); }
+.nitem.accor { border-left-color: #8ea8e8; } .nitem.ihg { border-left-color: #6fcf97; } .nitem.marriott { border-left-color: #e09378; } .nitem.hilton { border-left-color: #4a9fd8; } .nitem.other { border-left-color: var(--line); opacity: .9; }
+.nitem .nmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); letter-spacing: .03em; }
+.nitem .nk { padding: 1px 7px; border-radius: 6px; background: var(--soft); } .nitem .nr { padding: 1px 7px; border-radius: 6px; background: var(--gold-soft); color: var(--gold); } .nitem .nd { margin-left: auto; }
+.nitem b { font-family: var(--serif); font-size: 18px; line-height: 1.35; font-weight: 600; }
+.nitem p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.nitem .nsrc { margin-top: auto; font-size: 12px; color: var(--gold); }
+.ctag.other { background: var(--soft); color: var(--muted); }
+.ndata { margin-top: 36px; padding-top: 18px; border-top: 1px dashed var(--line); }
+.ndata summary { cursor: pointer; font-size: 14px; color: var(--muted); letter-spacing: .03em; }
+.ndata[open] summary { margin-bottom: 14px; }
+@media (max-width: 720px) { .nlist { grid-template-columns: 1fr; } }

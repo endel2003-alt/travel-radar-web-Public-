@@ -33,6 +33,23 @@ const D = { rows: [], hotels: new Map(), promos: [], guides: {}, meta: {} };
 const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const dow = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
 const fmtD = (s) => `${s.slice(5, 7)}.${s.slice(8, 10)} (${DOW[dow(s)]})`;
+// ---------- 한국 공휴일 (2026~2027, 관공서 공휴일 + 근로자의 날·선거일) — 기능 플래그 FEAT.holiday ----------
+const FEAT = { holiday: true, flex: true, share: true };   // 기능 켜고 끄기 (별로면 false)
+const HOLI_KR = { '2026-01-01': '신정', '2026-02-16': '설 연휴', '2026-02-17': '설날', '2026-02-18': '설 연휴', '2026-03-01': '삼일절', '2026-03-02': '대체휴일', '2026-05-01': '근로자의 날', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날', '2026-05-25': '대체휴일', '2026-06-03': '지방선거', '2026-06-06': '현충일', '2026-08-15': '광복절', '2026-08-17': '대체휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절', '2026-10-05': '대체휴일', '2026-10-09': '한글날', '2026-12-25': '성탄절',
+  '2027-01-01': '신정', '2027-02-06': '설 연휴', '2027-02-07': '설날', '2027-02-08': '설 연휴', '2027-02-09': '대체휴일', '2027-03-01': '삼일절', '2027-05-01': '근로자의 날', '2027-05-05': '어린이날', '2027-05-13': '부처님오신날', '2027-06-06': '현충일', '2027-08-15': '광복절', '2027-08-16': '대체휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴', '2027-10-03': '개천절', '2027-10-04': '대체휴일', '2027-10-09': '한글날', '2027-10-11': '대체휴일', '2027-12-25': '성탄절', '2027-12-27': '대체휴일' };
+const holiName = (d) => FEAT.holiday ? (HOLI_KR[d] || '') : '';
+const isOff = (d) => !!HOLI_KR[d] || [0, 6].includes(dow(d));
+// 연휴 = 주말 포함 3일 이상 연속 쉬는 날. 체크인이 연휴 전날 저녁~연휴 안이고 체크아웃이 연휴 끝 다음날 안이면 "연휴 숙박"
+let _lw = null;
+function longWeekends() {
+  if (_lw) return _lw; _lw = []; const y0 = +todayStr().slice(0, 4); let d = `${y0}-01-01`, end = `${y0 + 1}-12-31`, cur = null;
+  for (; d <= end; d = addDays(d, 1)) { if (isOff(d)) { if (!cur) cur = { start: d, end: d }; else cur.end = d; } else if (cur) { if (daysBetween(cur.start, cur.end) >= 2) _lw.push(cur); cur = null; } }
+  for (const r of _lw) r.name = Object.keys(HOLI_KR).filter(k => k >= r.start && k <= r.end).map(k => HOLI_KR[k]).find(n => !/연휴|대체/.test(n)) || Object.keys(HOLI_KR).filter(k => k >= r.start && k <= r.end).map(k => HOLI_KR[k])[0] || '주말';
+  return _lw;
+}
+const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400e3);
+const inLongWeekend = (d, n) => longWeekends().some(r => d >= addDays(r.start, -1) && addDays(d, n || 1) <= addDays(r.end, 1));
+const holiTag = (d, cls) => { const n = holiName(d); const lw = FEAT.holiday && !n && longWeekends().find(r => d >= addDays(r.start, -1) && d <= r.end && daysBetween(r.start, r.end) >= 2 && Object.keys(HOLI_KR).some(k => k >= r.start && k <= r.end)); return n ? `<i class="hol ${cls || ''}" title="공휴일">${esc(n)}</i>` : lw ? `<i class="hol lw ${cls || ''}" title="연휴">${esc(lw.name)} 연휴</i>` : ''; };
 
 // ---------- 프로필 (브라우저에만 저장) ----------
 const PROFILE_DEFAULT = { accorTier: '', explorer: false, snu: 0, stayPlus: 0, accorPts: 0, accorNights: 0, snuExp: '', stayPlusExp: '', ihgTier: '', ambassador: false, ihgPts: 0, ihgNights: 0, ambExp: '', marriottTier: '', marriottPts: 0, marriottNights: 0, hiltonTier: '', hiltonPts: 0, hiltonNights: 0 };
@@ -620,12 +637,46 @@ function newsItems() {
   if (upList.length) out.push({ kind: 'pt-up', title: `포인트가 오른 곳 ${seenU.size}곳`, sub: '최근 7일 · 서두르거나 다른 날짜로', items: upList.map(({ r, pct }) => `${link(r)} <span class="small">${dstr(r.d)} · ${r.pp.toLocaleString()} → <b>${r.pt.toLocaleString()}pt</b> <span class="chg up">▲${Math.round(pct * 100)}%</span></span>`) });
   return out;
 }
-function viewNews() {
-  const el = $('#v-news'); const items = newsItems();
-  const snaps = (D.meta.snapshots || []).slice(-2); const diff = snaps.length === 2 ? snaps[1].total - snaps[0].total : null;
+// ---------- 호텔 소식 (메일로 오는 뉴스레터를 정리한 시트) ----------
+// 회사 Google 시트 'Travel Radar 호텔 소식'(누구나 보기 가능) → gviz JSON. 열: id,date,source,chain,region,kind,title,summary,url,score,show
+const NEWS_SHEET = '1Ujl6wN9ZlSGL4K0mVNwDOXdTNVd4H799o2bLriHhcF4';
+let NEWS = { items: null, at: 0, err: null };
+async function loadNews(force) {
+  if (!force && NEWS.items && Date.now() - NEWS.at < 3600e3) return NEWS.items;
+  const url = `https://docs.google.com/spreadsheets/d/${NEWS_SHEET}/gviz/tq?tqx=out:json&sheet=news&headers=1`;
+  const parse = (txt) => { const m = /setResponse\(([\s\S]*)\);?\s*$/.exec(txt); const j = JSON.parse(m ? m[1] : txt); const cols = j.table.cols.map(c => (c.label || c.id || '').trim()); return j.table.rows.map(r => { const o = {}; r.c.forEach((c, i) => { o[cols[i]] = c ? (c.f ?? c.v) : ''; }); return o; }); };
+  let items = null;
+  try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) items = parse(await r.text()); } catch (e) { NEWS.err = e; }
+  if (!items) { try { const cache = await caches.open('tr-data-cache'); const c = await cache.match('news'); if (c) items = await c.json(); } catch (e) {} }
+  else { try { const cache = await caches.open('tr-data-cache'); await cache.put('news', new Response(JSON.stringify(items), { headers: { 'Content-Type': 'application/json' } })); } catch (e) {} }
+  items = (items || []).map(x => ({ id: String(x.id || ''), date: String(x.date || '').replace(/^'/, '').slice(0, 10), source: String(x.source || ''), chain: String(x.chain || 'other').toLowerCase(), region: String(x.region || ''), kind: String(x.kind || 'news'), title: String(x.title || ''), summary: String(x.summary || ''), url: String(x.url || ''), score: +x.score || 0, show: String(x.show ?? '1') !== '0' }))
+    .filter(x => x.title && x.show).sort((a, b) => b.date.localeCompare(a.date) || b.score - a.score);
+  NEWS = { items, at: Date.now(), err: NEWS.err }; return items;
+}
+const NEWS_KIND = { news: '소식', promo: '프로모션', brand: '브랜드', guide: '가이드' };
+function newsCardHtml(x) {
+  const mine = ['accor', 'ihg', 'marriott', 'hilton'].includes(x.chain); const tag = mine ? `<span class="ctag ${x.chain}">${CHAIN[x.chain]}</span>` : `<span class="ctag other">기타</span>`;
+  const d = x.date ? `${x.date.slice(5).replace('-', '.')} ${DOW[dow(x.date)]}` : '';
+  return `<a class="nitem ${mine ? x.chain : 'other'} ${x.kind}" href="${esc(x.url)}" target="_blank" rel="noopener"><span class="nmeta">${tag}<span class="nk">${NEWS_KIND[x.kind] || x.kind}</span>${x.region && x.region !== '전체' ? `<span class="nr">${esc(x.region)}</span>` : ''}<span class="nd">${d}</span></span><b>${esc(x.title)}</b><p>${esc(x.summary)}</p><span class="nsrc">${esc(x.source)} ↗</span></a>`;
+}
+async function viewNews() {
+  const el = $('#v-news');
+  el.innerHTML = `<h1>호텔 소식</h1><p class="lead">메일로 오는 호텔 뉴스레터(LoyaltyLobby · 체인 공지 · Tablet 등)에서 <b>우리 체인·여행지에 쓸모 있는 것만</b> 골라 한 줄로 정리해요. 제목을 누르면 원문으로 갑니다.</p><div class="nfilt" id="nfilt"></div><div class="nlist" id="nlist"><div class="loadingNote"><span></span>소식을 불러오는 중</div></div><details class="ndata" id="ndata"><summary>데이터 변화 — 수집 데이터에서 자동으로 뽑은 변동</summary><div id="ndataBody"></div></details>`;
+  const items = await loadNews(); if (location.hash.replace(/^#\/?/, '').split('/')[0] !== 'news') return;
+  const mineChains = ['accor', 'ihg', 'marriott', 'hilton']; let chain = 'all';
+  const render = () => {
+    const list = items.filter(x => chain === 'all' ? true : chain === 'mine' ? mineChains.includes(x.chain) : x.chain === chain);
+    const my = list.filter(x => mineChains.includes(x.chain)), other = list.filter(x => !mineChains.includes(x.chain));
+    $('#nlist').innerHTML = list.length ? (chain === 'all' ? my.map(newsCardHtml).join('') + (other.length ? `<div class="lsep">다른 체인·플랫폼 소식</div>` + other.map(newsCardHtml).join('') : '') : list.map(newsCardHtml).join('')) : `<div class="empty">${NEWS.err ? '소식을 불러오지 못했어요. 잠시 후 다시 열어 보세요.' : '아직 올라온 소식이 없어요.'}</div>`;
+  };
+  const counts = { all: items.length, mine: items.filter(x => mineChains.includes(x.chain)).length }; for (const c of mineChains) counts[c] = items.filter(x => x.chain === c).length;
+  $('#nfilt').innerHTML = [['all', '전체'], ['mine', '내 4체인'], ...mineChains.map(c => [c, CHAIN[c]])].map(([k, l]) => `<button type="button" class="chip ${k === chain ? 'on' : ''}" data-nc="${k}">${l} <span class="muted">${counts[k] || 0}</span></button>`).join('');
+  $('#nfilt').addEventListener('click', (e) => { const b = e.target.closest('[data-nc]'); if (!b) return; chain = b.dataset.nc; $('#nfilt').querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x.dataset.nc === chain)); render(); });
+  render();
+  // 데이터 변화는 아래 접힌 칸에 (예전 뉴스 탭 내용)
+  const dItems = newsItems(); const snaps = (D.meta.snapshots || []).slice(-2); const diff = snaps.length === 2 ? snaps[1].total - snaps[0].total : null;
   const head = `수집 ${D.meta.collectedAt ? new Date(D.meta.collectedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''} · 혜택 ${D.rows.length.toLocaleString()}건${diff != null ? ` (지난 수집 대비 ${diff >= 0 ? '+' : ''}${diff.toLocaleString()})` : ''} · 호텔 ${D.hotels.size}곳${hasProfile() ? ' · 내 티어 기준' : ''}`;
-  el.innerHTML = `<h1>오늘의 소식</h1><p class="lead">기사가 아니라 <b>매일 새로 수집한 데이터</b>에서 나오는 변화예요. 새로 열린 혜택, 내린 포인트가, 이번 주 바로 갈 수 있는 곳. ${head}</p>
-    ${items.length ? items.map(it => `<article class="ncard ${it.kind}"><h2>${esc(it.title)}</h2>${it.sub ? `<p class="muted small">${esc(it.sub)}</p>` : ''}<ol>${it.items.map(x => `<li>${x}</li>`).join('')}</ol>${it.more ? `<p class="muted small">… 외 ${it.more}곳</p>` : ''}</article>`).join('') : '<div class="empty">아직 변화가 없어요. 수집이 이틀 이상 쌓이면 여기에 소식이 생겨요.</div>'}`;
+  $('#ndataBody').innerHTML = `<p class="muted small">${head}</p>` + (dItems.length ? dItems.map(it => `<article class="ncard ${it.kind}"><h2>${esc(it.title)}</h2>${it.sub ? `<p class="muted small">${esc(it.sub)}</p>` : ''}<ol>${it.items.map(x => `<li>${x}</li>`).join('')}</ol>${it.more ? `<p class="muted small">… 외 ${it.more}곳</p>` : ''}</article>`).join('') : '<div class="empty">아직 변화가 없어요. 수집이 이틀 이상 쌓이면 여기에 생겨요.</div>');
 }
 
 // ---------- 라우터 ----------
@@ -636,7 +687,7 @@ function route() {
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   (views[name] || viewRadar)(arg); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { news: 'Daily data news', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
@@ -707,7 +758,7 @@ const benefitValue = (list) => (list || []).reduce((s, b) => s + (b.s === 'ok' ?
 const Q_CHAIN = { 아코르: 'accor', accor: 'accor', ihg: 'ihg', 메리어트: 'marriott', marriott: 'marriott', 힐튼: 'hilton', hilton: 'hilton' };
 const Q_BEN = { 포인트: 'POINTS', 스위트: 'SUITE', 세일: 'SALE', 무료박: 'FREE_NIGHT', 무료: 'FREE_NIGHT', 바우처: 'VOUCHER' };
 function parseQ(q) {
-  const out = { text: [], chains: new Set(), bens: new Set(), month: null, nights: null, weekend: false, lounge: false, breakfast: false, five4: false, voucher: false, onePlusOne: false, city: null };
+  const out = { text: [], chains: new Set(), bens: new Set(), month: null, nights: null, weekend: false, holiday: false, lounge: false, breakfast: false, five4: false, voucher: false, onePlusOne: false, city: null };
   const cities = new Set(); for (const h of D.hotels.values()) if (h.city) cities.add(h.city);
   for (let t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
     let m;
@@ -715,6 +766,7 @@ function parseQ(q) {
     if ((m = /^(\d)박$/.exec(t))) { if (m[1] === '5') out.five4 = true; else out.nights = +m[1]; continue; }
     if (/^(이번\s*)?주말$|^금토$/.test(t) || t === '이번') { if (t !== '이번') out.weekend = true; continue; }
     if (t === '1+1' || t === '1+1박' || t === '원플러스원') { out.onePlusOne = true; continue; }
+    if (t === '연휴' || t === '공휴일' || t === '황금연휴') { out.holiday = true; continue; }
     if (t === '라운지') { out.lounge = true; continue; }
     if (t === '조식') { out.breakfast = true; continue; }
     if (t === '바우처') { out.voucher = true; continue; }
@@ -748,6 +800,7 @@ function filtered() {
   if (where.startsWith('c:')) rows = rows.filter(r => r.cc === where.slice(2));
   else if (where.startsWith('t:')) { const [, cc, city] = where.split(':'); rows = rows.filter(r => r.cc === cc && r.city === city); }
   if (we || qp.weekend) rows = rows.filter(r => [5, 6].includes(dow(r.d)));
+  if (qp.holiday) rows = rows.filter(r => inLongWeekend(r.d, r.n || 1));
   if (qp.month) rows = rows.filter(r => +r.d.slice(5, 7) === qp.month);
   if (qp.nights) rows = rows.filter(r => (r.n || 1) === qp.nights);
   if (qp.five4) rows = rows.filter(r => r.br === 'FIVE4');
@@ -771,7 +824,7 @@ function rowHtml(r, showHotel = true) {
   const note = NOTE[r.br] || ''; const elig = hasProfile() ? `<span class="elig ${eligible(r) ? '' : 'no'}">${eligible(r) ? '✓ 사용 가능' : '자격 없음'}</span>` : `<span class="elig">${eligLabel(r)}</span>`;
   const rooms = r.rooms ? `<div class="rooms">${r.rooms.map(x => `<span class="rc ${x.s ? 's' : ''}">${esc(x.c)}${x.n > 1 ? ' ×' + x.n : ''}</span>`).join('')}</div>` : (r.rem ? `<span class="muted small">잔여 ${r.rem}</span>` : '');
   return `<tr class="r">
-    <td class="date">${r.d.slice(5).replace('-', '.')} <span class="dow ${we ? 'we' : ''}">${DOW[dow(r.d)]}</span><div class="muted small">${r.n || 1}박</div></td>
+    <td class="date">${r.d.slice(5).replace('-', '.')} <span class="dow ${we ? 'we' : ''}">${DOW[dow(r.d)]}</span>${holiTag(r.d)}<div class="muted small">${r.n || 1}박</div></td>
     <td class="hotel">${showHotel ? `<a class="hname" href="#hotel/${encodeURIComponent(r.h)}">${esc(r.hn)}</a>` : ''}<div class="hsub"><span class="ctag ${r.chain}">${CHAIN[r.chain]}</span>${esc(h.brand || '')} · ${esc(h.country || '')} ${esc(h.city || '')}</div></td>
     <td class="benefit"><span class="badge ${r.b}">${badgeLabel(r)}</span>${r.also ? '<span class="tag">Red Hot</span>' : ''}<span class="blabel">${esc(rawLabel(r))}</span>${elig}</td>
     <td class="cost">${cost}${chg(r)}</td>
@@ -803,6 +856,15 @@ function groupHotels(rows) {
   }
   return out;
 }
+// ±3일 유연 힌트: 같은 호텔·같은 혜택·같은 박수에서 전후 3일 안에 더 싼 날이 있으면 한 줄 (포인트 숙박은 하루 차이로 2배 나기도 한다). 기능 플래그 FEAT.flex
+function flexAlt(o) {
+  if (!FEAT.flex || !o.best) return null; const b = o.best;
+  const same = o.rows.filter(r => r !== b && r.br === b.br && (r.n || 1) === (b.n || 1) && Math.abs(daysBetween(b.d, r.d)) <= 3 && (!hasProfile() || eligible(r) === eligible(b)));
+  if (!same.length) return null; const key = b.pt ? (r => r.pt || Infinity) : (r => r.my ?? Infinity);
+  const alt = same.slice().sort((x, y) => key(x) - key(y))[0]; const cur = key(b); if (!isFinite(cur) || !isFinite(key(alt)) || key(alt) >= cur * 0.95) return null;
+  const dd = daysBetween(b.d, alt.d); return { alt, diff: cur - key(alt), dd, pt: !!b.pt, when: dd === -1 ? '하루 앞당기면' : dd === 1 ? '하루 미루면' : dd < 0 ? `${-dd}일 앞당기면` : `${dd}일 미루면` };
+}
+const flexHint = (o, cls) => { const f = flexAlt(o); return f ? `<span class="flex ${cls || ''}">${f.when} <b>−${f.pt ? f.diff.toLocaleString() + 'pt' : won(f.diff)}</b> <small>${f.alt.d.slice(5).replace('-', '.')} ${DOW[dow(f.alt.d)]}</small></span>` : ''; };
 const payCell = (label, r, kind) => {
   if (!r) return `<div class="pay"><span class="pl">${label}</span><span class="pv muted">—</span></div>`;
   const v = kind === 'points' ? `${r.pt.toLocaleString()}<small>pt</small>` : kind === 'voucher' ? (r.br === 'SNU' ? won(r.my) : `${won(r.my)}<small>/${r.n || 1}박</small>`) : won(r.my);
@@ -839,13 +901,13 @@ function cardHtml(o, i) {
   const dr = o.best ? `${o.best.d.slice(5).replace('-', '.')} ${DOW[dow(o.best.d)]}` : ''; const dout = o.best ? addDays(o.best.d, o.best.n || 1) : '';
   return `<article class="lrow ${bestKind}">
     <span class="num">${String(i + 1).padStart(2, '0')}</span>
-    <span class="ld"><b>${dr}</b><span class="muted">– ${o.best ? dout.slice(5).replace('-', '.') + ' ' + DOW[dow(dout)] : ''} · ${o.best?.n || 1}박${o.fresh ? ' · <i class="new">new</i>' : ''}</span></span>
+    <span class="ld"><b>${dr}</b><span class="muted">– ${o.best ? dout.slice(5).replace('-', '.') + ' ' + DOW[dow(dout)] : ''} · ${o.best?.n || 1}박${o.fresh ? ' · <i class="new">new</i>' : ''}</span>${o.best ? holiTag(o.best.d) : ''}</span>
     <a class="li ${hImg(h) && !NO_EXT_IMG ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(h.key)}">${hImg(h) && !NO_EXT_IMG ? `<img src="${esc(hImg(h))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}', 'parent')">` : ''}</a>
     <span class="lh"><a class="hname" href="#hotel/${encodeURIComponent(h.key)}">${esc(h.name)}</a><span class="muted">${starsHtml(h)}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')} · ${o.dates.size}일 가능</span></span>
     <span class="lf">${forYou}</span>
-    <span class="lb"><b class="gold">${bestTxt}</b><span class="sub">${bestSub}</span><span class="muted">${others}</span></span>
+    <span class="lb"><b class="gold">${bestTxt}</b><span class="sub">${bestSub}</span>${flexHint(o)}<span class="muted">${others}</span></span>
     <span class="lv">${tier ? `<b>+${won(o.tierValue)}</b><span class="muted">티어 가치</span>` : (o.best?.sv ? `<b>${won(o.best.sv)}</b><span class="muted">최대 절약</span>` : '')}</span>
-    <span class="la"><a href="#hotel/${encodeURIComponent(h.key)}">달력</a>${o.best ? `<a href="${esc(link(o.best))}" target="_blank" rel="noopener">예약 ↗</a>` : ''}</span>
+    <span class="la"><a href="#hotel/${encodeURIComponent(h.key)}">달력</a>${o.best ? `<a href="${esc(link(o.best))}" target="_blank" rel="noopener">예약 ↗</a>` : ''}${FEAT.share ? `<a href="#" data-share="${esc(h.key)}" data-share-row="${esc(rowId(o.best))}" title="이미지로 공유">공유</a>` : ''}</span>
   </article>`;
 }
 // 이 조건(기간·지역·체인·검색어)에서 혜택 행이 하나도 없는 호텔 — 목록 끝에 "혜택 없음"으로 보여 준다 (호텔이 빠진 게 아니라 혜택이 없는 것임을 알 수 있게)
@@ -870,6 +932,63 @@ function noneCardHtml(h, i) {
     <span class="la"><a href="#hotel/${encodeURIComponent(h.key)}">달력</a></span>
   </article>`;
 }
+// ---------- 카드 이미지 공유 (1080×1350 · 카톡/인스타) — 기능 플래그 FEAT.share ----------
+// 호텔 사진 + 이름 + 가장 좋은 날·혜택 + 티어 가치 + 내 티어 혜택을 한 장으로. Web Share가 되면 바로 공유, 아니면 PNG 내려받기.
+const rowId = (r) => r ? `${r.br}|${r.d}|${r.n || 1}` : '';
+function loadImg(src) { return new Promise((res) => { if (!src) return res(null); const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+function wrapText(ctx, text, maxW, maxLines) {
+  const words = text.split(/(\s+)/).filter(w => w.trim()); const lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; } }
+  if (cur) lines.push(cur);
+  // 한글은 띄어쓰기가 드물어 글자 단위로 한 번 더
+  const out = []; for (const l of lines) { if (ctx.measureText(l).width <= maxW) { out.push(l); continue; } let c = ''; for (const ch of l) { if (ctx.measureText(c + ch).width > maxW) { out.push(c); c = ch; } else c += ch; } if (c) out.push(c); }
+  if (out.length > maxLines) { const k = out.slice(0, maxLines); k[maxLines - 1] = k[maxLines - 1].replace(/.{2}$/, '') + '…'; return k; } return out;
+}
+async function shareCard(hotelKey, rowKey) {
+  const h = D.hotels.get(hotelKey); if (!h) return;
+  const rows = D.rows.filter(r => r.h === hotelKey); const o = groupHotels(rows)[0] || { h, rows, best: null, benefits: tierBenefits(h), dates: new Set(), tierValue: 0 };
+  const r = rowKey ? rows.find(x => rowId(x) === rowKey) || o.best : o.best; const tier = myTier(h.chain);
+  const W = 1080, H = 1350; const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const SERIF = '"Playfair Display", "Gowun Batang", "Noto Serif KR", Georgia, serif', SANS = '"Pretendard", "Noto Sans KR", system-ui, sans-serif';
+  const GOLD = '#d4a84b', FG = '#ece7da', MUTED = '#a39f93', BG = '#10172a';
+  try { await document.fonts?.load(`600 62px ${SERIF}`); await document.fonts?.load(`500 28px ${SANS}`); } catch (e) {}
+  x.fillStyle = BG; x.fillRect(0, 0, W, H);
+  const im = await loadImg(hImg(h) && !NO_EXT_IMG ? hImg(h) : null); const PH = 760;
+  if (im) { const s = Math.max(W / im.width, PH / im.height); const dw = im.width * s, dh = im.height * s; try { x.drawImage(im, (W - dw) / 2, (PH - dh) / 2, dw, dh); } catch (e) {} }
+  else { const g = x.createLinearGradient(0, 0, W, PH); g.addColorStop(0, '#1c2640'); g.addColorStop(1, '#0a0f1e'); x.fillStyle = g; x.fillRect(0, 0, W, PH); }
+  const g2 = x.createLinearGradient(0, PH * .35, 0, PH); g2.addColorStop(0, 'rgba(16,23,42,0)'); g2.addColorStop(1, BG); x.fillStyle = g2; x.fillRect(0, 0, W, PH);
+  const g3 = x.createLinearGradient(0, 0, 0, 260); g3.addColorStop(0, 'rgba(16,23,42,.75)'); g3.addColorStop(1, 'rgba(16,23,42,0)'); x.fillStyle = g3; x.fillRect(0, 0, W, 260);
+  // 상단 브랜드
+  x.fillStyle = GOLD; x.beginPath(); x.roundRect(64, 64, 72, 72, 18); x.fill(); x.strokeStyle = BG; x.lineWidth = 7; x.lineCap = 'round'; x.lineJoin = 'round';
+  x.beginPath(); x.moveTo(82, 86); x.lineTo(104, 86); x.moveTo(93, 86); x.lineTo(93, 114); x.moveTo(106, 114); x.lineTo(106, 96); x.lineTo(114, 96); x.arc(114, 101, 5, -Math.PI / 2, Math.PI / 2); x.lineTo(106, 106); x.moveTo(114, 106); x.lineTo(122, 114); x.stroke();
+  x.fillStyle = FG; x.font = `600 30px ${SERIF}`; x.textBaseline = 'alphabetic'; x.fillText('TRAVEL RADAR', 156, 96); x.fillStyle = GOLD; x.font = `500 20px ${SANS}`; x.fillText('M E M B E R S   O N L Y', 156, 126);
+  if (tier) { const t = `${CHAIN[h.chain]} ${tierKo(tier)}`; x.font = `600 22px ${SANS}`; const tw = x.measureText(t).width + 40; x.fillStyle = 'rgba(16,23,42,.72)'; x.beginPath(); x.roundRect(W - 64 - tw, 72, tw, 48, 24); x.fill(); x.fillStyle = GOLD; x.fillText(t, W - 64 - tw + 20, 104); }
+  // 호텔
+  let y = PH - 120; x.fillStyle = GOLD; x.font = `500 22px ${SANS}`; x.fillText([starsOf(h) ? '★'.repeat(Math.floor(starsOf(h).n)) : '', (h.brand || '').toUpperCase(), CHAIN[h.chain].toUpperCase(), ((h.country || '') + ' ' + (h.city || '')).trim()].filter(Boolean).join('  ·  '), 64, y);
+  y += 24; x.fillStyle = FG; x.font = `600 62px ${SERIF}`; for (const l of wrapText(x, h.name, W - 128, 2)) { y += 72; x.fillText(l, 64, y); }
+  // 날짜·혜택
+  y += 70; x.strokeStyle = 'rgba(201,189,160,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(64, y); x.lineTo(W - 64, y); x.stroke();
+  if (r) {
+    const dout = addDays(r.d, r.n || 1); const how = r.br === 'SNU' ? 'SNU로 스위트' : r.br === 'STAY_PLUS' ? 'Stay Plus · 1박 무료' : r.br === 'AMB' ? 'Ambassador · 주말 1박 무료' : r.br === 'FIVE4' ? '포인트 5박 · 1박 무료' : r.b === 'POINTS' ? '포인트 숙박' : r.br === 'RED_HOT' ? 'Red Hot Room' : r.b === 'SALE' ? '회원 특가' : r.b === 'SUITE' ? '스위트' : '회원 요금';
+    y += 54; x.fillStyle = MUTED; x.font = `500 28px ${SANS}`; x.fillText(`${r.d.slice(5).replace('-', '.')} ${DOW[dow(r.d)]} – ${dout.slice(5).replace('-', '.')} ${DOW[dow(dout)]} · ${r.n || 1}박${holiName(r.d) ? ' · ' + holiName(r.d) : ''}`, 64, y);
+    y += 46; x.fillStyle = GOLD; x.font = `600 30px ${SANS}`; x.fillText(how, 64, y);
+    const big = r.pt ? `${r.pt.toLocaleString()}pt` : won(r.my); const sub = r.pt ? (r.my != null ? `현금이면 ${won(r.my)}` : '') : (r.ref ? `정가 ${won(r.ref)}` : '');
+    y += 100; x.fillStyle = FG; x.font = `600 96px ${SERIF}`; x.fillText(big, 64, y); const bw = x.measureText(big).width; x.fillStyle = MUTED; x.font = `500 34px ${SANS}`; x.fillText(`/ ${r.n || 1}박`, 64 + bw + 16, y);
+    if (sub) { y += 44; x.fillStyle = MUTED; x.font = `500 28px ${SANS}`; x.fillText(sub, 64, y); }
+    const pct = r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0; const pills = []; if (r.sv) pills.push(`혜택 ${won(r.sv)}`); if (pct) pills.push(`정가 대비 −${pct}%`); if (tier && o.tierValue) pills.push(`티어 가치 +${won(o.tierValue)}`);
+    let px = 64; y += 64; for (const pt of pills) { x.font = `600 26px ${SANS}`; const w = x.measureText(pt).width + 44; x.fillStyle = 'rgba(212,168,75,.16)'; x.beginPath(); x.roundRect(px, y - 36, w, 54, 27); x.fill(); x.fillStyle = GOLD; x.fillText(pt, px + 22, y); px += w + 14; }
+  } else { y += 60; x.fillStyle = MUTED; x.font = `500 30px ${SANS}`; x.fillText('이 기간엔 수집된 티어 혜택 요금이 없어요', 64, y); }
+  // 내 티어 혜택
+  // 내 티어 혜택 (아래에서 위로 고정 배치 — 본문이 길어도 겹치지 않게)
+  if (tier && o.benefits?.length) { x.fillStyle = MUTED; x.font = `500 24px ${SANS}`; x.fillText(`${tierKo(tier)}인 당신은`, 64, H - 164); x.fillStyle = FG; x.font = `500 28px ${SANS}`; const line = o.benefits.filter(b => b.s !== 'no').slice(0, 5).map(b => `${b.label} ${b.s === 'ok' ? '✓' : '△'}`).join('   ·   '); x.fillText(wrapText(x, line, W - 128, 1)[0] || '', 64, H - 120); }
+  // 하단
+  x.fillStyle = 'rgba(201,189,160,.35)'; x.fillRect(64, H - 84, W - 128, 1); x.fillStyle = MUTED; x.font = `500 21px ${SANS}`; x.fillText('개인 수집 데이터 · 예약은 각 체인 공식 사이트에서 본인 계정으로', 64, H - 44); x.fillStyle = GOLD; x.font = `600 21px ${SANS}`; const url = (location.origin + location.pathname).replace(/^https?:\/\//, '').replace(/\/(index\.html)?$/, ''); x.fillText(url, W - 64 - x.measureText(url).width, H - 44);
+  const blob = await new Promise(res => c.toBlob(res, 'image/png')); if (!blob) return;
+  const file = new File([blob], `travel-radar-${(h.name || 'hotel').replace(/[^\w가-힣]+/g, '-').slice(0, 40)}.png`, { type: 'image/png' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: h.name, text: `${h.name} · Travel Radar` }); return; } catch (e) { if (e.name === 'AbortError') return; } }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = file.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (!b) return; e.preventDefault(); b.classList.add('busy'); shareCard(b.dataset.share, b.dataset.shareRow || '').finally(() => b.classList.remove('busy')); });
 function tierBarHtml() {
   const chips = ['accor', 'ihg', 'marriott', 'hilton'].map(c => { const t = myTier(c); const on = ui.chains.has(c); return `<button class="tchip ${c} ${on ? 'on' : ''} ${t ? '' : 'none'}" data-tc="${c}" title="${on ? '이 체인 숨기기' : '이 체인 보이기'}">${CHAIN[c]} ${t ? `<b>${esc(tierKo(t))}</b>${c === 'accor' && profile.explorer ? ' +Explorer' : ''}${c === 'ihg' && profile.ambassador ? ' +Amb' : ''}` : '<span class="muted">—</span>'}</button>`; }).join('');
   return `<span class="tl">${hasProfile() ? 'My tier' : 'No tier yet'}</span>${chips}<button class="lnk" data-open-profile>${hasProfile() ? '수정' : '내 티어 넣기'}</button>`;
@@ -885,11 +1004,11 @@ function mPhotoCard(o, i, opts) {
   const per = isPt ? `${Math.round(r.pt / (r.n || 1)).toLocaleString()}<small>pt/박</small>` : (r && r.my != null ? won(r.my / (r.n || 1)) : '');
   const bens = tier ? (o.benefits || []).filter(b => !/웰컴/.test(b.label)).slice(0, 4).map(b => `<i class="${b.s}">${esc(b.label.replace(/\s*\(.*\)$/, ''))}</i>`).join('') : '';
   const img = hImg(h) && !NO_EXT_IMG ? `<img src="${esc(hImg(h))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : '';
-  const date = r ? `${r.d.slice(5).replace('-', '.')} ${DOW[dow(r.d)]}` : '';
+  const date = r ? `${r.d.slice(5).replace('-', '.')} ${DOW[dow(r.d)]}${holiTag(r.d, 'w')}` : '';
   return `<a class="mpc ${small ? 'sm' : ''} ${hImg(h) ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(h.key)}">${img}<span class="ov"></span>
     <span class="tl"><b class="pill">${r ? `Best · ${kind}` : '열림'}</b>${pct ? `<b class="pill w">−${pct}%</b>` : ''}${o.fresh ? '<b class="pill w">New</b>' : ''}</span>
     ${tier && o.bv ? `<span class="tr pill w">혜택 ${won(o.bv)}</span>` : ''}
-    <span class="tx"><small>${starsHtml(h, 'w')}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</small><b>${esc(h.name)}</b>${small ? '' : `<span class="bens">${bens}</span>`}<span class="pr"><span>${date}${r && (r.n || 1) > 1 ? ` · ${r.n}박` : ''}${isPt ? (r.my != null ? ` · 현금이면 ${won(r.my / (r.n || 1))}` : '') : (r && r.ref && r.my != null ? ` · 정가 ${won(r.ref / (r.n || 1))}` : '')}</span><em>${per}${!isPt && r && r.my != null ? '<small>/박</small>' : ''}</em></span></span></a>`;
+    <span class="tx"><small>${starsHtml(h, 'w')}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</small><b>${esc(h.name)}</b>${small ? '' : `<span class="bens">${bens}</span>`}<span class="pr"><span>${date}${r && (r.n || 1) > 1 ? ` · ${r.n}박` : ''}${isPt ? (r.my != null ? ` · 현금이면 ${won(r.my / (r.n || 1))}` : '') : (r && r.ref && r.my != null ? ` · 정가 ${won(r.ref / (r.n || 1))}` : '')}</span><em>${per}${!isPt && r && r.my != null ? '<small>/박</small>' : ''}</em></span>${small ? '' : flexHint(o, 'w')}</span></a>`;
 }
 const refMax = (o) => Math.max(0, ...o.rows.map(r => (r.ref || r.my || 0) / (r.n || 1)));   // 정가(1박) 기준 — 호텔의 급
 function mobileHome(rows, groups) {
@@ -917,7 +1036,7 @@ function mobileHome(rows, groups) {
       <div class="tx"><b class="pill">Today${q ? ' · ' + esc(q) : ''}</b><h1>오직 멤버들에게만,<br>${wl ? esc(wl) + ' ' : '오늘 '}<em>${groups.length.toLocaleString()}곳</em>이 열립니다</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>
     ${band}${wallet}
     <form class="msearch" id="mSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="방콕 11월 2박 라운지" value="${esc(q)}"><button type="button" class="mflt">필터</button></form>
-    <div class="mchips">${['1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
+    <div class="mchips">${['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
     ${limitText() ? `<p class="limitNote m">${limitText()}</p>` : ''}
     <div class="mlab">오늘 당신에게 열린 곳</div>
     <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
@@ -1347,12 +1466,12 @@ function viewHotel(key) {
   const from = D.meta.dateFrom, to = D.meta.dateTo; let start = addDays(from, -dow(from)); const cells = [];
   for (let d = start; d <= to || dow(d) !== 0; d = addDays(d, 1)) {
     const inR = d >= from && d <= to; const rs = byDay[d] || []; const kinds = [...new Set(rs.map(r => r.b))]; const min = rs.length ? Math.min(...rs.map(r => r.my ?? Infinity)) : null;
-    cells.push(`<div class="cell ${inR ? '' : 'off'} ${[0, 6].includes(dow(d)) ? 'we' : ''}" data-d="${d}"><span class="dn">${+d.slice(8) === 1 ? `${+d.slice(5, 7)}/1` : +d.slice(8)}</span>${kinds.length ? `<div class="dots">${kinds.map(k => `<i class="${k}" title="${BEN[k].label}"></i>`).join('')}</div><div class="mn">${isFinite(min) ? (NARROW() ? wonShort(min) : won(min)) : ''}</div>${(() => { const p = rs.filter(r => r.pt).sort((a, b) => a.pt - b.pt)[0]; return p ? `<div class="mp">${NARROW() ? ptShort(p.pt) : p.pt.toLocaleString() + 'pt'}${(p.n || 1) > 1 ? `/${p.n}박` : ''}</div>` : ''; })()}` : ''}</div>`);
+    cells.push(`<div class="cell ${inR ? '' : 'off'} ${[0, 6].includes(dow(d)) ? 'we' : ''} ${holiName(d) ? 'hol' : ''}" data-d="${d}" ${holiName(d) ? `title="${esc(holiName(d))}"` : ''}><span class="dn">${+d.slice(8) === 1 ? `${+d.slice(5, 7)}/1` : +d.slice(8)}</span>${holiName(d) ? `<span class="hn">${esc(holiName(d))}</span>` : ''}${kinds.length ? `<div class="dots">${kinds.map(k => `<i class="${k}" title="${BEN[k].label}"></i>`).join('')}</div><div class="mn">${isFinite(min) ? (NARROW() ? wonShort(min) : won(min)) : ''}</div>${(() => { const p = rs.filter(r => r.pt).sort((a, b) => a.pt - b.pt)[0]; return p ? `<div class="mp">${NARROW() ? ptShort(p.pt) : p.pt.toLocaleString() + 'pt'}${(p.n || 1) > 1 ? `/${p.n}박` : ''}</div>` : ''; })()}` : ''}</div>`);
     if (d >= to && dow(d) === 6) break;
   }
   const gid = h.chain || 'accor'; const tb = tierBenefits(h); const tier = myTier(h.chain);
   el.innerHTML = `<p><a href="#hotels">← 호텔 목록</a></p>
-    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button></p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
+    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button>${FEAT.share ? ` <button type="button" class="btn ghost" data-share="${esc(key)}">이미지로 공유</button>` : ''}</p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
       ${tier ? `<div class="band ${h.chain}" style="margin:8px 0"><b>${esc(tierKo(tier))}인 당신은</b>${(tb || []).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : b.s === 'maybe' ? '△' : '✗'}${b.note ? ` <em>${esc(b.note)}</em>` : ''}</span>`).join('')}</div>` : ''}<div class="stats"><div class="stat"><b>${rows.length}</b><span>혜택 날짜</span></div><div class="stat"><b style="color:var(--suite)">${c.SUITE}</b><span>스위트</span></div><div class="stat"><b style="color:var(--free)">${c.FREE_NIGHT}</b><span>무료박</span></div><div class="stat"><b style="color:var(--points)">${c.POINTS}</b><span>포인트</span></div><div class="stat"><b style="color:var(--sale)">${c.SALE}</b><span>세일</span></div></div></div>
     ${h.lat != null && h.lng != null && window.L ? '<div class="hmap" id="hmap"></div>' : ''}
     <h2>다음 30일 가능한 혜택</h2>
