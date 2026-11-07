@@ -34,7 +34,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
 const dow = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
 const fmtD = (s) => `${s.slice(5, 7)}.${s.slice(8, 10)} (${DOW[dow(s)]})`;
 // ---------- 한국 공휴일 (2026~2027, 관공서 공휴일 + 근로자의 날·선거일) — 기능 플래그 FEAT.holiday ----------
-const FEAT = { holiday: true, flex: true, share: true, history: true };   // 기능 켜고 끄기 (별로면 false)
+const FEAT = { holiday: true, flex: true, share: true, history: true, appLinks: true };   // 기능 켜고 끄기 (별로면 false)
 const HOLI_KR = { '2026-01-01': '신정', '2026-02-16': '설 연휴', '2026-02-17': '설날', '2026-02-18': '설 연휴', '2026-03-01': '삼일절', '2026-03-02': '대체휴일', '2026-05-01': '근로자의 날', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날', '2026-05-25': '대체휴일', '2026-06-03': '지방선거', '2026-06-06': '현충일', '2026-08-15': '광복절', '2026-08-17': '대체휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절', '2026-10-05': '대체휴일', '2026-10-09': '한글날', '2026-12-25': '성탄절',
   '2027-01-01': '신정', '2027-02-06': '설 연휴', '2027-02-07': '설날', '2027-02-08': '설 연휴', '2027-02-09': '대체휴일', '2027-03-01': '삼일절', '2027-05-01': '근로자의 날', '2027-05-05': '어린이날', '2027-05-13': '부처님오신날', '2027-06-06': '현충일', '2027-08-15': '광복절', '2027-08-16': '대체휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴', '2027-10-03': '개천절', '2027-10-04': '대체휴일', '2027-10-09': '한글날', '2027-10-11': '대체휴일', '2027-12-25': '성탄절', '2027-12-27': '대체휴일' };
 const holiName = (d) => FEAT.holiday ? (HOLI_KR[d] || '') : '';
@@ -1004,6 +1004,15 @@ function openShareDialog(blob, name, pageUrl, title) {
   $('#shareLink').onclick = async () => { try { await navigator.clipboard.writeText(`${title} · Travel Radar\n${pageUrl}`); say('호텔 페이지 링크를 복사했어요. (이 사이트는 로그인한 멤버만 볼 수 있어요)'); } catch (e) { say(pageUrl); } };
   say('이미지를 복사한 뒤 카톡·메신저 대화창에 붙여넣기(Ctrl+V) 하세요.'); dlg.showModal();
 }
+// ---------- 예약 링크를 호텔 앱으로 (안드로이드) ----------
+// 안드로이드 크롬은 intent:// 주소를 주면 설치된 앱으로 열고, 앱이 없거나 그 주소를 못 받으면 fallback(웹)으로 간다. 앱은 로그인이 유지돼 있어 편하다.
+// iOS는 앱이 등록한 유니버설 링크(체인이 정함)로만 열리므로 그대로 https 링크 — 사파리가 앱을 열어주면 열리고, 아니면 웹.
+const APP_PKG = [[/(^|\.)marriott\.com$/, 'com.marriott.mrt'], [/(^|\.)hilton\.com$/, 'com.hilton.android.hhonors'], [/(^|\.)ihg\.com$/, 'com.ihg.apps.android'], [/(^|\.)accor\.com$/, 'com.accor.appli.hybrid']];
+document.addEventListener('click', (e) => {
+  if (!FEAT.appLinks || !/Android/i.test(navigator.userAgent)) return; const a = e.target.closest('a[href^="https://"]'); if (!a) return;
+  let u; try { u = new URL(a.href); } catch (err) { return; } const pkg = APP_PKG.find(([re]) => re.test(u.hostname))?.[1]; if (!pkg) return;
+  e.preventDefault(); location.href = `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(a.href)};end`;
+}, true);
 // ---------- 앱으로 설치 (PWA) ----------
 // 크롬·엣지·삼성: 설치 프롬프트를 받아 두었다가 More → "앱으로 설치"에서 띄운다. iOS 사파리는 프롬프트가 없어 안내만. 이미 앱으로 열렸으면 숨김.
 { let deferredPrompt = null; const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
