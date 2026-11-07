@@ -716,3 +716,9 @@ dialog.share img { width: 100%; border-radius: 10px; border: 1px solid var(--lin
 dialog.share .dlgBtns { display: flex; gap: 8px; flex-wrap: wrap; }
 dialog.share .dlgBtns .btn { flex: 1; text-align: center; text-decoration: none; }
 footer .bver { margin-left: auto; font-size: 11px; color: var(--muted); opacity: .7; letter-spacing: .04em; }
+/* 가격·포인트 추이 */
+.hgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 10px 0 6px; }
+.hcard { padding: 12px 14px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.hcard .hl { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; margin-bottom: 4px; }
+.hcard .hl b { font-weight: 600; }
+.spark { width: 100%; height: auto; display: block; color: var(--fg); }

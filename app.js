@@ -34,7 +34,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
 const dow = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
 const fmtD = (s) => `${s.slice(5, 7)}.${s.slice(8, 10)} (${DOW[dow(s)]})`;
 // ---------- 한국 공휴일 (2026~2027, 관공서 공휴일 + 근로자의 날·선거일) — 기능 플래그 FEAT.holiday ----------
-const FEAT = { holiday: true, flex: true, share: true };   // 기능 켜고 끄기 (별로면 false)
+const FEAT = { holiday: true, flex: true, share: true, history: true };   // 기능 켜고 끄기 (별로면 false)
 const HOLI_KR = { '2026-01-01': '신정', '2026-02-16': '설 연휴', '2026-02-17': '설날', '2026-02-18': '설 연휴', '2026-03-01': '삼일절', '2026-03-02': '대체휴일', '2026-05-01': '근로자의 날', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날', '2026-05-25': '대체휴일', '2026-06-03': '지방선거', '2026-06-06': '현충일', '2026-08-15': '광복절', '2026-08-17': '대체휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절', '2026-10-05': '대체휴일', '2026-10-09': '한글날', '2026-12-25': '성탄절',
   '2027-01-01': '신정', '2027-02-06': '설 연휴', '2027-02-07': '설날', '2027-02-08': '설 연휴', '2027-02-09': '대체휴일', '2027-03-01': '삼일절', '2027-05-01': '근로자의 날', '2027-05-05': '어린이날', '2027-05-13': '부처님오신날', '2027-06-06': '현충일', '2027-08-15': '광복절', '2027-08-16': '대체휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴', '2027-10-03': '개천절', '2027-10-04': '대체휴일', '2027-10-09': '한글날', '2027-10-11': '대체휴일', '2027-12-25': '성탄절', '2027-12-27': '대체휴일' };
 const holiName = (d) => FEAT.holiday ? (HOLI_KR[d] || '') : '';
@@ -52,7 +52,7 @@ const inLongWeekend = (d, n) => longWeekends().some(r => d >= addDays(r.start, -
 const holiTag = (d, cls) => { const n = holiName(d); const lw = FEAT.holiday && !n && longWeekends().find(r => d >= addDays(r.start, -1) && d <= r.end && daysBetween(r.start, r.end) >= 2 && Object.keys(HOLI_KR).some(k => k >= r.start && k <= r.end)); return n ? `<i class="hol ${cls || ''}" title="공휴일">${esc(n)}</i>` : lw ? `<i class="hol lw ${cls || ''}" title="연휴">${esc(lw.name)} 연휴</i>` : ''; };
 
 // ---------- 프로필 (브라우저에만 저장) ----------
-const PROFILE_DEFAULT = { accorTier: '', explorer: false, snu: 0, stayPlus: 0, accorPts: 0, accorNights: 0, snuExp: '', stayPlusExp: '', ihgTier: '', ambassador: false, ihgPts: 0, ihgNights: 0, ambExp: '', marriottTier: '', marriottPts: 0, marriottNights: 0, hiltonTier: '', hiltonPts: 0, hiltonNights: 0 };
+const PROFILE_DEFAULT = { accorTier: '', explorer: false, snu: 0, stayPlus: 0, accorPts: 0, accorNights: 0, snuExp: '', stayPlusExp: '', ihgTier: '', ambassador: false, ihgPts: 0, ihgNights: 0, ambExp: '', marriottTier: '', marriottPts: 0, marriottNights: 0, hiltonTier: '', hiltonPts: 0, hiltonNights: 0, mailAlerts: false };
 let profile = Object.assign({}, PROFILE_DEFAULT);
 try { profile = Object.assign({}, PROFILE_DEFAULT, JSON.parse(localStorage.getItem('tr_profile') || '{}')); } catch (e) {}
 const hasProfile = () => !!(profile.accorTier || profile.ihgTier || profile.marriottTier || profile.hiltonTier);
@@ -1474,6 +1474,38 @@ const THEMES = [
 const hotelTheme = (h) => THEMES.filter(([, re]) => re.test(`${h.name} ${h.brand || ''} ${h.city0 || ''}`)).map(([n]) => n);
 
 // ---------- 호텔 페이지 ----------
+// ---------- 가격·포인트 추이 (SQL 05 tr_offer_history · 매일 수집 후 스냅샷) — 기능 플래그 FEAT.history ----------
+const HIST = new Map();   // hotelKey → rows [{k,d,i,n,b,br,pt,my,ref}]
+async function loadHistory(key) {
+  if (HIST.has(key)) return HIST.get(key);
+  const S = window.TR_SERVER; if (!S?.url) return [];
+  const headers = { apikey: S.anon, Authorization: `Bearer ${S.anon}`, 'Content-Type': 'application/json' }; try { const tok = localStorage.getItem('tr_token'); if (tok) headers.Authorization = `Bearer ${tok}`; } catch (e) {}
+  let rows = [];
+  try { const r = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_history`, { method: 'POST', headers, body: JSON.stringify({ p_hotel: key }) }); if (r.ok) rows = await r.json(); } catch (e) {}
+  if (!Array.isArray(rows)) rows = []; HIST.set(key, rows); return rows;
+}
+// 선 그래프 SVG: series = [{label, color, pts: [[x(날짜 문자열), y]]}], 포맷 함수. 높이 150px, 반응형 폭
+function sparkSvg(series, fmt) {
+  const W = 600, H = 150, L = 8, R = 8, T = 18, B = 26; const all = series.flatMap(s => s.pts); if (!all.length) return '';
+  const xs = [...new Set(all.map(p => p[0]))].sort(); const ys = all.map(p => p[1]); let lo = Math.min(...ys), hi = Math.max(...ys); if (hi === lo) { lo = lo * 0.9; hi = hi * 1.1 || 1; } const pad = (hi - lo) * 0.12; lo -= pad; hi += pad;
+  const X = (d) => xs.length === 1 ? W / 2 : L + (xs.indexOf(d) / (xs.length - 1)) * (W - L - R); const Y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+  const lines = series.map(s => { const p = s.pts.slice().sort((a, b) => a[0].localeCompare(b[0])); const d = p.map((q, i) => `${i ? 'L' : 'M'}${X(q[0]).toFixed(1)},${Y(q[1]).toFixed(1)}`).join(''); const last = p[p.length - 1], first = p[0];
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round"/>${p.map(q => `<circle cx="${X(q[0]).toFixed(1)}" cy="${Y(q[1]).toFixed(1)}" r="2.5" fill="${s.color}"><title>${q[0].slice(5).replace('-', '.')} · ${fmt(q[1])}</title></circle>`).join('')}<text x="${Math.min(X(last[0]), W - 70).toFixed(1)}" y="${(Y(last[1]) - 7).toFixed(1)}" fill="${s.color}" font-size="11" font-weight="600">${fmt(last[1])}</text>${p.length > 1 ? `<text x="${X(first[0]).toFixed(1)}" y="${(Y(first[1]) - 7).toFixed(1)}" fill="${s.color}" font-size="10" opacity=".7">${fmt(first[1])}</text>` : ''}`; }).join('');
+  const ticks = xs.filter((d, i) => i === 0 || i === xs.length - 1 || (xs.length > 6 && i % Math.ceil(xs.length / 5) === 0)).map(d => `<text x="${X(d).toFixed(1)}" y="${H - 8}" fill="currentColor" opacity=".55" font-size="10" text-anchor="middle">${d.slice(5).replace('-', '.')}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="spark">${lines}${ticks}</svg>`;
+}
+// 호텔 페이지 추이 칸: 날짜를 고르면 그 체크인 날짜의 추이, 아니면 범위 내 "가장 싼 날" 추이
+function renderHistory(el, hist, dateIn) {
+  const box = el.querySelector('#hhist'); if (!box) return;
+  if (!hist.length) { box.innerHTML = `<p class="muted small">추이는 수집이 이틀 이상 쌓이면 보여요. (매일 새벽 수집 후 하루 한 점)</p>`; return; }
+  const sel = dateIn ? hist.filter(x => x.i === dateIn) : hist; const days = [...new Set(sel.map(x => x.d))].sort();
+  // 스냅샷 날짜별 최저 현금 내 비용 · 최저 포인트 (고른 날짜가 없으면 범위 전체에서의 최저)
+  const cash = days.map(d => { const v = sel.filter(x => x.d === d && x.my != null && !x.pt).map(x => x.my); return v.length ? [d, Math.min(...v)] : null; }).filter(Boolean);
+  const pts = days.map(d => { const v = sel.filter(x => x.d === d && x.pt).map(x => x.pt); return v.length ? [d, Math.min(...v)] : null; }).filter(Boolean);
+  const trend = (p) => p.length > 1 ? (p[p.length - 1][1] - p[0][1]) : 0;
+  const note = (p, f) => p.length > 1 ? `<span class="chg ${trend(p) < 0 ? 'dn' : trend(p) > 0 ? 'up' : ''}">${trend(p) < 0 ? '▼' : trend(p) > 0 ? '▲' : '─'} ${f(Math.abs(trend(p)))} · ${days.length}일</span>` : `<span class="muted small">첫 기록</span>`;
+  box.innerHTML = `<div class="hgrid">${cash.length ? `<div class="hcard"><div class="hl"><b>현금 최저 (내 비용)</b>${note(cash, won)}</div>${sparkSvg([{ color: '#d4a84b', pts: cash }], won)}</div>` : ''}${pts.length ? `<div class="hcard"><div class="hl"><b>포인트 최저</b>${note(pts, v => v.toLocaleString() + 'pt')}</div>${sparkSvg([{ color: 'var(--points, #8ea8e8)', pts }], v => v.toLocaleString() + 'pt')}</div>` : ''}</div><p class="muted small">${dateIn ? `${fmtD(dateIn)} 체크인 기준` : '범위 안에서 가장 싼 날 기준'} · 매일 수집 시각의 값 · 최근 ${days.length}일</p>`;
+}
 function viewHotel(key) {
   const h = D.hotels.get(key); const el = $('#v-hotel');
   if (!h) { el.innerHTML = '<div class="empty">호텔을 찾을 수 없어요.</div>'; return; }
@@ -1495,14 +1527,17 @@ function viewHotel(key) {
     <h2>다음 30일 가능한 혜택</h2>
     <div class="legend">${Object.entries(BEN).map(([k, v]) => `<span><i class="${k}"></i>${v.label}</span>`).join('')}<span class="muted">· 칸의 금액은 그날 가장 낮은 내 비용</span></div>
     <div class="cal">${DOW.map((d, i) => `<div class="dh ${i === 0 || i === 6 ? 'we' : ''}">${d}</div>`).join('')}${cells.join('')}</div>
+    ${FEAT.history ? `<h2>가격·포인트 추이 <span class="muted small">달력에서 날짜를 누르면 그 날짜의 추이</span></h2><div id="hhist"><p class="muted small">불러오는 중…</p></div>` : ''}
     <h2 id="hdays">날짜별 상세 <span class="muted small" id="hsel"></span></h2>
     <div class="tablewrap"><table><thead><tr><th>체크인</th><th>호텔</th><th>혜택</th><th>내 비용 (₩)</th><th>비교 기준</th><th>절약</th><th>객실</th><th>예약</th></tr></thead><tbody id="htbody">${rows.map(r => rowHtml(r, false)).join('')}</tbody></table></div>
     ${rows.length ? '' : '<div class="empty">이 호텔은 현재 수집 범위에서 가능한 혜택이 없어요.</div>'}`;
   if ($('#hmap')) { try { const m = L.map('hmap', { scrollWheelZoom: false, attributionControl: false }).setView([h.lat, h.lng], 14); osmTiles().addTo(m); L.circleMarker([h.lat, h.lng], Object.assign(markerStyle(h.chain, 9), { fillOpacity: .95 })).addTo(m).bindTooltip(h.name); } catch (e) {} }
+  if (FEAT.history) loadHistory(key).then(hist => { if (location.hash.includes(encodeURIComponent(key)) || location.hash.includes(key)) renderHistory(el, hist, el.querySelector('.cell.sel')?.dataset.d); });
   el.querySelectorAll('.cell').forEach(cell => cell.addEventListener('click', () => {
     const d = cell.dataset.d; const sel = cell.classList.contains('sel'); el.querySelectorAll('.cell').forEach(x => x.classList.remove('sel'));
     const list = sel ? rows : rows.filter(r => r.d === d); if (!sel) cell.classList.add('sel');
     $('#htbody').innerHTML = list.map(r => rowHtml(r, false)).join(''); $('#hsel').textContent = sel ? '' : `· ${fmtD(d)}만 표시 (다시 누르면 전체)`;
+    if (FEAT.history && HIST.has(key)) renderHistory(el, HIST.get(key), sel ? null : d);
   }));
 }
 
@@ -1687,12 +1722,12 @@ async function viewPromos() {
 // ---------- 프로필 대화상자 ----------
 $('#profileBtn').addEventListener('click', () => {
   const f = $('#profileForm'); f.accorTier.value = profile.accorTier; f.explorer.checked = profile.explorer; f.snu.value = profile.snu; f.stayPlus.value = profile.stayPlus; f.accorPts.value = profile.accorPts;
-  f.ihgTier.value = profile.ihgTier; f.ambassador.checked = profile.ambassador; f.ihgPts.value = profile.ihgPts; f.marriottTier.value = profile.marriottTier || ''; f.marriottPts.value = profile.marriottPts || 0; f.accorNights.value = profile.accorNights || 0; f.snuExp.value = profile.snuExp || ''; f.stayPlusExp.value = profile.stayPlusExp || ''; f.ihgNights.value = profile.ihgNights || 0; f.ambExp.value = profile.ambExp || ''; f.marriottNights.value = profile.marriottNights || 0; f.hiltonTier.value = profile.hiltonTier || ''; f.hiltonPts.value = profile.hiltonPts || 0; f.hiltonNights.value = profile.hiltonNights || 0; $('#dlgProfile').showModal();
+  f.ihgTier.value = profile.ihgTier; f.ambassador.checked = profile.ambassador; f.ihgPts.value = profile.ihgPts; f.marriottTier.value = profile.marriottTier || ''; f.marriottPts.value = profile.marriottPts || 0; f.accorNights.value = profile.accorNights || 0; f.snuExp.value = profile.snuExp || ''; f.stayPlusExp.value = profile.stayPlusExp || ''; f.ihgNights.value = profile.ihgNights || 0; f.ambExp.value = profile.ambExp || ''; f.marriottNights.value = profile.marriottNights || 0; f.hiltonTier.value = profile.hiltonTier || ''; f.hiltonPts.value = profile.hiltonPts || 0; f.hiltonNights.value = profile.hiltonNights || 0; f.mailAlerts.checked = !!profile.mailAlerts; $('#dlgProfile').showModal();
 });
 $('#dlgProfile').addEventListener('close', () => {
   const f = $('#profileForm'); const rv = $('#dlgProfile').returnValue;
   if (rv === 'clear') profile = Object.assign({}, PROFILE_DEFAULT);
-  else if (rv === 'ok') profile = { accorTier: f.accorTier.value, explorer: f.explorer.checked, snu: +f.snu.value || 0, stayPlus: +f.stayPlus.value || 0, accorPts: +f.accorPts.value || 0, ihgTier: f.ihgTier.value, ambassador: f.ambassador.checked, ihgPts: +f.ihgPts.value || 0, marriottTier: f.marriottTier.value, marriottPts: +f.marriottPts.value || 0, accorNights: +f.accorNights.value || 0, snuExp: f.snuExp.value, stayPlusExp: f.stayPlusExp.value, ihgNights: +f.ihgNights.value || 0, ambExp: f.ambExp.value, marriottNights: +f.marriottNights.value || 0, hiltonTier: f.hiltonTier.value, hiltonPts: +f.hiltonPts.value || 0, hiltonNights: +f.hiltonNights.value || 0 };
+  else if (rv === 'ok') profile = { accorTier: f.accorTier.value, explorer: f.explorer.checked, snu: +f.snu.value || 0, stayPlus: +f.stayPlus.value || 0, accorPts: +f.accorPts.value || 0, ihgTier: f.ihgTier.value, ambassador: f.ambassador.checked, ihgPts: +f.ihgPts.value || 0, marriottTier: f.marriottTier.value, marriottPts: +f.marriottPts.value || 0, accorNights: +f.accorNights.value || 0, snuExp: f.snuExp.value, stayPlusExp: f.stayPlusExp.value, ihgNights: +f.ihgNights.value || 0, ambExp: f.ambExp.value, marriottNights: +f.marriottNights.value || 0, hiltonTier: f.hiltonTier.value, hiltonPts: +f.hiltonPts.value || 0, hiltonNights: +f.hiltonNights.value || 0, mailAlerts: f.mailAlerts.checked };
   else return;
   try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {}
   profilePush();
