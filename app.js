@@ -1004,6 +1004,17 @@ function openShareDialog(blob, name, pageUrl, title) {
   $('#shareLink').onclick = async () => { try { await navigator.clipboard.writeText(`${title} · Travel Radar\n${pageUrl}`); say('호텔 페이지 링크를 복사했어요. (이 사이트는 로그인한 멤버만 볼 수 있어요)'); } catch (e) { say(pageUrl); } };
   say('이미지를 복사한 뒤 카톡·메신저 대화창에 붙여넣기(Ctrl+V) 하세요.'); dlg.showModal();
 }
+// ---------- 앱으로 설치 (PWA) ----------
+// 크롬·엣지·삼성: 설치 프롬프트를 받아 두었다가 More → "앱으로 설치"에서 띄운다. iOS 사파리는 프롬프트가 없어 안내만. 이미 앱으로 열렸으면 숨김.
+{ let deferredPrompt = null; const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const btn = document.getElementById('moreInstall'); const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; if (btn && !standalone) btn.hidden = false; });
+  if (btn && ios && !standalone) { btn.hidden = false; btn.textContent = 'Install — 홈 화면에 추가'; }
+  btn?.addEventListener('click', async (e) => { e.preventDefault(); document.getElementById('dlgMore')?.close();
+    if (deferredPrompt) { deferredPrompt.prompt(); const r = await deferredPrompt.userChoice.catch(() => null); if (r?.outcome === 'accepted') btn.hidden = true; deferredPrompt = null; return; }
+    alert(ios ? 'Safari 아래 공유(□↑) 버튼 → "홈 화면에 추가"를 누르면 앱처럼 설치돼요. 업데이트는 열 때마다 자동으로 받아요.' : '브라우저 메뉴(⋮)에서 "앱 설치" 또는 "홈 화면에 추가"를 누르면 설치돼요.'); });
+  window.addEventListener('appinstalled', () => { if (btn) btn.hidden = true; });
+}
 // 배포 확인용 빌드 버전(푸터): app.js?v=YYYYMMDDHHMM → "build 11.06 16:03"
 { const m = /app\.js\?v=(\d{12})/.exec([...document.scripts].map(x => x.src).join(' ')); const el = document.getElementById('buildVer'); if (m && el) el.textContent = `build ${m[1].slice(4, 6)}.${m[1].slice(6, 8)} ${m[1].slice(8, 10)}:${m[1].slice(10, 12)}`; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (!b) return; e.preventDefault(); b.classList.add('busy'); shareCard(b.dataset.share, b.dataset.shareRow || '').finally(() => b.classList.remove('busy')); });
