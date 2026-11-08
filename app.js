@@ -54,6 +54,8 @@ const holiTag = (d, cls) => { const n = holiName(d); const lw = FEAT.holiday && 
 // ---------- 프로필 (브라우저에만 저장) ----------
 const PROFILE_DEFAULT = { accorTier: '', explorer: false, snu: 0, stayPlus: 0, accorPts: 0, accorNights: 0, snuExp: '', stayPlusExp: '', ihgTier: '', ambassador: false, ihgPts: 0, ihgNights: 0, ambExp: '', marriottTier: '', marriottPts: 0, marriottNights: 0, hiltonTier: '', hiltonPts: 0, hiltonNights: 0, mailAlerts: false };
 let profile = Object.assign({}, PROFILE_DEFAULT);
+// 모바일: 데이터가 오기 전에 PC용 머리글("날짜와 지역만 고르세요")이 잠깐 비치지 않게 — 처음부터 앱 모드 + 브랜드 로딩 화면
+if (matchMedia('(max-width: 720px)').matches) { document.body.classList.add('app-m'); const ln = document.getElementById('loadingNote'); if (ln) ln.innerHTML = `<div class="splash"><svg viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="40" fill="#d4a84b"/><path d="M52 72 H108 M80 72 V140 M110 140 V96 H130 a14 14 0 0 1 0 28 H110 M126 124 L146 140" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg><b>Travel Radar</b><small>Members only</small><i></i><p>오늘 열린 혜택을 불러오는 중</p></div>`; }
 try { profile = Object.assign({}, PROFILE_DEFAULT, JSON.parse(localStorage.getItem('tr_profile') || '{}')); } catch (e) {}
 const hasProfile = () => !!(profile.accorTier || profile.ihgTier || profile.marriottTier || profile.hiltonTier);
 function eligible(r) {
@@ -1108,7 +1110,7 @@ function mPhotoCard(o, i, opts) {
   const img = hImg(h) && !NO_EXT_IMG ? `<img src="${esc(hImg(h))}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : '';
   const date = r ? `${r.d.slice(5).replace('-', '.')} ${DOW[dow(r.d)]}${holiTag(r.d, 'w')}` : '';
   return `<a class="mpc ${small ? 'sm' : ''} ${hImg(h) ? '' : 'noimg'}" href="#hotel/${encodeURIComponent(h.key)}">${img}<span class="ov"></span>
-    <span class="tl"><b class="pill">${r ? `Best · ${kind}` : '열림'}</b>${pct ? `<b class="pill w">−${pct}%</b>` : ''}${o.fresh ? '<b class="pill w">New</b>' : ''}</span>
+    <span class="tl"><b class="pill">${r ? `Best · ${kind}` : '열림'}</b>${pct ? `<b class="pill w">−${pct}%</b>` : ''}${o.fresh && !small ? '<b class="pill w">New</b>' : ''}</span>
     ${tier && o.bv ? `<span class="tr pill w">혜택 ${won(o.bv)}</span>` : ''}
     <span class="tx"><small>${starsHtml(h, 'w')}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</small><b>${esc(h.name)}</b>${small ? '' : `<span class="bens">${bens}</span>`}<span class="pr"><span>${date}${r && (r.n || 1) > 1 ? ` · ${r.n}박` : ''}${isPt ? (r.my != null ? ` · 현금이면 ${won(r.my / (r.n || 1))}` : '') : (r && r.ref && r.my != null ? ` · 정가 ${won(r.ref / (r.n || 1))}` : '')}</span><em>${per}${!isPt && r && r.my != null ? '<small>/박</small>' : ''}</em></span>${small ? '' : flexHint(o, 'w')}</span></a>`;
 }
@@ -1527,7 +1529,7 @@ function viewHome() {
     el.innerHTML = `${H.heroHtml}${H.band}${H.wallet}
       ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
       ${H.soonHtml}
-      <div class="mlab">오늘 당신에게 열린 곳 ${groups.length.toLocaleString()}곳 · 가장 이득 순 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
+      <div class="mlab">오늘 열린 곳 ${groups.length.toLocaleString()}곳 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
       <div class="mlist" id="hList">${groups.slice(0, ui.hLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<p class="muted small mpad">지금 열린 혜택이 없어요.</p>'}</div>
       ${groups.length > ui.hLimit ? `<button type="button" class="mmore" id="hMore">호텔 ${(groups.length - ui.hLimit).toLocaleString()}곳 더 보기</button>` : ''}`;
     // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)

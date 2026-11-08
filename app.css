@@ -510,7 +510,13 @@ body.app-m main { padding-top: 0; }
 .mrow::-webkit-scrollbar { display: none; }
 .mrow .mpc { width: 300px; height: 230px; flex-shrink: 0; scroll-snap-align: start; }
 .mlist { display: flex; flex-direction: column; gap: 12px; padding: 0 20px; }
-.mlist .mpc { height: 170px; }
+.mlist .mpc { height: 182px; }
+/* 작은 카드: 왼쪽 칩은 한 줄, '혜택 ₩' 칩은 그 아래 둘째 줄 — 서로 안 겹치게 */
+.mpc.sm .tl { flex-wrap: nowrap; max-width: none; white-space: nowrap; }
+.mpc.sm .tr { top: 46px; right: auto; left: 14px; }
+/* 홈(모바일)은 검색 탭처럼 화면 끝까지 — 양쪽 여백 이중으로 안 생기게 */
+body.app-m #v-home { margin: 0 calc(-1 * var(--gutter)); padding-top: 0; }
+.mlab .lnk { white-space: nowrap; }
 .mpc { position: relative; display: block; border-radius: 22px; overflow: hidden; background: linear-gradient(160deg, #2c3a66, #1a2342 55%, #3a2f1a); color: #fff; }
 .mpc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .mpc .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,17,34,.58) 0%, rgba(12,17,34,.64) 40%, rgba(12,17,34,.94) 100%); }   /* 사진 전체에 옅은 남색 막 + 아래로 갈수록 짙게 */
@@ -583,7 +589,14 @@ select { color-scheme: light; }
 .loadingNote { display: flex; align-items: center; gap: 12px; padding: 40px 0; color: var(--muted); font-size: 14px; letter-spacing: .02em; }
 .loadingNote span { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--gold); animation: trspin .9s linear infinite; }
 @keyframes trspin { to { transform: rotate(360deg); } }
-body.app-m .loadingNote { padding: 120px 20px; justify-content: center; }
+body.app-m .loadingNote { padding: 0; justify-content: center; min-height: calc(100vh - 80px); }
+body.app-m .loadingNote > span { display: none; }
+.splash { display: flex; flex-direction: column; align-items: center; text-align: center; color: var(--fg); }
+.splash svg { width: 64px; height: 64px; margin-bottom: 18px; }
+.splash b { font-family: var(--serif); font-size: 22px; letter-spacing: .2em; text-transform: uppercase; font-weight: 500; }
+.splash small { font-size: 9px; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-top: 6px; }
+.splash i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--gold); animation: trspin .9s linear infinite; margin-top: 28px; }
+.splash p { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 
 /* ---------- 운영자 편집 ---------- */
 .hnote { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; border-left: 2px solid var(--gold); padding-left: 10px; }
