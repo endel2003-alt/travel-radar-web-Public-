@@ -413,6 +413,13 @@ footer .brand span { font-family: var(--font); font-size: 9.5px; letter-spacing:
   .tierbtn { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 }
 @media (max-width: 720px) {
+  .topbar .in { gap: 8px; }
+  .topbar .hamb { margin-left: -8px; }
+  .logo { gap: 8px; } .logo svg { width: 26px; height: 26px; } .logo .wm b { font-size: 14px; letter-spacing: .14em; } .logo .wm small { font-size: 7.5px; letter-spacing: .22em; }
+  .topbar .right { gap: 8px; min-width: 0; }
+  .tierbtn { display: inline-flex; align-items: center; max-width: 118px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); } .tierbtn .tlabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+@media (max-width: 720px) {
   :root { --gutter: 20px; }
   body { padding-bottom: calc(58px + env(safe-area-inset-bottom, 0px)); }
   .headline { font-size: 34px; }
@@ -461,7 +468,7 @@ body.app-m main { padding-top: 0; }
 .mhero { position: relative; height: 420px; background: linear-gradient(160deg, #2c3a66, #1a2342 55%, #3a2f1a); overflow: hidden; color: #fff; }
 .mhero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .mhero .ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(16,23,42,.6) 0%, rgba(16,23,42,.55) 35%, rgba(16,23,42,.95) 100%); }
-.mhero .brand { position: absolute; top: calc(18px + env(safe-area-inset-top, 0px)); left: 20px; display: flex; align-items: center; gap: 10px; }
+.mhero .brand { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; display: flex; align-items: center; gap: 10px; }
 .mhero .brand svg { width: 30px; height: 30px; }
 .mhero .brand span { display: flex; flex-direction: column; line-height: 1; }
 .mhero .brand b { font-family: var(--serif); font-size: 17px; letter-spacing: .18em; text-transform: uppercase; font-weight: 500; }
@@ -811,10 +818,10 @@ dialog.drawer::backdrop { background: rgba(5, 8, 18, .55); }
 .mtop { padding: calc(10px + env(safe-area-inset-top, 0px)) 0 0; }
 .mtop .mhead, .msrch .mhead { display: flex; align-items: center; gap: 6px; padding: 0 12px 0 8px; }
 .mtop .mhead .hamb, .msrch .mhead .hamb { display: flex; order: 0; flex-shrink: 0; }
-.mtop .mhead .t, .msrch .mhead .t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
-.mtop .mhead .t b, .msrch .mhead .t b { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0; }
-.mtop .mhead .t small, .msrch .mhead .t small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.mtop .mhead .tierbtn.m, .msrch .mhead .tierbtn.m { flex-shrink: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); }
+.mtop .mhead .t, .msrch .mhead .t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; white-space: nowrap; overflow: hidden; }
+.mtop .mhead .t b, .msrch .mhead .t b { font-family: var(--serif); font-size: 21px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
+.mtop .mhead .t small, .msrch .mhead .t small { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mtop .mhead .tierbtn.m, .msrch .mhead .tierbtn.m { flex-shrink: 0; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); }
 .mtop .msearch { margin-top: 12px; }
 .mtop .mrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 10px 20px 0; }
 .mtop .mrow .mf:first-child { grid-column: 1 / -1; }
@@ -830,6 +837,7 @@ dialog.drawer::backdrop { background: rgba(5, 8, 18, .55); }
 .mf small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 .mf select, .mf input { width: 100%; min-width: 0; box-sizing: border-box; -webkit-appearance: none; appearance: none; padding: 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); font: inherit; font-size: 16px; }
 .mf2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.mf2 input[type=date] { font-size: 14px; padding-left: 10px; padding-right: 8px; }
 .mform .mchips { margin: 2px 0 0; padding: 0; }
 .mgo { margin-top: 6px; padding: 15px; border: 0; border-radius: 14px; background: var(--gold); color: #10172a; font-weight: 700; font-size: 16px; letter-spacing: .04em; }
 .mform .mflt { align-self: center; background: none; border: 0; color: var(--muted); font-size: 13px; padding: 4px; }

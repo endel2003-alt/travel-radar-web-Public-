@@ -1131,7 +1131,7 @@ function mobileHome(rows, groups) {
   const nightsNow = lastQ?.nights || '';
   const searched = !!(q || where.value || from || to);
   return `<div class="msrch">
-      <div class="mhead"><button type="button" class="hamb" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button><div class="t"><b>Search</b><small>by my tier</small></div><button type="button" class="lnk tierbtn m" data-open-profile>${hasProfile() ? ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => tierKo(myTier(c))).join(' · ') : '내 티어'}</button></div>
+      <div class="mhead"><button type="button" class="hamb" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button><div class="t"><b>Search</b><small>by my tier</small></div><button type="button" class="lnk tierbtn m" data-open-profile>${tierShort(true)}</button></div>
       <form class="mform" id="mForm">
         <label class="mf"><small>Destination</small><select id="mWhere">${whereOpts}</select></label>
         <div class="mf2"><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
@@ -1204,7 +1204,13 @@ function viewRadar() {
 }
 function renderProfileBtn() {
   const b = $('#profileBtn'); const dots = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => `<i class="${c}"></i>`).join('');
-  b.querySelector('.tdots').innerHTML = ''; b.querySelector('.tlabel').textContent = hasProfile() ? ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => tierKo(myTier(c))).join(' · ') : '내 티어 넣기';
+  b.querySelector('.tdots').innerHTML = ''; b.querySelector('.tlabel').textContent = tierShort(MOBILE());
+}
+// 티어 버튼 글자: PC는 전부(플래티넘 · 다이아몬드 · …), 모바일은 첫 티어 + 나머지 수(플래티넘 +3) — 로고와 겹치지 않게
+function tierShort(short) {
+  const ts = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => tierKo(myTier(c)));
+  if (!ts.length) return short ? '내 티어' : '내 티어 넣기';
+  return short ? (ts.length > 1 ? `${ts[0]} +${ts.length - 1}` : ts[0]) : ts.join(' · ');
 }
 // 우측 레일: 바우처 D-day · 미니 달력(내 최저) · 티어 플래너 · 이번 주 변화
 function renderRail(rows) {
