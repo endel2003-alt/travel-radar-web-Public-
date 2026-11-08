@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611090002">
+<link rel="stylesheet" href="app.css?v=202611090032">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -171,7 +171,7 @@
   <form method="dialog" id="profileForm">
     <h3 style="margin:0">내 프로필</h3>
     <p class="muted small" style="margin:0">로그인 없이, 이 브라우저에만 저장돼요. 입력하면 "내가 쓸 수 있는 것만" 필터와 행마다 사용 가능 표시가 켜집니다.</p>
-    <fieldset class="accor"><legend>Accor ALL<small>소피텔 · 풀만 · 노보텔 · 이비스</small></legend>
+    <fieldset class="accor"><legend><i class="cb lg accor"></i><span>Accor ALL<small>소피텔 · 풀만 · 노보텔 · 이비스</small></span></legend>
       <label>티어 <select name="accorTier"><option value="">회원 아님</option><option>Classic</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option><option>Limitless</option></select></label>
       <label>ALL Accor+ Explorer 구독 <input name="explorer" type="checkbox"></label>
       <label>SNU 남은 장수 <input name="snu" type="number" min="0" max="12"></label>
@@ -181,17 +181,17 @@
       <label>SNU 만료일 <input name="snuExp" type="date"></label>
       <label>Stay Plus 만료일 <input name="stayPlusExp" type="date"></label>
     </fieldset>
-    <fieldset class="marriott"><legend>Marriott Bonvoy<small>리츠칼튼 · 웨스틴 · 쉐라톤 · JW</small></legend>
+    <fieldset class="marriott"><legend><i class="cb lg marriott"></i><span>Marriott Bonvoy<small>리츠칼튼 · 웨스틴 · 쉐라톤 · JW</small></span></legend>
       <label>티어 <select name="marriottTier"><option value="">회원 아님</option><option>Member</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Titanium</option><option>Ambassador</option></select></label>
       <label>보유 포인트 <input name="marriottPts" type="number" min="0" step="1000"></label>
       <label>올해 숙박 수 <input name="marriottNights" type="number" min="0" max="400"></label>
     </fieldset>
-    <fieldset class="hilton"><legend>Hilton Honors<small>콘래드 · 월도프 · 힐튼 · DT</small></legend>
+    <fieldset class="hilton"><legend><i class="cb lg hilton"></i><span>Hilton Honors<small>콘래드 · 월도프 · 힐튼 · DT</small></span></legend>
       <label>티어 <select name="hiltonTier"><option value="">회원 아님</option><option>Member</option><option>Silver</option><option>Gold</option><option>Diamond</option></select></label>
       <label>보유 포인트 <input name="hiltonPts" type="number" min="0" step="1000"></label>
       <label>올해 숙박 수 <input name="hiltonNights" type="number" min="0" max="400"></label>
     </fieldset>
-    <fieldset class="ihg"><legend>IHG One Rewards<small>인터컨티넨탈 · 크라운플라자 · 홀리데이인</small></legend>
+    <fieldset class="ihg"><legend><i class="cb lg ihg"></i><span>IHG One Rewards<small>인터컨티넨탈 · 크라운플라자 · 홀리데이인</small></span></legend>
       <label>티어 <select name="ihgTier"><option value="">회원 아님</option><option>Club</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></label>
       <label>Ambassador 회원 <input name="ambassador" type="checkbox"></label>
       <label>보유 포인트 <input name="ihgPts" type="number" min="0" step="1000"></label>
@@ -207,8 +207,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611090002"></script>
-<script src="config.js?v=202611090002"></script>
-<script src="app.js?v=202611090002"></script>
+<script src="compare.js?v=202611090032"></script>
+<script src="config.js?v=202611090032"></script>
+<script src="app.js?v=202611090032"></script>
 </body>
 </html>
