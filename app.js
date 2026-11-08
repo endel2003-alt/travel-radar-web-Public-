@@ -830,6 +830,20 @@ function fillWhere() {
   if (!hasProfile()) $('#fSort').value = 'cost';
 }
 let lastQ = null;
+// 1박짜리 요금을 N일 연속으로 이어 붙여 N박 한 건처럼 (같은 호텔 · 같은 혜택 종류). 비용·정가·포인트·절약은 합계. 예약은 사이트에서 N박으로 한 번에.
+function combineNights(rows, N) {
+  const by = new Map();
+  for (const r of rows) if ((r.n || 1) === 1) { const k = `${r.h}|${r.b}|${r.br || ''}`; if (!by.has(k)) by.set(k, new Map()); by.get(k).set(r.d, r); }
+  const out = [];
+  for (const m of by.values()) for (const [d, r0] of m) {
+    const seq = [r0]; for (let i = 1; i < N; i++) { const r = m.get(addDays(d, i)); if (!r) break; seq.push(r); }
+    if (seq.length < N) continue;
+    const sum = (f) => seq.every(r => r[f] != null) ? seq.reduce((a, r) => a + r[f], 0) : null;
+    const rem = seq.map(r => r.rem).filter(x => x != null);
+    out.push(Object.assign({}, r0, { n: N, my: sum('my'), ref: sum('ref'), pt: sum('pt'), sv: seq.reduce((a, r) => a + (r.sv || 0), 0) || undefined, rooms: undefined, rem: rem.length ? Math.min(...rem) : undefined, first: seq.some(r => !r.first) ? undefined : Math.max(...seq.map(r => r.first)), combo: N }));
+  }
+  return out;
+}
 function filtered() {
   const from = $('#fFrom').value, to = $('#fTo').value, where = $('#fWhere').value, q = $('#fText').value.trim(), we = $('#fWeekend').checked, mine = $('#fMine').checked;
   const qp = lastQ = parseQ(q);
@@ -840,7 +854,7 @@ function filtered() {
   if (we || qp.weekend) rows = rows.filter(r => [5, 6].includes(dow(r.d)));
   if (qp.holiday) rows = rows.filter(r => inLongWeekend(r.d, r.n || 1));
   if (qp.month) rows = rows.filter(r => +r.d.slice(5, 7) === qp.month);
-  if (qp.nights) rows = rows.filter(r => (r.n || 1) === qp.nights);
+  if (qp.nights) rows = rows.filter(r => (r.n || 1) === qp.nights).concat(qp.nights > 1 ? combineNights(rows, qp.nights) : []);   // N박: N박짜리 요금 + 1박짜리를 N일 연속 이어 붙인 것
   if (qp.five4) rows = rows.filter(r => r.br === 'FIVE4');
   if (qp.onePlusOne) rows = rows.filter(r => r.br === 'STAY_PLUS' || r.br === 'AMB');   // 2박 중 1박 무료 (아코르 Stay Plus · IHG 앰배서더 주말)
   if (qp.chains.size) rows = rows.filter(r => qp.chains.has(r.chain));
@@ -866,7 +880,7 @@ function rowHtml(r, showHotel = true) {
     <td class="hotel">${showHotel ? `<a class="hname" href="#hotel/${encodeURIComponent(r.h)}">${esc(r.hn)}</a>` : ''}<div class="hsub"><span class="ctag ${r.chain}">${CHAIN[r.chain]}</span>${esc(h.brand || '')} · ${esc(h.country || '')} ${esc(h.city || '')}</div></td>
     <td class="benefit"><span class="badge ${r.b}">${badgeLabel(r)}</span>${r.also ? '<span class="tag">Red Hot</span>' : ''}<span class="blabel">${esc(rawLabel(r))}</span>${elig}</td>
     <td class="cost">${cost}${chg(r)}</td>
-    <td class="refc"><span class="ref">${ref}<span class="note">${esc(note)}</span></span></td>
+    <td class="refc"><span class="ref">${ref}<span class="note">${esc(note)}${r.combo ? ` 1박 요금 ${r.combo}일 연속 합계` : ''}</span></span></td>
     <td class="savec">${r.sv ? `<span class="save">${won(r.sv)}${r.ap ? ' <span class="ap">추정</span>' : ''}</span>` : '<span class="muted">–</span>'}</td>
     <td class="roomsc">${rooms}</td>
     <td class="book"><a class="btn small" href="${link(r)}" target="_blank" rel="noopener">예약 ↗</a></td>
@@ -928,7 +942,7 @@ function cardHtml(o, i) {
   const KIND_KO = { cash: '현금', points: '포인트', voucher: '바우처' };
   const perNight = (r) => r.my != null ? won(r.my / (r.n || 1)) + '/박' : '';
   const pay = (r, kind) => !r ? null : kind === 'points' ? `${r.pt.toLocaleString()}pt${(r.n || 1) > 1 ? ` / ${r.n}박` : ''}` : kind === 'voucher' ? (r.br === 'SNU' ? `${won(r.my)} 스위트` : `${won(r.my)} / ${r.n || 1}박`) : won(r.my);
-  const pct = (r) => r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0;
+  const pct = (r) => r.sv > 0 && r.ref ? Math.round(r.sv / r.ref * 100) : 0;
   const how = (r) => r.br === 'SNU' ? 'SNU로 스위트' : r.br === 'STAY_PLUS' ? 'Stay Plus · 1박 무료' : r.br === 'AMB' ? 'Ambassador · 주말 1박 무료' : r.br === 'FIVE4' ? '포인트 5박 · 1박 무료' : r.b === 'POINTS' ? '포인트' : r.br === 'RED_HOT' ? 'Red Hot Room' : r.b === 'SALE' ? '회원 특가' : KIND_KO[bestKind];
   const bestTxt = o.best ? `<i class="how">${how(o.best)}</i>${pay(o.best, bestKind)}${chg(o.best)}` : '—';
   const bestSub = o.best ? [perNight(o.best), pct(o.best) ? `정가 대비 ${pct(o.best)}% 절약` : ''].filter(Boolean).join(' · ') : '';
@@ -1018,7 +1032,7 @@ async function shareCard(hotelKey, rowKey) {
     const big = r.pt ? `${r.pt.toLocaleString()}pt` : won(r.my); const sub = r.pt ? (r.my != null ? `현금이면 ${won(r.my)}` : '') : (r.ref ? `정가 ${won(r.ref)}` : '');
     y += 100; x.fillStyle = FG; x.font = `600 96px ${SERIF}`; x.fillText(big, 64, y); const bw = x.measureText(big).width; x.fillStyle = MUTED; x.font = `500 34px ${SANS}`; x.fillText(`/ ${r.n || 1}박`, 64 + bw + 16, y);
     if (sub) { y += 44; x.fillStyle = MUTED; x.font = `500 28px ${SANS}`; x.fillText(sub, 64, y); }
-    const pct = r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0; const pills = []; if (r.sv) pills.push(`혜택 ${won(r.sv)}`); if (pct) pills.push(`정가 대비 −${pct}%`); if (tier && o.tierValue) pills.push(`내 등급으로 +${won(o.tierValue)} 이득`);
+    const pct = r.sv > 0 && r.ref ? Math.round(r.sv / r.ref * 100) : 0; const pills = []; if (r.sv) pills.push(`혜택 ${won(r.sv)}`); if (pct) pills.push(`정가 대비 −${pct}%`); if (tier && o.tierValue) pills.push(`내 등급으로 +${won(o.tierValue)} 이득`);
     let px = 64; y += 64; for (const pt of pills) { x.font = `600 26px ${SANS}`; const w = x.measureText(pt).width + 44; x.fillStyle = 'rgba(212,168,75,.16)'; x.beginPath(); x.roundRect(px, y - 36, w, 54, 27); x.fill(); x.fillStyle = GOLD; x.fillText(pt, px + 22, y); px += w + 14; }
   } else { y += 60; x.fillStyle = MUTED; x.font = `500 30px ${SANS}`; x.fillText('이 기간엔 수집된 티어 혜택 요금이 없어요', 64, y); }
   // 내 티어 혜택 (본문 흐름대로 이어서)
@@ -1086,7 +1100,7 @@ const MOBILE = () => window.matchMedia('(max-width: 720px)').matches;
 function mPhotoCard(o, i, opts) {
   const h = o.h; const tier = myTier(h.chain); const r = o.best; const small = opts?.small;
   const kind = r ? (r.pt ? '포인트' : r.br === 'STAY_PLUS' || r.br === 'AMB' ? '1박 무료' : r.br === 'SNU' ? '스위트' : r.br === 'FIVE4' ? '5박 무료' : r.b === 'SALE' ? '특가' : '현금') : '';
-  const pct = r && r.sv && r.ref ? Math.round(r.sv / r.ref * 100) : 0;
+  const pct = r && r.sv > 0 && r.ref ? Math.round(r.sv / r.ref * 100) : 0;
   // 포인트 혜택은 포인트로 보여준다 (우린 가격이 아니라 티어 혜택을 보여주는 곳) — 현금 환산은 작게
   const isPt = r && r.pt && (r.b === 'POINTS' || r.br === 'FIVE4' || r.br === 'POINTS_SUITE');
   const per = isPt ? `${Math.round(r.pt / (r.n || 1)).toLocaleString()}<small>pt/박</small>` : (r && r.my != null ? won(r.my / (r.n || 1)) : '');
@@ -1123,6 +1137,9 @@ function mHeroHtml(rows, groups, opts) {
       <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
   return { heroHtml, band, wallet, soonHtml };
 }
+const M_CHIPS = ['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'];
+// 검색어에서 박수(2박)와 칩 단어를 뺀 '순수 키워드'만 — 폼을 다시 그려도 검색어가 쌓이지 않게
+const kwOnly = (q) => { let t = ` ${q} `; for (const c of [...M_CHIPS].sort((a, b) => b.length - a.length)) t = t.split(` ${c} `).join(' '); return t.replace(/\s\d+박(?=\s)/g, ' ').replace(/\s{2,}/g, ' ').trim(); };
 // 검색 탭(모바일): 폼 카드가 먼저 — 어디로 · 언제 · 몇 박 · 혜택 → [호텔 찾기] — 그 아래 결과
 function mobileHome(rows, groups) {
   const q = $('#fText').value; const where = $('#fWhere'); const from = $('#fFrom').value, to = $('#fTo').value;
@@ -1136,8 +1153,8 @@ function mobileHome(rows, groups) {
         <label class="mf"><small>Destination</small><select id="mWhere">${whereOpts}</select></label>
         <div class="mf2"><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
         <label class="mf"><small>Nights</small><select id="mNights"><option value="">상관없음</option>${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${String(nightsNow) === String(n) ? 'selected' : ''}>${n}박</option>`).join('')}</select></label>
-        <label class="mf"><small>Keyword</small><input type="search" id="mText" placeholder="소피텔 · 라운지 · 포인트" value="${esc(q.replace(/\b\d박\b/g, '').trim())}"></label>
-        <div class="mchips">${['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
+        <label class="mf"><small>Keyword</small><input type="search" id="mText" placeholder="소피텔 · 라운지 · 포인트" value="${esc(kwOnly(q))}"></label>
+        <div class="mchips">${M_CHIPS.map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
         <button type="submit" class="mgo">호텔 찾기</button>
         <button type="button" class="mflt lnk">자세한 필터</button>
       </form>
@@ -1182,7 +1199,7 @@ function viewRadar() {
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
   const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups);
-      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; $('#fFrom').value = m.querySelector('#mFrom').value; $('#fTo').value = m.querySelector('#mTo').value; const n = m.querySelector('#mNights').value; const kw = m.querySelector('#mText').value.trim(); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw.replace(/\b\d박\b/g, '').trim(), n ? `${n}박` : '', ...chips.filter(c => !kw.includes(c))].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
+      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; $('#fFrom').value = m.querySelector('#mFrom').value; $('#fTo').value = m.querySelector('#mTo').value; const n = m.querySelector('#mNights').value; const kw = kwOnly(m.querySelector('#mText').value.trim()); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw, n ? `${n}박` : '', ...chips].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
       mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));   // 칩은 폼 안에서 고르기만, 적용은 '호텔 찾기'
       mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
