@@ -16,13 +16,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611082142">
+<link rel="stylesheet" href="app.css?v=202611082156">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
 <header class="topbar"><div class="in">
   <button type="button" class="hamb" id="hamb" aria-label="메뉴"><span></span><span></span><span></span></button>
-  <nav class="nav"><a href="#radar" data-v="radar"><b>Search</b><small data-copy="menu.search.sub">내 등급 기준</small></a><a href="#me" data-v="me"><b>Today</b><small data-copy="menu.today.sub">내 혜택</small></a><a href="#best" data-v="best"><b>Best</b><small data-copy="menu.best.sub">이번 달</small></a><a href="#plan" data-v="plan"><b>Plan</b><small data-copy="menu.plan.sub">여행 일정</small></a><a href="#map" data-v="map"><b>Map</b><small data-copy="menu.map.sub">전체 호텔</small></a><a href="#hotels" data-v="hotels"><b>Hotels</b><small data-copy="menu.hotels.sub">도시별</small></a><a href="#guide" data-v="guide"><b>Guide</b><small data-copy="menu.guide.sub">등급 비교</small></a><a href="#promos" data-v="promos"><b>Offers</b><small data-copy="menu.offers.sub">진행 중</small></a><a href="#news" data-v="news"><b>News</b><small data-copy="menu.news.sub">알림·뉴스</small></a></nav>
+  <nav class="nav"><a href="#radar" data-v="radar"><b>Search</b><small data-copy="nav.search.sub">by my tier</small></a><a href="#me" data-v="me"><b>Today</b><small data-copy="nav.today.sub">my benefits</small></a><a href="#best" data-v="best"><b>Best</b><small data-copy="nav.best.sub">of the month</small></a><a href="#plan" data-v="plan"><b>Plan</b><small data-copy="nav.plan.sub">my trip</small></a><a href="#map" data-v="map"><b>Map</b><small data-copy="nav.map.sub">all hotels</small></a><a href="#hotels" data-v="hotels"><b>Hotels</b><small data-copy="nav.hotels.sub">by city</small></a><a href="#guide" data-v="guide"><b>Guide</b><small data-copy="nav.guide.sub">tiers compared</small></a><a href="#promos" data-v="promos"><b>Offers</b><small data-copy="nav.offers.sub">live promos</small></a><a href="#news" data-v="news"><b>News</b><small data-copy="nav.news.sub">from my inbox</small></a></nav>
   <a class="logo" href="#radar"><svg viewBox="0 0 200 200" aria-hidden="true"><rect x="8" y="8" width="184" height="184" rx="40" fill="#d4a84b"></rect><path d="M44 62 H118 M72 62 V146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round"></path><path d="M104 146 V94 H128 a19 19 0 0 1 0 38 H104 M130 132 L152 146" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="wm"><b>Travel Radar</b><small>Members only</small></span></a>
   <div class="right"><span class="muted small" id="meta"></span><a class="lnk" id="collectorBtn" href="#" hidden>수집 관리</a><button class="lnk themebtn" id="themeBtn" hidden title="낮/밤 전환">Night</button><a class="lnk" id="checkLink" href="#check" hidden>점검</a><button class="lnk bellBtn" hidden>알림</button><button class="lnk authBtn" hidden>로그인</button><button class="lnk tierbtn" id="profileBtn"><span class="tdots"></span><span class="tlabel">내 티어</span></button></div>
 </div></header>
@@ -207,8 +207,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611082142"></script>
-<script src="config.js?v=202611082142"></script>
-<script src="app.js?v=202611082142"></script>
+<script src="compare.js?v=202611082156"></script>
+<script src="config.js?v=202611082156"></script>
+<script src="app.js?v=202611082156"></script>
 </body>
 </html>

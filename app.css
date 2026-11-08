@@ -801,3 +801,6 @@ dialog.drawer::backdrop { background: rgba(5, 8, 18, .55); }
 .copyed label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .copyed label span small { margin-left: 6px; font-size: 11px; }
 .copyed input, .copyed textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--fg); font: inherit; font-size: 14px; }
+/* PC 메뉴 소제목 — 길어져도 메뉴가 밀리지 않게 */
+.nav a small { display: block; white-space: nowrap; max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1280px) { .nav a small { display: none; } .nav a { padding-top: 6px; padding-bottom: 6px; } }
