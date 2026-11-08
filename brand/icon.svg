@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512"><title>Travel Radar app icon</title>
-<rect width="64" height="64" rx="14" fill="#141a2e"/>
-<rect x="9" y="9" width="46" height="46" rx="10" fill="#d4a84b"/>
-<path d="M18 22 H37 M25 22 V44" fill="none" stroke="#141a2e" stroke-width="4.2" stroke-linecap="round"/>
-<path d="M33 44 V30 h6 a4.8 4.8 0 0 1 0 9.6 h-6 M39.5 39.5 L45 44" fill="none" stroke="#141a2e" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect width="64" height="64" fill="#d4a84b"/>
+<path d="M17 21 H37.5 M27 21 V45" fill="none" stroke="#141a2e" stroke-width="5" stroke-linecap="round"/>
+<path d="M35 45 V29 h7 a5.5 5.5 0 0 1 0 11 h-7 M42 40 L48 45" fill="none" stroke="#141a2e" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

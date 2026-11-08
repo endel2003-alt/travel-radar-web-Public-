@@ -1139,6 +1139,35 @@ function mHeroHtml(rows, groups, opts) {
       <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
   return { heroHtml, band, wallet, soonHtml };
 }
+// ---------- 기간 달력 (모바일 검색): 한 달력에서 체크인 → 체크아웃을 찍는다 ----------
+const fmtMD = (d) => d ? `${+d.slice(5, 7)}.${+d.slice(8, 10)} ${DOW[dow(d)]}` : '';
+function datesLabel(from, out) {
+  if (!from) return '<span class="ph">날짜를 고르세요</span>';
+  if (!out) return `${fmtMD(from)} → <span class="ph">체크아웃</span>`;
+  return `${fmtMD(from)} → ${fmtMD(out)} <em>${daysBetween(from, out)}박</em>`;
+}
+function openCal(btn) {
+  let dlg = document.getElementById('dlgCal');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'dlgCal'; dlg.className = 'sheet'; document.body.appendChild(dlg); dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); }
+  const today = todayStr(); const minD = D.meta.dateFrom && D.meta.dateFrom > today ? D.meta.dateFrom : today; const maxD = D.meta.dateTo || addDays(today, 60);
+  let from = btn.dataset.from || '', out = btn.dataset.out || '';
+  const months = []; let m = minD.slice(0, 7); while (m <= maxD.slice(0, 7)) { months.push(m); const [y, mo] = m.split('-').map(Number); m = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; }
+  const grid = (ym) => {
+    const [y, mo] = ym.split('-').map(Number); const first = `${ym}-01`; const days = new Date(Date.UTC(y, mo, 0)).getUTCDate(); const pad = dow(first);
+    const cells = []; for (let i = 0; i < pad; i++) cells.push('<i></i>');
+    for (let d = 1; d <= days; d++) { const ds = `${ym}-${String(d).padStart(2, '0')}`; const dis = ds < minD || ds > addDays(maxD, 1); const hol = HOLI_KR[ds]; const cls = [dis ? 'dis' : '', ds === from ? (out ? 'a ar' : 'a') : '', ds === out ? 'b' : '', from && out && ds > from && ds < out ? 'in' : '', hol || dow(ds) === 0 ? 'off' : '', ds === today ? 'td' : ''].filter(Boolean).join(' '); cells.push(`<button type="button" class="${cls}" data-d="${ds}" ${dis ? 'disabled' : ''}><b>${d}</b>${hol ? `<small>${esc(hol)}</small>` : ''}</button>`); }
+    return `<div class="cmon"><h3>${y}년 ${mo}월</h3><div class="cdow">${DOW.map((w, i) => `<span class="${i === 0 ? 'off' : ''}">${w}</span>`).join('')}</div><div class="cgrid">${cells.join('')}</div></div>`;
+  };
+  const render = () => { dlg.innerHTML = `<div class="shead"><b>${from && out ? `${fmtMD(from)} → ${fmtMD(out)} · ${daysBetween(from, out)}박` : from ? `${fmtMD(from)} 체크인 · 체크아웃 날을 고르세요` : '체크인 날을 고르세요'}</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody">${months.map(grid).join('')}</div><div class="cfoot"><button type="button" class="lnk" id="calClear">지우기</button><button type="button" class="mgo" id="calOk" ${from && out ? '' : 'disabled'}>${from && out ? `${daysBetween(from, out)}박 적용` : '적용'}</button></div>`;
+    dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+    dlg.querySelector('#calClear').addEventListener('click', () => { from = ''; out = ''; render(); });
+    dlg.querySelector('#calOk').addEventListener('click', () => { btn.dataset.from = from; btn.dataset.out = out; btn.innerHTML = datesLabel(from, out); dlg.close(); });
+    dlg.querySelectorAll('.cgrid button').forEach(b => b.addEventListener('click', () => { const d = b.dataset.d; if (!from || (from && out) || d <= from) { from = d; out = ''; } else { out = d; } const top = dlg.querySelector('.cbody').scrollTop; render(); dlg.querySelector('.cbody').scrollTop = top; }));
+  };
+  render(); dlg.showModal();
+  // 선택된 달(없으면 이번 달)이 보이게
+  const tgt = dlg.querySelector(from ? `[data-d="${from}"]` : '.td'); if (tgt) tgt.scrollIntoView({ block: 'center' });
+}
 const M_CHIPS = ['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'];
 // 검색어에서 박수(2박)와 칩 단어를 뺀 '순수 키워드'만 — 폼을 다시 그려도 검색어가 쌓이지 않게
 const kwOnly = (q) => { let t = ` ${q} `; for (const c of [...M_CHIPS].sort((a, b) => b.length - a.length)) t = t.split(` ${c} `).join(' '); return t.replace(/\s\d+박(?=\s)/g, ' ').replace(/\s{2,}/g, ' ').trim(); };
@@ -1147,14 +1176,12 @@ function mobileHome(rows, groups) {
   const q = $('#fText').value; const where = $('#fWhere'); const from = $('#fFrom').value, to = $('#fTo').value;
   const whereOpts = [...where.options].map(o => `<option value="${esc(o.value)}" ${o.selected ? 'selected' : ''}>${esc(o.textContent.replace(/ \(\d+\)$/, ''))}</option>`).join('');
   const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '') : '';
-  const nightsNow = lastQ?.nights || '';
   const searched = !!(q || where.value || from || to);
   return `<div class="msrch">
       <div class="mhead"><button type="button" class="hamb" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button><div class="t"><b>Search</b><small>by my tier</small></div><button type="button" class="lnk tierbtn m" data-open-profile>${tierShort(true)}</button></div>
       <form class="mform" id="mForm">
         <label class="mf"><small>Destination</small><select id="mWhere">${whereOpts}</select></label>
-        <div class="mf2"><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
-        <label class="mf"><small>Nights</small><select id="mNights"><option value="">상관없음</option>${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${String(nightsNow) === String(n) ? 'selected' : ''}>${n}박</option>`).join('')}</select></label>
+        <div class="mf"><small>Dates</small><button type="button" class="mdates" id="mDates" data-from="${ui.mDatesSet ? esc(from) : ''}" data-out="${ui.mDatesSet && to ? esc(addDays(to, 1)) : ''}">${ui.mDatesSet ? datesLabel(from, to ? addDays(to, 1) : '') : '<span class="ph">날짜를 고르세요 · 안 고르면 전체 기간</span>'}</button></div>
         <label class="mf"><small>Keyword</small><input type="search" id="mText" placeholder="소피텔 · 라운지 · 포인트" value="${esc(kwOnly(q))}"></label>
         <div class="mchips">${M_CHIPS.map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
         <button type="submit" class="mgo">호텔 찾기</button>
@@ -1201,8 +1228,9 @@ function viewRadar() {
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
   const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups);
-      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; $('#fFrom').value = m.querySelector('#mFrom').value; $('#fTo').value = m.querySelector('#mTo').value; const n = m.querySelector('#mNights').value; const kw = kwOnly(m.querySelector('#mText').value.trim()); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw, n ? `${n}박` : '', ...chips].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
+      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; const md = m.querySelector('#mDates'); if (md.dataset.from && md.dataset.out) { $('#fFrom').value = md.dataset.from; $('#fTo').value = addDays(md.dataset.out, -1); ui.mDatesSet = true; } else if (ui.mDatesSet && !md.dataset.from) { ui.mDatesSet = false; $('#fFrom').value = ''; $('#fTo').value = ''; } const n = ''; const kw = kwOnly(m.querySelector('#mText').value.trim()); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw, n ? `${n}박` : '', ...chips].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
       mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));   // 칩은 폼 안에서 고르기만, 적용은 '호텔 찾기'
+      mApp.querySelector('#mDates').addEventListener('click', (e) => openCal(e.currentTarget));
       mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
       mApp.querySelector('#mMore')?.addEventListener('click', () => { const from = ui.mLimit; ui.mLimit += 24; mApp.querySelector('#mList').insertAdjacentHTML('beforeend', groups.slice(from, ui.mLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const b = mApp.querySelector('#mMore'); if (groups.length > ui.mLimit) b.textContent = `호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기`; else b.remove(); }); } }
