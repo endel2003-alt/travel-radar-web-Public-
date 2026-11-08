@@ -722,11 +722,12 @@ function route() {
   const hash = location.hash.replace(/^#\/?/, '') || (matchMedia('(max-width: 720px)').matches ? 'home' : 'radar'); const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
+  document.body.classList.toggle('app-m', MOBILE() && name === 'home');   // 홈은 사진 헤더가 상단바를 대신한다 (검색 탭은 viewRadar 가 직접 정함)
   (views[name] || viewRadar)(arg); applyCopy(); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
   const EYE = { home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
-  if (h1 && EYE[name] && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
+  if (h1 && EYE[name] && !(name === 'home' && MOBILE()) && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
 window.addEventListener('hashchange', route);
 
@@ -1098,9 +1099,9 @@ function mPhotoCard(o, i, opts) {
     <span class="tx"><small>${starsHtml(h, 'w')}${esc(h.brand || '')} · ${CHAIN[h.chain]} · ${esc(h.city || '')}</small><b>${esc(h.name)}</b>${small ? '' : `<span class="bens">${bens}</span>`}<span class="pr"><span>${date}${r && (r.n || 1) > 1 ? ` · ${r.n}박` : ''}${isPt ? (r.my != null ? ` · 현금이면 ${won(r.my / (r.n || 1))}` : '') : (r && r.ref && r.my != null ? ` · 정가 ${won(r.ref / (r.n || 1))}` : '')}</span><em>${per}${!isPt && r && r.my != null ? '<small>/박</small>' : ''}</em></span>${small ? '' : flexHint(o, 'w')}</span></a>`;
 }
 const refMax = (o) => Math.max(0, ...o.rows.map(r => (r.ref || r.my || 0) / (r.n || 1)));   // 정가(1박) 기준 — 호텔의 급
-function mobileHome(rows, groups) {
-  const P = profile;
-  // 메인 사진: 소피텔·식스센스·리츠칼튼 중에서 (사진 있는 호텔) 열 때마다 하나 랜덤. 없으면 가장 비싼 호텔.
+// 모바일 홈 상단: 큰 사진 + 등급 띠 + 포인트/쿠폰 지갑 (홈 탭에서 쓴다)
+function mHeroHtml(rows, groups, opts) {
+  const P = profile; const q = opts?.q || '';
   const HERO_BRANDS = /sofitel|소피텔|six senses|식스센스|ritz|리츠/i;
   const picks = groups.filter(o => hImg(o.h) && HERO_BRANDS.test(`${o.h.brand || ''} ${o.h.name || ''}`));
   const hero = picks.length ? picks[Math.floor(Math.random() * picks.length)] : (groups.filter(o => hImg(o.h)).sort((a, b) => refMax(b) - refMax(a))[0] || groups[0]);
@@ -1109,30 +1110,38 @@ function mobileHome(rows, groups) {
   if (main) {
     const ladder = TIERS_N[main]; const tier = myTier(main); const nights = P[main + 'Nights'] || 0; const idx = ladder.findIndex(([n]) => n === tier); const next = idx >= 0 ? ladder[idx + 1] : ladder.find(([, n]) => n > nights); const target = next || ladder[idx] || ladder[ladder.length - 1];
     const pct = Math.min(100, Math.round(nights / target[1] * 100)); const left = Math.max(0, target[1] - nights);
-    band = `<div class="mband"><div class="l"><b>${CHAIN[main]} ${tierKo(tier)}</b><span>${next ? `${left}박 더 묵으면 ${tierKo(next[0])}` : `${tierKo(tier)} 유지 · 올해 ${daysTo(todayStr().slice(0, 4) + '-12-31')}일 남음`}</span></div><div class="r"><span><b>${nights}</b> / ${target[1]}박</span><i><em style="width:${pct}%"></em></i></div><div class="others">${tiers.slice(1).map(c => `${CHAIN[c]} ${tierKo(myTier(c))}`).join(' · ')}</div></div>`;
+    band = `<div class="mband"><div class="l"><b>${CHAIN[main]} ${tierKo(tier)}</b><span>${next ? `${left}박 더 묵으면 ${tierKo(next[0])}` : `${tierKo(tier)} 유지 · 올해 ${daysTo(todayStr().slice(0, 4) + '-12-31')}일 남음`}</span></div><div class="r"><span><b>${nights}</b> / ${target[1]}박</span><i><em style="width:${pct}%"></em></i></div>${tiers.length > 1 ? `<div class="others">${tiers.slice(1).map(c => `${CHAIN[c]} ${tierKo(myTier(c))}`).join(' · ')}</div>` : ''}</div>`;
   }
   const pts = (P.accorPts || 0) + (P.ihgPts || 0) + (P.marriottPts || 0) + (P.hiltonPts || 0);
   const vs = []; if (P.snu > 0) vs.push(['스위트 업그레이드 쿠폰', P.snu, P.snuExp]); if (P.explorer && P.stayPlus > 0) vs.push(['1박 무료 쿠폰', P.stayPlus, P.stayPlusExp]); if (P.ambassador) vs.push(['IHG Ambassador 무료 주말', 1, P.ambExp]);
   const nv = vs.reduce((a, v) => a + v[1], 0); const soon = vs.map(v => [v, daysTo(v[2])]).filter(([, d]) => d != null).sort((a, b) => a[1] - b[1])[0];
-  const wallet = hasProfile() ? `<div class="mwal"><a href="#me"><small>Points</small><b>${pts.toLocaleString()}</b><i>›</i></a><a href="#me"><small>Vouchers</small><b>${nv}${soon ? ` <em>D-${soon[1]}</em>` : ''}</b><i>›</i></a></div>` : `<div class="mwal one"><a href="#" data-open-profile><small>Members only</small><b>내 티어 넣기</b><i>›</i></a></div>`;
-  const soonHtml = soon && soon[1] <= 60 ? `<div class="mlab">곧 사라지는 것</div><a class="msoon" href="#me"><b>${esc(soon[0][0])} · ${soon[1] <= 1 ? '내일' : `D-${soon[1]}`} 만료</b><span>쓸 수 있는 호텔 ${new Set(D.rows.filter(r => isVoucher(r) && eligible(r) && (!soon[0][2] || r.d <= soon[0][2])).map(r => r.h)).size}곳</span><i>›</i></a>` : '';
-  const wl = $('#fWhere').value ? $('#fWhere').options[$('#fWhere').selectedIndex].textContent.replace(/ \(\d+\)$/, '') : (lastQ?.city || '');
-  const q = $('#fText').value;
-  return `<div class="mhero">${hero && hImg(hero.h) && !NO_EXT_IMG ? `<img src="${esc(hImg(hero.h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(hero.h.img ? hero.h.image || '' : '')}')">` : ''}<span class="ov"></span>
+  const wallet = hasProfile() ? `<div class="mwal"><a href="#me"><small>Points</small><b>${pts.toLocaleString()}</b><i>›</i></a><a href="#me"><small>Vouchers</small><b>${nv}${soon ? ` <em>D-${soon[1]}</em>` : ''}</b><i>›</i></a></div>` : `<div class="mwal one"><a href="#" data-open-profile><small>Members only</small><b>내 등급 넣기</b><i>›</i></a></div>`;
+  const soonHtml = soon && soon[1] <= 60 ? `<div class="mlab">곧 사라지는 것</div><a class="msoon" href="#me"><b>${esc(soon[0][0])} · ${soon[1] <= 1 ? '내일' : `D-${soon[1]}`} 만료</b><span>쓸 수 있는 호텔 ${new Set(D.rows.filter(r => isVoucher(r) && eligible(r) && (!soon[0][2] || r.d <= soon[0][2])).map(r => r.h)).size}곳 →</span></a>` : '';
+  const heroHtml = `<div class="mhero">${hero && hImg(hero.h) && !NO_EXT_IMG ? `<img src="${esc(hImg(hero.h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(hero.h.img ? hero.h.image || '' : '')}')">` : ''}<span class="ov"></span>
       <button type="button" class="hamb onhero" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button>
       <div class="brand"><svg viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="40" fill="#d4a84b"/><path d="M52 72 H108 M80 72 V140 M110 140 V96 H130 a14 14 0 0 1 0 28 H110 M126 124 L146 140" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Travel Radar</b><small>Members only</small></span></div>
-      <div class="tx"><b class="pill">Today${q ? ' · ' + esc(q) : ''}</b><h1>오직 멤버들에게만,<br>${wl ? esc(wl) + ' ' : '오늘 '}<em>${groups.length.toLocaleString()}곳</em>이 열립니다</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>
-    ${band}${wallet}
-    <form class="msearch" id="mSearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input type="search" placeholder="방콕 11월 2박 라운지" value="${esc(q)}"><button type="button" class="mflt">필터</button></form>
+      <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
+  return { heroHtml, band, wallet, soonHtml };
+}
+// 검색 탭(모바일): 위에 검색 줄(키워드 · 어디 · 언제) + 혜택 칩, 바로 아래 결과 — 홈의 큰 사진은 여기 없음
+function mobileHome(rows, groups) {
+  const q = $('#fText').value; const where = $('#fWhere'); const from = $('#fFrom').value, to = $('#fTo').value;
+  const whereOpts = [...where.options].map(o => `<option value="${esc(o.value)}" ${o.selected ? 'selected' : ''}>${esc(o.textContent.replace(/ \(\d+\)$/, ''))}</option>`).join('');
+  const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '') : '';
+  const searched = !!(q || where.value || from || to);
+  return `<div class="mtop">
+      <div class="mhead"><button type="button" class="hamb" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button><div class="t"><b>Search</b><small>by my tier</small></div><button type="button" class="lnk tierbtn m" data-open-profile>${hasProfile() ? ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => tierKo(myTier(c))).join(' · ') : '내 티어'}</button></div>
+      <form class="msearch" id="mForm" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mText" placeholder="호텔 · 도시 · 혜택 (소피텔, 라운지…)" value="${esc(q)}" autocomplete="off"><button type="button" class="mflt">필터</button></form>
+      <div class="mrow"><label class="mf"><small>Where</small><select id="mWhere">${whereOpts}</select></label><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
+    </div>
     <div class="mchips">${['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
     ${limitText() ? `<p class="limitNote m">${limitText()}</p>` : ''}
-    <div class="mlab">오늘 당신에게 열린 곳</div>
-    <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
-    ${soonHtml}
-    <div class="mlab">전체 ${groups.length.toLocaleString()}곳 · 가장 이득 순 <a href="#map" class="lnk small" style="float:right">지도로 보기 →</a></div>
+    <div class="mlab" id="mResHead">${searched ? `${wl ? esc(wl) + ' · ' : ''}${groups.length.toLocaleString()}곳` : `오늘 열린 곳 ${groups.length.toLocaleString()}곳`} · 가장 이득 순 <a href="#map" class="lnk small" style="float:right">지도로 보기 →</a></div>
     <div class="mlist" id="mList">${groups.slice(0, ui.mLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('')}</div>
-    ${groups.length > ui.mLimit ? `<button type="button" class="mmore" id="mMore">호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기</button>` : ''}`;
+    ${groups.length > ui.mLimit ? `<button type="button" class="mmore" id="mMore">호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기</button>` : ''}
+    ${!groups.length ? '<div class="empty">이 조건으로는 지금 열린 곳이 없어요. 기간이나 지역을 넓혀 보세요.</div>' : ''}`;
 }
+
 function resTitle(rows, groups) {
   const qp = lastQ || {}; const where = $('#fWhere'); const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '').replace(' 전체', '') : (qp.city || '');
   const n = `<em>${groups.length}곳</em>`;
@@ -1165,7 +1174,14 @@ function viewRadar() {
   $('#tierBar').innerHTML = tierBarHtml();
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
-  const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups); const inp = mApp.querySelector('#mSearch input'); mApp.querySelector('#mSearch').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = inp.value; viewRadar(); inp.blur(); }); mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); }); mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = $('#fText'); const c = b.dataset.mq; t.value = t.value.includes(c) ? t.value.replace(c, '').replace(/\s+/g, ' ').trim() : (t.value + ' ' + c).trim(); viewRadar(); }));
+  const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups);
+      const rerun = () => { ui.mLimit = 24; viewRadar(); };
+      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = mApp.querySelector('#mText').value.trim(); mApp.querySelector('#mText').blur(); rerun(); });   // 키워드는 Enter(검색)로 적용
+      mApp.querySelector('#mWhere').addEventListener('change', (e) => { $('#fWhere').value = e.target.value; rerun(); });
+      mApp.querySelector('#mFrom').addEventListener('change', (e) => { $('#fFrom').value = e.target.value; if ($('#fTo').value && $('#fTo').value <= e.target.value) $('#fTo').value = ''; rerun(); });
+      mApp.querySelector('#mTo').addEventListener('change', (e) => { $('#fTo').value = e.target.value; rerun(); });
+      mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.mq; const cur = $('#fText').value; $('#fText').value = cur.includes(t) ? cur.replace(t, '').replace(/\s{2,}/g, ' ').trim() : `${cur} ${t}`.trim(); rerun(); }));   // 칩은 누르면 바로 적용
+      mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
       mApp.querySelector('#mMore')?.addEventListener('click', () => { const from = ui.mLimit; ui.mLimit += 24; mApp.querySelector('#mList').insertAdjacentHTML('beforeend', groups.slice(from, ui.mLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const b = mApp.querySelector('#mMore'); if (groups.length > ui.mLimit) b.textContent = `호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기`; else b.remove(); }); } }
   $('#cards').hidden = !isCards || mob; $('#tableWrap').hidden = isCards;
@@ -1478,6 +1494,22 @@ function miniRows(rows, n = 6) {
 // ---------- 홈 (모바일 탭 1) — 나에게 맞춘 것: 등급 · 바우처 만료 · 이번 주 가장 이득 · 알림 · 소식 ----------
 function viewHome() {
   const el = $('#v-home'); const P = profile;
+  if (MOBILE()) {
+    const mine = hasProfile() ? D.rows.filter(eligible) : D.rows; const groups = groupHotels(mine).sort((a, b) => b.tierValue - a.tierValue || (b.best?.sv || 0) - (a.best?.sv || 0));
+    const H = mHeroHtml(mine, groups, { pill: hasProfile() ? 'Today' : 'Members only', title: hasProfile() ? `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다` : `내 등급을 넣으면<br><em>${groups.length.toLocaleString()}곳</em> 중 내 것이 보입니다` });
+    const today = todayStr(); const soon = addDays(today, 14); const g2 = groupHotels(mine.filter(r => r.d <= soon)).sort((a, b) => b.tierValue - a.tierValue).slice(0, 6);
+    const alerts = AUTH.s ? `<div class="mlab">내 알림 ${WATCH.unread ? `<b class="bdg">${WATCH.unread}</b>` : ''} <a href="#alerts" class="lnk small" style="float:right">전체</a></div>${WATCH.alerts.length ? `<ul class="alist home mpad">${WATCH.alerts.slice(0, 3).map(a => `<li class="${a.read_at ? '' : 'new'}">${alertText(a)}</li>`).join('')}</ul>` : `<p class="muted small mpad">관심 호텔을 걸어두면 혜택이 열릴 때 여기에 떠요. <a href="#alerts">관심 추가</a></p>`}` : '';
+    el.innerHTML = `${H.heroHtml}${H.band}${H.wallet}
+      ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
+      <div class="mlab">오늘 당신에게 열린 곳 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
+      <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
+      ${H.soonHtml}
+      ${hasProfile() ? `<div class="mlab">앞으로 2주, 내 등급으로 가장 이득 <a href="#best" class="lnk small" style="float:right">더 보기</a></div><div class="mlist">${g2.map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<p class="muted small mpad">2주 안에는 내 등급으로 쓸 수 있는 혜택이 없어요.</p>'}</div>` : ''}
+      ${alerts}
+      <div class="mlab">호텔 소식 <a href="#news" class="lnk small" style="float:right">전체</a></div><div class="nlist home mpad" id="homeNews"><p class="muted small">불러오는 중…</p></div>`;
+    loadNews().then(items => { const box = $('#homeNews'); if (box) box.innerHTML = items.slice(0, 3).map(newsCardHtml).join('') || '<p class="muted small">아직 소식이 없어요.</p>'; });
+    return;
+  }
   if (!hasProfile()) {
     el.innerHTML = `<h1>${esc(cp('home.title.noprofile'))}</h1><div class="onb"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">먼저 둘러보기</a></div>
       <h2>이번 달 베스트 <span class="muted small">전체 회원 기준</span></h2><div class="mlist" id="homeBest"></div>`;
@@ -1532,7 +1564,8 @@ function viewAccount() {
 }
 function viewMe() {
   const el = $('#v-me'); const P = profile;
-  if (!hasProfile()) { el.innerHTML = `<h1>오늘의 혜택</h1><p class="lead">티어·포인트·바우처를 넣으면 지금 내가 받을 수 있는 혜택과 놓치기 전에 써야 할 것을 한 화면에 모아 보여드려요. 로그인 없이 이 브라우저에만 저장됩니다.</p><p><button class="btn primary" id="meProfile">내 프로필 입력</button></p>`; $('#meProfile').addEventListener('click', () => $('#profileBtn').click()); return; }
+  const alertsHtml = () => AUTH.s ? `<h2>내 알림 ${WATCH.unread ? `<b class="bdg">${WATCH.unread}</b>` : ''} <a href="#alerts" class="lnk small">전체 · 관심 관리</a></h2>${WATCH.alerts.length ? `<ul class="alist home">${WATCH.alerts.slice(0, 5).map(a => `<li class="${a.read_at ? '' : 'new'}">${alertText(a)}</li>`).join('')}</ul>` : `<p class="muted small">관심 호텔을 걸어두면 혜택이 열릴 때 여기에 떠요. <a href="#alerts">관심 추가</a></p>`}` : '';
+  if (!hasProfile()) { el.innerHTML = `<h1>오늘의 혜택</h1><p class="lead">티어·포인트·바우처를 넣으면 지금 내가 받을 수 있는 혜택과 놓치기 전에 써야 할 것을 한 화면에 모아 보여드려요. 로그인 없이 이 브라우저에만 저장됩니다.</p><p><button class="btn primary" id="meProfile">내 프로필 입력</button></p>${alertsHtml()}`; $('#meProfile').addEventListener('click', () => $('#profileBtn').click()); return; }
   const today = todayStr(); const mine = D.rows.filter(eligible); const out = [];
   // 요약
   const sum = [];
@@ -1541,6 +1574,8 @@ function viewMe() {
   if (P.marriottTier) sum.push(`<div class="kpi marriott"><b>Marriott ${esc(P.marriottTier)}</b><span>${(P.marriottPts || 0).toLocaleString()}pt · ${P.marriottNights || 0}박</span></div>`);
   if (P.hiltonTier) sum.push(`<div class="kpi hilton"><b>Hilton ${esc(P.hiltonTier)}</b><span>${(P.hiltonPts || 0).toLocaleString()}pt · ${P.hiltonNights || 0}박</span></div>`);
   out.push(`<h1>오늘의 혜택</h1><p class="lead">내 티어·포인트·바우처로 지금 받을 수 있는 혜택, 놓치기 전에 써야 할 것, 포인트로 갈 수 있는 곳을 모았어요. <a href="#" id="meEdit">프로필 수정</a></p><div class="kpis">${sum.join('')}</div>`);
+  // 0) 내 알림 — 하단 종 아이콘이 이 화면으로 오니, 알림을 가장 먼저 (로그인한 경우)
+  out.push(alertsHtml());
   // 1) 바우처 소진 플래너
   const vouchers = [];
   if (P.accorTier && P.snu > 0) vouchers.push({ name: '스위트 업그레이드 쿠폰 (SNU)', chain: 'accor', count: P.snu, exp: P.snuExp, rows: mine.filter(r => r.br === 'SNU') });
