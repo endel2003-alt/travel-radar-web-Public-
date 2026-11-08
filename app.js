@@ -109,14 +109,17 @@ function link(r) {
 }
 
 // ---------- 서버(Supabase)에서 읽기 ----------
+// 손님(비로그인) 헤더: 새 publishable 키(sb_publishable_…)는 apikey 만 보내고, 예전 anon(JWT) 키는 apikey + Bearer 둘 다
+const guestHeaders = () => { const k = window.TR_SERVER?.anon || ''; return /^sb_/.test(k) ? { apikey: k } : { apikey: k, Authorization: `Bearer ${k}` }; };
+const isGuestAuth = (h) => !h.Authorization || h.Authorization === `Bearer ${window.TR_SERVER?.anon}`;
 // tr_data() 하나로 rows/hotels/promos/meta를 받는다. 무료는 오늘+7일, Pro·운영자는 전부 (서버가 자른다).
 async function loadFromServer() {
-  const S = window.TR_SERVER; const headers = { apikey: S.anon, Authorization: `Bearer ${S.anon}`, 'Content-Type': 'application/json' };
+  const S = window.TR_SERVER; let headers = Object.assign(guestHeaders(), { 'Content-Type': 'application/json' });
   try { const tok = localStorage.getItem('tr_token'); if (tok) headers.Authorization = `Bearer ${tok}`; } catch (e) {}
   let res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_data`, { method: 'POST', headers, body: '{}' });
-  if ((res.status === 401 || res.status === 403) && headers.Authorization !== `Bearer ${S.anon}`) {
+  if ((res.status === 401 || res.status === 403) && !isGuestAuth(headers)) {
     // 내 토큰이 만료·무효 → 로그아웃 처리하고 손님으로 다시 (옛 data/ 폴더로 조용히 넘어가지 않게)
-    authSave(null); headers.Authorization = `Bearer ${S.anon}`;
+    authSave(null); headers = Object.assign(guestHeaders(), { 'Content-Type': 'application/json' });
     res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_data`, { method: 'POST', headers, body: '{}' });
   }
   if (!res.ok) throw new Error('server ' + res.status);
@@ -503,7 +506,7 @@ const COPY = Object.assign({}, COPY_DEFAULT);
 const cp = (k) => COPY[k] ?? COPY_DEFAULT[k] ?? '';
 function applyCopy() { document.querySelectorAll('[data-copy]').forEach(el => { const v = cp(el.dataset.copy); if (v) el.textContent = v; }); }
 async function loadCopy() {
-  if (!window.TR_SERVER?.url) return; try { const r = await fetch(restUrl('tr_copy?select=key,value'), { headers: { apikey: window.TR_SERVER.anon, Authorization: `Bearer ${window.TR_SERVER.anon}` } }); if (r.ok) { for (const row of await r.json()) COPY[row.key] = row.value; } } catch (e) {}
+  if (!window.TR_SERVER?.url) return; try { const r = await fetch(restUrl('tr_copy?select=key,value'), { headers: guestHeaders() }); if (r.ok) { for (const row of await r.json()) COPY[row.key] = row.value; } } catch (e) {}
   applyCopy();
 }
 function copyEditorHtml() {
@@ -1601,7 +1604,7 @@ const HIST = new Map();   // hotelKey → rows [{k,d,i,n,b,br,pt,my,ref}]
 async function loadHistory(key) {
   if (HIST.has(key)) return HIST.get(key);
   const S = window.TR_SERVER; if (!S?.url) return [];
-  const headers = { apikey: S.anon, Authorization: `Bearer ${S.anon}`, 'Content-Type': 'application/json' }; try { const tok = localStorage.getItem('tr_token'); if (tok) headers.Authorization = `Bearer ${tok}`; } catch (e) {}
+  const headers = Object.assign(guestHeaders(), { 'Content-Type': 'application/json' }); try { const tok = localStorage.getItem('tr_token'); if (tok) headers.Authorization = `Bearer ${tok}`; } catch (e) {}
   let rows = [];
   try { const r = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_history`, { method: 'POST', headers, body: JSON.stringify({ p_hotel: key }) }); if (r.ok) rows = await r.json(); } catch (e) {}
   if (!Array.isArray(rows)) rows = []; HIST.set(key, rows); return rows;
