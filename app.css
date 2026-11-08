@@ -219,7 +219,9 @@ td.date .dow.we { color: var(--gold); }
 .cb.lg { width: 38px; height: 38px; border-radius: 11px; } .cb.lg::before { font-size: 19px; }
 .cb.w { width: 20px; height: 20px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.7); } .cb.w::before { font-size: 11px; }
 .tchip .cb { margin-right: 5px; vertical-align: -6px; }
-.kpi .cb { margin-right: 8px; vertical-align: -8px; }
+.kpi.ch { flex-direction: row; align-items: center; gap: 14px; }
+.kpi.ch > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+@media (max-width: 720px) { .kpis { grid-template-columns: 1fr; border-top: 0; } .kpi.ch { border-right: 0; margin-right: 0; padding: 14px 0; border-bottom: 1px solid var(--line); } .kpi.ch b { font-size: 20px; } }
 .lh .muted .cb { vertical-align: -4px; margin-right: 2px; }
 .badge { display: inline-block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 1px 0; border-bottom: 1px solid currentColor; white-space: nowrap; }
 .badge.SUITE { color: var(--suite); } .badge.FREE_NIGHT { color: var(--free); } .badge.POINTS { color: var(--points); } .badge.SALE { color: var(--sale); }
@@ -499,15 +501,16 @@ body.app-m main { padding-top: 0; }
 .mhero .tx > small { display: block; margin-top: 10px; font-size: 10px; opacity: .55; }
 .pill { display: inline-block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; padding: 5px 9px; border-radius: 6px; background: #d4a84b; color: #141a2e; }
 .pill.w { background: rgba(255,255,255,.2); color: #fff; backdrop-filter: blur(4px); }
-.mband { background: linear-gradient(135deg, #1b2545, #141a2e); color: #fff; padding: 22px 20px 66px; display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; position: relative; overflow: hidden; }
+.mband { background: linear-gradient(135deg, #1b2545, #141a2e); color: #fff; padding: 14px 20px 62px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
 .mband::after { content: ""; position: absolute; right: -40px; top: -30px; width: 180px; height: 180px; border-radius: 50%; border: 1px solid rgba(212,168,75,.22); }
-.mband .l b { display: flex; align-items: center; gap: 8px; font-size: 24px; font-weight: 800; line-height: 1; }
-.mband .l span { display: block; font-size: 12.5px; opacity: .75; margin-top: 8px; }
-.mband .r { text-align: right; min-width: 110px; font-size: 12px; opacity: .9; }
-.mband .r b { color: #e0b85c; font-size: 16px; }
-.mband .r i { display: block; height: 5px; border-radius: 3px; background: rgba(255,255,255,.2); margin-top: 10px; overflow: hidden; }
+.mband .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.08); position: relative; z-index: 1; }
+.mband .row:last-child { border-bottom: 0; }
+.mband .l b { display: block; font-size: 17px; font-weight: 700; line-height: 1.15; }
+.mband .l span { display: block; font-size: 12px; opacity: .7; margin-top: 3px; }
+.mband .r { text-align: right; min-width: 92px; font-size: 11.5px; opacity: .9; }
+.mband .r b { color: #e0b85c; font-size: 15px; }
+.mband .r i { display: block; height: 4px; border-radius: 3px; background: rgba(255,255,255,.2); margin-top: 7px; overflow: hidden; }
 .mband .r i em { display: block; height: 100%; background: #d4a84b; }
-.mband .others { grid-column: 1 / -1; font-size: 11px; opacity: .75; margin-top: 4px; }
 .mwal { margin: -44px 20px 0; background: var(--card, #fff); border-radius: 18px; box-shadow: 0 10px 30px rgba(20,26,46,.14); display: grid; grid-template-columns: 1fr 1fr; position: relative; z-index: 1; }
 .mwal.one { grid-template-columns: 1fr; }
 .mwal a { padding: 16px 18px; display: grid; grid-template-columns: 1fr auto; align-items: baseline; color: inherit; }

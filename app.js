@@ -1122,11 +1122,14 @@ function mHeroHtml(rows, groups, opts) {
   const picks = groups.filter(o => hImg(o.h) && HERO_BRANDS.test(`${o.h.brand || ''} ${o.h.name || ''}`));
   const hero = picks.length ? picks[Math.floor(Math.random() * picks.length)] : (groups.filter(o => hImg(o.h)).sort((a, b) => refMax(b) - refMax(a))[0] || groups[0]);
   const tiers = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier);
-  const main = tiers[0]; let band = '';
-  if (main) {
-    const ladder = TIERS_N[main]; const tier = myTier(main); const nights = P[main + 'Nights'] || 0; const idx = ladder.findIndex(([n]) => n === tier); const next = idx >= 0 ? ladder[idx + 1] : ladder.find(([, n]) => n > nights); const target = next || ladder[idx] || ladder[ladder.length - 1];
-    const pct = Math.min(100, Math.round(nights / target[1] * 100)); const left = Math.max(0, target[1] - nights);
-    band = `<div class="mband"><div class="l"><b>${cb(main, 'sm')} ${CHAIN[main]} ${tierKo(tier)}</b><span>${next ? `${left}박 더 묵으면 ${tierKo(next[0])}` : `${tierKo(tier)} 유지 · 올해 ${daysTo(todayStr().slice(0, 4) + '-12-31')}일 남음`}</span></div><div class="r"><span><b>${nights}</b> / ${target[1]}박</span><i><em style="width:${pct}%"></em></i></div>${tiers.length > 1 ? `<div class="others">${tiers.slice(1).map(c => `${CHAIN[c]} ${tierKo(myTier(c))}`).join(' · ')}</div>` : ''}</div>`;
+  let band = '';
+  if (tiers.length) {   // 가입한 체인 전부 한 줄씩 — 뱃지 · 체인 티어 · 다음 등급까지 · 진행 막대
+    const rows = tiers.map(c => {
+      const ladder = TIERS_N[c]; const tier = myTier(c); const nights = P[c + 'Nights'] || 0; const idx = ladder.findIndex(([n]) => n === tier); const next = idx >= 0 ? ladder[idx + 1] : ladder.find(([, n]) => n > nights); const target = next || ladder[idx] || ladder[ladder.length - 1];
+      const pct = Math.min(100, Math.round(nights / target[1] * 100)); const left = Math.max(0, target[1] - nights);
+      return `<div class="row">${cb(c)}<div class="l"><b>${CHAIN[c]} ${tierKo(tier)}</b><span>${next ? `${left}박 더 묵으면 ${tierKo(next[0])}` : `${tierKo(tier)} 유지 · 올해 ${daysTo(todayStr().slice(0, 4) + '-12-31')}일 남음`}</span></div><div class="r"><span><b>${nights}</b> / ${target[1]}박</span><i><em style="width:${pct}%"></em></i></div></div>`;
+    }).join('');
+    band = `<div class="mband">${rows}</div>`;
   }
   const pts = (P.accorPts || 0) + (P.ihgPts || 0) + (P.marriottPts || 0) + (P.hiltonPts || 0);
   const vs = []; if (P.snu > 0) vs.push(['스위트 업그레이드 쿠폰', P.snu, P.snuExp]); if (P.explorer && P.stayPlus > 0) vs.push(['1박 무료 쿠폰', P.stayPlus, P.stayPlusExp]); if (P.ambassador) vs.push(['IHG Ambassador 무료 주말', 1, P.ambExp]);
@@ -1624,10 +1627,10 @@ function viewMe() {
   const today = todayStr(); const mine = D.rows.filter(eligible); const out = [];
   // 요약
   const sum = [];
-  if (P.accorTier) sum.push(`<div class="kpi accor"><b>${cb('accor')}Accor ${esc(P.accorTier)}</b><span>${(P.accorPts || 0).toLocaleString()}pt · ${P.accorNights || 0}박${P.explorer ? ' · Explorer' : ''}</span></div>`);
-  if (P.ihgTier) sum.push(`<div class="kpi ihg"><b>${cb('ihg')}IHG ${esc(P.ihgTier)}</b><span>${(P.ihgPts || 0).toLocaleString()}pt · ${P.ihgNights || 0}박${P.ambassador ? ' · Ambassador' : ''}</span></div>`);
-  if (P.marriottTier) sum.push(`<div class="kpi marriott"><b>${cb('marriott')}Marriott ${esc(P.marriottTier)}</b><span>${(P.marriottPts || 0).toLocaleString()}pt · ${P.marriottNights || 0}박</span></div>`);
-  if (P.hiltonTier) sum.push(`<div class="kpi hilton"><b>${cb('hilton')}Hilton ${esc(P.hiltonTier)}</b><span>${(P.hiltonPts || 0).toLocaleString()}pt · ${P.hiltonNights || 0}박</span></div>`);
+  if (P.accorTier) sum.push(`<div class="kpi ch accor">${cb('accor', 'lg')}<div><b>Accor ${esc(P.accorTier)}</b><span>${(P.accorPts || 0).toLocaleString()}pt · ${P.accorNights || 0}박${P.explorer ? ' · Explorer' : ''}</span></div></div>`);
+  if (P.ihgTier) sum.push(`<div class="kpi ch ihg">${cb('ihg', 'lg')}<div><b>IHG ${esc(P.ihgTier)}</b><span>${(P.ihgPts || 0).toLocaleString()}pt · ${P.ihgNights || 0}박${P.ambassador ? ' · Ambassador' : ''}</span></div></div>`);
+  if (P.marriottTier) sum.push(`<div class="kpi ch marriott">${cb('marriott', 'lg')}<div><b>Marriott ${esc(P.marriottTier)}</b><span>${(P.marriottPts || 0).toLocaleString()}pt · ${P.marriottNights || 0}박</span></div></div>`);
+  if (P.hiltonTier) sum.push(`<div class="kpi ch hilton">${cb('hilton', 'lg')}<div><b>Hilton ${esc(P.hiltonTier)}</b><span>${(P.hiltonPts || 0).toLocaleString()}pt · ${P.hiltonNights || 0}박</span></div></div>`);
   out.push(`<h1>오늘의 혜택</h1><p class="lead">내 티어·포인트·바우처로 지금 받을 수 있는 혜택, 놓치기 전에 써야 할 것, 포인트로 갈 수 있는 곳을 모았어요. <a href="#" id="meEdit">프로필 수정</a></p><div class="kpis">${sum.join('')}</div>`);
   // 0) 내 알림 — 하단 종 아이콘이 이 화면으로 오니, 알림을 가장 먼저 (로그인한 경우)
   out.push(alertsHtml());
