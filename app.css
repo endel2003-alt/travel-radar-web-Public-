@@ -809,12 +809,12 @@ dialog.drawer::backdrop { background: rgba(5, 8, 18, .55); }
 #v-home .nlist.home { padding-bottom: 10px; }
 /* 검색 탭(모바일) 상단: 메뉴 · 제목 · 내 티어 → 검색 줄 → 어디·언제 */
 .mtop { padding: calc(10px + env(safe-area-inset-top, 0px)) 0 0; }
-.mtop .mhead { display: flex; align-items: center; gap: 6px; padding: 0 12px 0 8px; }
-.mtop .mhead .hamb { display: flex; order: 0; flex-shrink: 0; }
-.mtop .mhead .t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
-.mtop .mhead .t b { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0; }
-.mtop .mhead .t small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.mtop .mhead .tierbtn.m { flex-shrink: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); }
+.mtop .mhead, .msrch .mhead { display: flex; align-items: center; gap: 6px; padding: 0 12px 0 8px; }
+.mtop .mhead .hamb, .msrch .mhead .hamb { display: flex; order: 0; flex-shrink: 0; }
+.mtop .mhead .t, .msrch .mhead .t { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.mtop .mhead .t b, .msrch .mhead .t b { font-family: var(--serif); font-size: 22px; font-weight: 500; letter-spacing: 0; }
+.mtop .mhead .t small, .msrch .mhead .t small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.mtop .mhead .tierbtn.m, .msrch .mhead .tierbtn.m { flex-shrink: 0; max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--fg); }
 .mtop .msearch { margin-top: 12px; }
 .mtop .mrow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin: 10px 20px 0; }
 .mtop .mrow .mf:first-child { grid-column: 1 / -1; }
@@ -822,13 +822,14 @@ dialog.drawer::backdrop { background: rgba(5, 8, 18, .55); }
 .mtop .mrow .mf select, .mtop .mrow .mf input { padding: 10px 10px; font-size: 14px; min-width: 0; width: 100%; box-sizing: border-box; border-radius: 10px; }
 .mtop .mrow .mf input[type=date] { -webkit-appearance: none; appearance: none; }
 #mApp .empty { margin: 8px 20px 0; padding: 36px 0; font-size: 17px; line-height: 1.5; border-bottom: 0; }
-.msrch { padding: calc(18px + env(safe-area-inset-top, 0px)) 20px 6px; }
+.msrch { padding: calc(10px + env(safe-area-inset-top, 0px)) 20px 6px; }
+.msrch .mhead { padding: 0 0 12px; margin-left: -12px; }
 .msrch h1 { font-size: 30px; margin: 6px 0 16px; }
 .mform { display: flex; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
 .mf { display: flex; flex-direction: column; gap: 4px; }
 .mf small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.mf select, .mf input { width: 100%; padding: 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); font: inherit; font-size: 16px; }
-.mf2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mf select, .mf input { width: 100%; min-width: 0; box-sizing: border-box; -webkit-appearance: none; appearance: none; padding: 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--fg); font: inherit; font-size: 16px; }
+.mf2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 .mform .mchips { margin: 2px 0 0; padding: 0; }
 .mgo { margin-top: 6px; padding: 15px; border: 0; border-radius: 14px; background: var(--gold); color: #10172a; font-weight: 700; font-size: 16px; letter-spacing: .04em; }
 .mform .mflt { align-self: center; background: none; border: 0; color: var(--muted); font-size: 13px; padding: 4px; }

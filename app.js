@@ -1123,18 +1123,25 @@ function mHeroHtml(rows, groups, opts) {
       <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
   return { heroHtml, band, wallet, soonHtml };
 }
-// 검색 탭(모바일): 위에 검색 줄(키워드 · 어디 · 언제) + 혜택 칩, 바로 아래 결과 — 홈의 큰 사진은 여기 없음
+// 검색 탭(모바일): 폼 카드가 먼저 — 어디로 · 언제 · 몇 박 · 혜택 → [호텔 찾기] — 그 아래 결과
 function mobileHome(rows, groups) {
   const q = $('#fText').value; const where = $('#fWhere'); const from = $('#fFrom').value, to = $('#fTo').value;
   const whereOpts = [...where.options].map(o => `<option value="${esc(o.value)}" ${o.selected ? 'selected' : ''}>${esc(o.textContent.replace(/ \(\d+\)$/, ''))}</option>`).join('');
   const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '') : '';
+  const nightsNow = lastQ?.nights || '';
   const searched = !!(q || where.value || from || to);
-  return `<div class="mtop">
+  return `<div class="msrch">
       <div class="mhead"><button type="button" class="hamb" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button><div class="t"><b>Search</b><small>by my tier</small></div><button type="button" class="lnk tierbtn m" data-open-profile>${hasProfile() ? ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => tierKo(myTier(c))).join(' · ') : '내 티어'}</button></div>
-      <form class="msearch" id="mForm" role="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="mText" placeholder="호텔 · 도시 · 혜택 (소피텔, 라운지…)" value="${esc(q)}" autocomplete="off"><button type="button" class="mflt">필터</button></form>
-      <div class="mrow"><label class="mf"><small>Where</small><select id="mWhere">${whereOpts}</select></label><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
+      <form class="mform" id="mForm">
+        <label class="mf"><small>Destination</small><select id="mWhere">${whereOpts}</select></label>
+        <div class="mf2"><label class="mf"><small>Check in</small><input type="date" id="mFrom" value="${esc(from)}"></label><label class="mf"><small>Check out</small><input type="date" id="mTo" value="${esc(to)}"></label></div>
+        <label class="mf"><small>Nights</small><select id="mNights"><option value="">상관없음</option>${[1, 2, 3, 4, 5].map(n => `<option value="${n}" ${String(nightsNow) === String(n) ? 'selected' : ''}>${n}박</option>`).join('')}</select></label>
+        <label class="mf"><small>Keyword</small><input type="search" id="mText" placeholder="소피텔 · 라운지 · 포인트" value="${esc(q.replace(/\b\d박\b/g, '').trim())}"></label>
+        <div class="mchips">${['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
+        <button type="submit" class="mgo">호텔 찾기</button>
+        <button type="button" class="mflt lnk">자세한 필터</button>
+      </form>
     </div>
-    <div class="mchips">${['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'].map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
     ${limitText() ? `<p class="limitNote m">${limitText()}</p>` : ''}
     <div class="mlab" id="mResHead">${searched ? `${wl ? esc(wl) + ' · ' : ''}${groups.length.toLocaleString()}곳` : `오늘 열린 곳 ${groups.length.toLocaleString()}곳`} · 가장 이득 순 <a href="#map" class="lnk small" style="float:right">지도로 보기 →</a></div>
     <div class="mlist" id="mList">${groups.slice(0, ui.mLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('')}</div>
@@ -1175,12 +1182,8 @@ function viewRadar() {
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
   const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups);
-      const rerun = () => { ui.mLimit = 24; viewRadar(); };
-      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); $('#fText').value = mApp.querySelector('#mText').value.trim(); mApp.querySelector('#mText').blur(); rerun(); });   // 키워드는 Enter(검색)로 적용
-      mApp.querySelector('#mWhere').addEventListener('change', (e) => { $('#fWhere').value = e.target.value; rerun(); });
-      mApp.querySelector('#mFrom').addEventListener('change', (e) => { $('#fFrom').value = e.target.value; if ($('#fTo').value && $('#fTo').value <= e.target.value) $('#fTo').value = ''; rerun(); });
-      mApp.querySelector('#mTo').addEventListener('change', (e) => { $('#fTo').value = e.target.value; rerun(); });
-      mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { const t = b.dataset.mq; const cur = $('#fText').value; $('#fText').value = cur.includes(t) ? cur.replace(t, '').replace(/\s{2,}/g, ' ').trim() : `${cur} ${t}`.trim(); rerun(); }));   // 칩은 누르면 바로 적용
+      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; $('#fFrom').value = m.querySelector('#mFrom').value; $('#fTo').value = m.querySelector('#mTo').value; const n = m.querySelector('#mNights').value; const kw = m.querySelector('#mText').value.trim(); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw.replace(/\b\d박\b/g, '').trim(), n ? `${n}박` : '', ...chips.filter(c => !kw.includes(c))].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
+      mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));   // 칩은 폼 안에서 고르기만, 적용은 '호텔 찾기'
       mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
       mApp.querySelector('#mMore')?.addEventListener('click', () => { const from = ui.mLimit; ui.mLimit += 24; mApp.querySelector('#mList').insertAdjacentHTML('beforeend', groups.slice(from, ui.mLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const b = mApp.querySelector('#mMore'); if (groups.length > ui.mLimit) b.textContent = `호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기`; else b.remove(); }); } }
