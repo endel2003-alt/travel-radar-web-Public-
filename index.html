@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611090038">
+<link rel="stylesheet" href="app.css?v=202611090100">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -95,8 +95,13 @@
 <section id="v-hotel" hidden></section>
 <section id="v-hotels" hidden></section>
 <section id="v-guide" hidden></section>
+<section id="v-about" hidden></section>
+<section id="v-terms" hidden></section>
+<section id="v-privacy" hidden></section>
+<section id="v-contact" hidden></section>
+<section id="v-applinks" hidden></section>
 <section id="v-promos" hidden></section>
-<footer><span class="brand">Travel Radar <span>Members only</span></span><span data-copy="footer.line1">개인 수집 데이터 기반, 예약은 각 체인 공식 사이트에서 본인 계정으로 진행됩니다.</span><span data-copy="footer.line2">혜택 자격(티어·바우처)은 본인 계정 기준으로 확인하세요.</span><span class="bver" id="buildVer"></span></footer>
+<footer><span class="brand">Travel Radar <span>Members only</span></span><span data-copy="footer.line1">개인 수집 데이터 기반, 예약은 각 체인 공식 사이트에서 본인 계정으로 진행됩니다.</span><span data-copy="footer.line2">혜택 자격(티어·바우처)은 본인 계정 기준으로 확인하세요.</span><nav class="flinks"><a href="#about">소개</a><a href="#guide">티어 가이드</a><a href="#hotels">나라별 호텔</a><a href="#terms">이용약관</a><a href="#privacy">개인정보 처리방침</a><a href="#contact">문의</a></nav><span class="bver" id="buildVer"></span></footer>
 </main>
 <dialog id="drawer" class="drawer" aria-label="전체 메뉴"><div class="dwrap">
   <div class="dhead"><a class="dlogo" href="#home"><b>TRAVEL RADAR</b><small>Members only</small></a><button type="button" class="x" data-close aria-label="닫기">✕</button></div>
@@ -106,7 +111,7 @@
   <details><summary data-copy="group.learn">Learn</summary><nav><a href="#news" data-v="news"><b>News</b><small data-copy="menu.news.sub">메일로 오는 호텔 뉴스레터 정리</small></a><a href="#promos" data-v="promos"><b>Offers</b><small data-copy="menu.offers.sub">체인별 진행 중 프로모션</small></a><a href="#guide" data-v="guide"><b>Guide</b><small data-copy="menu.guide.sub">4개 체인 등급·혜택 비교</small></a></nav></details>
   <details><summary data-copy="group.settings">Settings</summary><nav><a href="#" data-open-profile><b>My tier</b><small data-copy="menu.tier.sub">등급·포인트·쿠폰</small></a><a href="#" data-open-profile><b>Email alerts</b><small data-copy="menu.mail.sub">새 혜택을 메일로</small></a><a href="#" id="dAuth" data-login><b>Log in</b></a><a href="#" id="dInstall"><b>Install app</b><small data-copy="menu.install.sub">홈 화면에 추가</small></a><a href="#check" data-v="check" id="dCheck" hidden><b>Data check</b><small>운영자</small></a></nav></details>
   <p class="muted small dver" id="dVer"></p>
-</div></dialog>
+<nav class="dlegal"><a href="#about">소개</a><a href="#terms">이용약관</a><a href="#privacy">개인정보 처리방침</a><a href="#contact">문의</a></nav></div></dialog>
 <nav class="tabbar" aria-label="주요 메뉴">
 <a href="#home" data-v="home" aria-label="홈 — 내 혜택"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></a>
 <a href="#radar" data-v="radar" aria-label="검색"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></svg></a>
@@ -207,8 +212,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611090038"></script>
-<script src="config.js?v=202611090038"></script>
-<script src="app.js?v=202611090038"></script>
+<script src="compare.js?v=202611090100"></script>
+<script src="config.js?v=202611090100"></script>
+<script src="app.js?v=202611090100"></script>
 </body>
 </html>

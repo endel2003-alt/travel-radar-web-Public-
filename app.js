@@ -501,9 +501,10 @@ const COPY_DEFAULT = {
   'nav.search.sub': 'by my tier', 'nav.today.sub': 'my benefits', 'nav.best.sub': 'of the month', 'nav.plan.sub': 'my trip', 'nav.map.sub': 'all hotels', 'nav.hotels.sub': 'by city', 'nav.guide.sub': 'tiers compared', 'nav.offers.sub': 'live promos', 'nav.news.sub': 'from my inbox',
   'group.find': 'Find', 'group.mine': 'Mine', 'group.learn': 'Learn', 'group.settings': 'Settings',
   'home.title.noprofile': '내 등급으로 보는 호텔', 'home.onb': '아코르·IHG·메리어트·힐튼 중 내 등급(티어)을 넣으면, 그 등급으로 받을 수 있는 혜택만 골라 보여드려요. 로그인 없이도 되고, 이 기기에만 저장돼요.',
+  'site.operator': 'Travel Radar 운영자', 'site.contact': 'endel2003@gmail.com', 'site.effective': '2026-11-09',
   'footer.line1': '개인 수집 데이터 기반, 예약은 각 체인 공식 사이트에서 본인 계정으로 진행됩니다.', 'footer.line2': '혜택 자격(티어·바우처)은 본인 계정 기준으로 확인하세요.',
 };
-const COPY_LABEL = { 'nav.search.sub': 'PC 메뉴 · Search', 'nav.today.sub': 'PC 메뉴 · Today', 'nav.best.sub': 'PC 메뉴 · Best', 'nav.plan.sub': 'PC 메뉴 · Plan', 'nav.map.sub': 'PC 메뉴 · Map', 'nav.hotels.sub': 'PC 메뉴 · Hotels', 'nav.guide.sub': 'PC 메뉴 · Guide', 'nav.offers.sub': 'PC 메뉴 · Offers', 'nav.news.sub': 'PC 메뉴 · News', 'menu.search.sub': '서랍 · Search 설명', 'menu.map.sub': 'Map 설명', 'menu.hotels.sub': 'Hotels 설명', 'menu.best.sub': 'Best 설명', 'menu.home.sub': 'Home 설명', 'menu.today.sub': 'Today 설명', 'menu.plan.sub': 'Plan 설명', 'menu.alerts.sub': 'Alerts 설명', 'menu.news.sub': 'News 설명', 'menu.offers.sub': 'Offers 설명', 'menu.guide.sub': 'Guide 설명', 'menu.tier.sub': 'My tier 설명', 'menu.mail.sub': 'Email alerts 설명', 'menu.install.sub': 'Install app 설명', 'group.find': '묶음 1 이름', 'group.mine': '묶음 2 이름', 'group.learn': '묶음 3 이름', 'group.settings': '묶음 4 이름', 'home.title.noprofile': '홈 제목 (등급 없을 때)', 'home.onb': '홈 안내문 (등급 없을 때)', 'footer.line1': '푸터 1줄', 'footer.line2': '푸터 2줄' };
+const COPY_LABEL = { 'nav.search.sub': 'PC 메뉴 · Search', 'nav.today.sub': 'PC 메뉴 · Today', 'nav.best.sub': 'PC 메뉴 · Best', 'nav.plan.sub': 'PC 메뉴 · Plan', 'nav.map.sub': 'PC 메뉴 · Map', 'nav.hotels.sub': 'PC 메뉴 · Hotels', 'nav.guide.sub': 'PC 메뉴 · Guide', 'nav.offers.sub': 'PC 메뉴 · Offers', 'nav.news.sub': 'PC 메뉴 · News', 'menu.search.sub': '서랍 · Search 설명', 'menu.map.sub': 'Map 설명', 'menu.hotels.sub': 'Hotels 설명', 'menu.best.sub': 'Best 설명', 'menu.home.sub': 'Home 설명', 'menu.today.sub': 'Today 설명', 'menu.plan.sub': 'Plan 설명', 'menu.alerts.sub': 'Alerts 설명', 'menu.news.sub': 'News 설명', 'menu.offers.sub': 'Offers 설명', 'menu.guide.sub': 'Guide 설명', 'menu.tier.sub': 'My tier 설명', 'menu.mail.sub': 'Email alerts 설명', 'menu.install.sub': 'Install app 설명', 'group.find': '묶음 1 이름', 'group.mine': '묶음 2 이름', 'group.learn': '묶음 3 이름', 'group.settings': '묶음 4 이름', 'home.title.noprofile': '홈 제목 (등급 없을 때)', 'home.onb': '홈 안내문 (등급 없을 때)', 'footer.line1': '푸터 1줄', 'footer.line2': '푸터 2줄', 'site.operator': '운영자(개인정보 보호책임자) 이름', 'site.contact': '문의·개인정보 이메일', 'site.effective': '약관·방침 시행일 (YYYY-MM-DD)' };
 const COPY = Object.assign({}, COPY_DEFAULT);
 const cp = (k) => COPY[k] ?? COPY_DEFAULT[k] ?? '';
 function applyCopy() { document.querySelectorAll('[data-copy]').forEach(el => { const v = cp(el.dataset.copy); if (v) el.textContent = v; }); }
@@ -719,7 +720,7 @@ async function viewNews() {
 }
 
 // ---------- 라우터 ----------
-const views = { radar: viewRadar, home: viewHome, account: viewAccount, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, news: viewNews, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { applinks: viewAppLinks, about: viewAbout, terms: viewTerms, privacy: viewPrivacy, contact: viewContact, radar: viewRadar, home: viewHome, account: viewAccount, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, news: viewNews, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || (matchMedia('(max-width: 720px)').matches ? 'home' : 'radar'); const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
@@ -727,7 +728,7 @@ function route() {
   document.body.classList.toggle('app-m', MOBILE() && name === 'home');   // 홈은 사진 헤더가 상단바를 대신한다 (검색 탭은 viewRadar 가 직접 정함)
   (views[name] || viewRadar)(arg); applyCopy(); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { about: 'About', terms: 'Terms of use', privacy: 'Privacy policy', contact: 'Contact', home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !(name === 'home' && MOBILE()) && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
@@ -1063,7 +1064,7 @@ function openShareDialog(blob, name, pageUrl, title) {
 // iOS는 앱이 등록한 유니버설 링크(체인이 정함)로만 열리므로 그대로 https 링크 — 사파리가 앱을 열어주면 열리고, 아니면 웹.
 const APP_PKG = [[/(^|\.)marriott\.com$/, 'com.marriott.mrt'], [/(^|\.)hilton\.com$/, 'com.hilton.android.hhonors'], [/(^|\.)ihg\.com$/, 'com.ihg.apps.android'], [/(^|\.)accor\.com$/, 'com.accor.appli.hybrid']];
 document.addEventListener('click', (e) => {
-  if (!FEAT.appLinks || !/Android/i.test(navigator.userAgent)) return; const a = e.target.closest('a[href^="https://"]'); if (!a) return;
+  if (!FEAT.appLinks || !/Android/i.test(navigator.userAgent)) return; const a = e.target.closest('a[href^="https://"]'); if (!a || a.closest('#v-applinks')) return;
   let u; try { u = new URL(a.href); } catch (err) { return; } const pkg = APP_PKG.find(([re]) => re.test(u.hostname))?.[1]; if (!pkg) return;
   e.preventDefault(); location.href = `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(a.href)};end`;
 }, true);
@@ -1595,26 +1596,20 @@ function viewHome() {
 // ---------- 내 정보 (모바일 탭 4) — 등급 카드 + 나머지 메뉴 ----------
 function viewAccount() {
   const el = $('#v-account'); const P = profile;
-  const rows = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => { const pts = P[c + 'Pts'] || 0, n = P[c + 'Nights'] || 0; return `<div class="kpi ${c}"><b>${CHAIN[c]} ${tierKo(myTier(c))}</b><span>${pts.toLocaleString()}pt · 올해 ${n}박</span></div>`; }).join('');
+  const rows = ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => { const pts = P[c + 'Pts'] || 0, n = P[c + 'Nights'] || 0; return `<div class="kpi ch ${c}">${cb(c, 'lg')}<div><b>${CHAIN[c]} ${tierKo(myTier(c))}</b><span>${pts.toLocaleString()}pt · 올해 ${n}박${c === 'accor' && P.explorer ? ' · Accor+ 구독' : ''}${c === 'ihg' && P.ambassador ? ' · Ambassador' : ''}</span></div></div>`; }).join('');
+  const vs = []; if (P.snu > 0) vs.push(['스위트 업그레이드 쿠폰 (SNU)', P.snu, P.snuExp]); if (P.explorer && P.stayPlus > 0) vs.push(['1박 무료 쿠폰 (Stay Plus)', P.stayPlus, P.stayPlusExp]); if (P.ambassador) vs.push(['Ambassador 주말 무료박', 1, P.ambExp]);
+  const vouchers = vs.length ? `<div class="vlist">${vs.map(([n, k, e]) => { const d = daysTo(e); return `<div class="vrow"><span>${esc(n)}</span><b>${k}장${e ? ` <small class="${d != null && d <= 45 ? 'hot' : ''}">D-${d}</small>` : ''}</b></div>`; }).join('')}</div>` : '';
   const item = (href, title, sub, attrs) => `<a class="mi" href="${href}" ${attrs || ''}><span><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span><i>›</i></a>`;
   el.innerHTML = `<h1>내 정보</h1>
-    <div class="acard">${rows || '<p class="muted">아직 등급을 넣지 않았어요.</p>'}<button type="button" class="btn" data-open-profile>${rows ? '등급·포인트·쿠폰 수정' : '내 등급 넣기'}</button></div>
-    <div class="mlist2">
-      ${item('#me', 'Today', cp('menu.today.sub'))}
-      ${item('#alerts', 'Alerts', AUTH.s ? `관심 호텔 및 혜택 알림 · 관심 ${WATCH.list.length} · 안 읽음 ${WATCH.unread}` : '관심 호텔 및 혜택 알림 · 로그인 필요')}
-      ${item('#plan', 'Plan', cp('menu.plan.sub'))}
-      ${item('#best', 'Best', cp('menu.best.sub'))}
-      ${item('#map', 'Map', cp('menu.map.sub'))}
-      ${item('#hotels', 'Hotels', cp('menu.hotels.sub'))}
-      ${item('#promos', 'Offers', cp('menu.offers.sub'))}
-      ${item('#guide', 'Guide', cp('menu.guide.sub'))}
-    </div>
+    <div class="acard">${rows || '<p class="muted">아직 등급을 넣지 않았어요. 등급을 넣으면 내가 쓸 수 있는 혜택만 골라 보여 드려요.</p>'}${vouchers}<button type="button" class="btn ${rows ? '' : 'primary'}" data-open-profile>${rows ? '등급 · 포인트 · 쿠폰 수정' : '내 등급 넣기'}</button></div>
     <div class="mlist2">
       ${item('#', AUTH.s ? 'Log out' : 'Log in', AUTH.s ? (AUTH.s.email || '') : '이메일 또는 Google · 관심·알림·기기 간 동기화', AUTH.s ? 'id="accLogout"' : 'data-login')}
+      ${item('#alerts', 'Watchlist & alerts', AUTH.s ? `관심 호텔 ${WATCH.list.length} · 안 읽은 알림 ${WATCH.unread}` : '관심 호텔 · 혜택 알림 · 로그인 필요')}
       ${item('#', 'Email alerts', P.mailAlerts ? '켜짐 · 새 혜택을 하루 한 통으로' : '꺼짐 · 등급 설정에서 켤 수 있어요', 'data-open-profile')}
       ${item('#', 'Install app', '홈 화면에 추가 · 업데이트 자동', 'id="accInstall"')}
       ${D.meta?.owner ? item('#check', 'Data check', '운영자') : ''}
     </div>
+    <nav class="dlegal acc"><a href="#about">소개</a><a href="#terms">이용약관</a><a href="#privacy">개인정보 처리방침</a><a href="#contact">문의</a></nav>
     <p class="muted small" id="accVer"></p>`;
   $('#accLogout')?.addEventListener('click', (e) => { e.preventDefault(); authLogout(); });
   $('#accInstall')?.addEventListener('click', (e) => { e.preventDefault(); $('#moreInstall')?.click(); });
@@ -1682,6 +1677,85 @@ function viewMe() {
   const allNew = fresh.length > mine.length * 0.5; out.push(`<h2>최근 48시간 새로 열린 혜택 <span class="muted small">${fresh.length}건${allNew ? ' · 최근 첫 수집이라 대부분이 새 항목이에요. 내일부터 진짜 "새로 열린 것"만 남습니다' : ''}</span></h2>` + (fresh.length ? miniRows(fresh, 8) : '<p class="muted small">새로 열린 혜택이 없어요. 수집이 매일 돌면 여기에 쌓입니다.</p>'));
   if (gone.length) out.push(`<h2>최근 사라진 혜택 <span class="muted small">먼저 잡힌 날짜들 — 이런 곳은 뜨면 바로 예약</span></h2><ul class="gone">${gone.map(g => { const h = D.hotels.get(g.h) || {}; return `<li><span class="ctag ${h.chain || ''}">${CHAIN[h.chain] || ''}</span> <a href="#hotel/${encodeURIComponent(g.h)}">${esc(h.name || g.h)}</a> · ${fmtD(g.d)} · <span class="badge ${g.b}">${g.bl || BEN[g.b]?.label || ''}</span> · ${g.my ? won(g.my) : ''} <span class="muted small">(체크인 ${g.db}일 전 사라짐)</span></li>`; }).join('')}</ul>`);
   el.innerHTML = out.join(''); $('#meEdit')?.addEventListener('click', (e) => { e.preventDefault(); $('#profileBtn').click(); });
+}
+
+// ---------- 앱 링크 테스트 (#applinks) — 안드로이드에서 어떤 방식이 실제로 앱을 여는지 눌러 보는 페이지 ----------
+function viewAppLinks() {
+  const el = $('#v-applinks'); const fb = encodeURIComponent('https://endel2003-alt.github.io/travel-radar-web-Public-/#applinks');
+  const CAND = [
+    ['marriott', 'Marriott Bonvoy', 'com.marriott.mrt', 'https://www.marriott.com/', ['marriott', 'marriottbonvoy', 'bonvoy']],
+    ['hilton', 'Hilton Honors', 'com.hilton.android.hhonors', 'https://www.hilton.com/', ['hiltonhonors', 'hilton', 'hhonors']],
+    ['ihg', 'IHG One Rewards', 'com.ihg.apps.android', 'https://www.ihg.com/', ['ihg', 'ihgonerewards', 'ihgrewardsclub']],
+    ['accor', 'Accor ALL', 'com.accor.appli.hybrid', 'https://all.accor.com/', ['accorhotels', 'all', 'accor', 'allaccor']],
+  ];
+  const btn = (label, href, note) => `<a class="btn small" href="${href}" style="margin:4px 6px 4px 0">${label}</a><small class="muted">${note || ''}</small><br>`;
+  el.innerHTML = `<div class="legal"><h1>앱 링크 테스트</h1><p class="lead">안드로이드 폰에서 아래 버튼을 하나씩 눌러, <b>어떤 버튼이 실제로 앱을 여는지</b> 알려 주세요. 앱이 안 열리면 이 페이지로 돌아오거나 웹이 열려요. (iOS에선 동작하지 않아요)</p>
+  <p class="muted small">기기: ${esc(navigator.userAgent.slice(0, 120))}</p>
+  ${CAND.map(([c, name, pkg, home, schemes]) => `<h2>${cb(c)} ${name}</h2>
+    ${btn('① 일반 링크', home, '그냥 사이트 주소 — 폰 설정의 "기본으로 열기"가 켜져 있으면 앱이 뜸')}
+    ${btn('② https 인텐트', `intent://${home.replace('https://', '')}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${fb};end`, '지금 사이트가 쓰는 방식 (앱이 이 주소를 받아줘야 열림)')}
+    ${btn('③ 패키지만', `intent:#Intent;package=${pkg};S.browser_fallback_url=${fb};end`, '앱만 지정 — 앱 첫 화면')}
+    ${schemes.map((sc, i) => btn(`④-${i + 1} ${sc}://`, `intent://open#Intent;scheme=${sc};package=${pkg};S.browser_fallback_url=${fb};end`, '앱 전용 주소 후보')).join('')}
+    ${btn('⑤ 스토어', `https://play.google.com/store/apps/details?id=${pkg}`, '패키지 이름이 맞는지 확인용 — 해당 앱 스토어 페이지가 떠야 함')}`).join('')}
+  <h2>폰 설정에서 켜는 방법 (①이 안 될 때)</h2><p>설정 → 애플리케이션 → (예: Marriott Bonvoy) → <b>기본으로 설정</b> 또는 <b>기본으로 열기</b> → "지원되는 링크 열기" 켜기 → 링크 추가에서 marriott.com 체크. 안드로이드 12부터는 앱이 애플에 해당하는 "검증"을 해 두지 않으면 기본이 꺼져 있어요.</p></div>`;
+}
+
+// ---------- 소개 · 이용약관 · 개인정보처리방침 · 문의 (정적 페이지, 운영자 이름·이메일·시행일은 Check 화면 문구 편집에서 수정) ----------
+const legalFoot = () => `<p class="muted small" style="margin-top:28px">시행일 ${esc(cp('site.effective'))} · 운영자 ${esc(cp('site.operator'))} · 문의 <a href="mailto:${esc(cp('site.contact'))}">${esc(cp('site.contact'))}</a></p>`;
+function viewAbout() {
+  $('#v-about').innerHTML = `<div class="legal"><h1>소개</h1>
+  <p class="lead">Travel Radar는 아코르 ALL · IHG One Rewards · Marriott Bonvoy · Hilton Honors 회원이 <b>내 등급·포인트·바우처로 실제로 쓸 수 있는 혜택</b>이 어느 호텔, 어느 날짜에 열려 있는지 한 화면에서 보는 멤버 전용 레이더예요.</p>
+  <h2>이런 걸 해요</h2>
+  <ul><li>스위트 업그레이드 쿠폰(SNU) · 1박 무료 쿠폰 · 포인트 숙박 · 회원 특가가 <b>지금 예약 가능한 날짜</b>를 호텔별 달력으로</li><li>내 등급이면 받는 혜택(라운지·조식·업그레이드)과 등급 가치(원화 환산)</li><li>연휴·주말·N박 조건으로 검색, 관심 호텔에 혜택이 열리면 알림</li><li>메일로 오는 체인 뉴스레터에서 우리 지역에 쓸모 있는 소식만 정리</li></ul>
+  <h2>이런 건 안 해요</h2>
+  <ul><li>예약·결제 — 예약은 항상 각 체인 <b>공식 사이트·앱</b>에서 본인 계정으로 하세요. 저희는 링크만 열어 드려요.</li><li>회원 계정 비밀번호 보관 — 어떤 체인 계정 정보도 받지 않고 저장하지 않아요.</li><li>전화번호 수집 — 알림은 앱 푸시·카카오 로그인·이메일로만 보내요.</li></ul>
+  <h2>데이터는 어떻게 모으나요</h2>
+  <p>각 체인이 공개한 요금·재고 정보를 운영자의 PC에서 매일 확인해 정리해요. 혜택 자격(티어·바우처 보유 여부)은 체인 계정 기준이 최종이니, 예약 전 본인 계정에서 한 번 더 확인하세요. 가격은 수집 시점 기준이라 예약 화면과 다를 수 있어요.</p>
+  <p>Travel Radar는 Accor · IHG · Marriott · Hilton과 제휴하거나 그들을 대리하지 않는 독립 서비스예요. 각 사명·브랜드명은 해당 회사의 상표예요.</p>${legalFoot()}</div>`;
+}
+function viewTerms() {
+  $('#v-terms').innerHTML = `<div class="legal"><h1>이용약관</h1>
+  <h2>1. 서비스</h2><p>Travel Radar(이하 "서비스")는 호텔 멤버십 혜택이 적용 가능한 날짜·요금을 정리해 보여 주는 <b>정보 제공 서비스</b>예요. 호텔 예약·결제·취소는 각 호텔 체인의 공식 사이트에서 이용자 본인이 진행하며, 서비스는 그 거래의 당사자가 아니에요.</p>
+  <h2>2. 계정</h2><p>로그인 없이도 대부분의 기능을 쓸 수 있어요. 관심 호텔·알림·여러 기기 동기화를 쓰려면 소셜 로그인(Google 등)이 필요해요. 계정은 본인만 쓰고, 만 14세 미만은 가입할 수 없어요. 탈퇴는 내 계정 화면 또는 문의 이메일로 언제든 요청할 수 있고, 탈퇴 시 서버에 저장된 개인정보는 지체 없이 삭제돼요.</p>
+  <h2>3. 정보의 정확성</h2><p>요금·재고·혜택은 수집 시점의 공개 정보라 예약 화면과 다를 수 있고, 체인 정책 변경·품절·오류로 달라질 수 있어요. 서비스는 정보의 정확성·완전성·예약 가능성을 보증하지 않으며, 예약 전 반드시 공식 사이트에서 확인해야 해요. 혜택 자격(등급·바우처)은 체인 계정 기준이 우선해요.</p>
+  <h2>4. 금지 행위</h2><ul><li>서비스 데이터의 자동 수집(크롤링·스크래핑), 재판매, 대량 복제</li><li>타인 계정 사용, 서비스 운영 방해, 역공학</li><li>법령·공서양속 위반 목적의 이용</li></ul>
+  <h2>5. 책임의 한계</h2><p>서비스는 "있는 그대로" 제공돼요. 정보 오류, 예약 실패, 체인 정책 변경, 서비스 중단 등으로 생긴 손해에 대해 서비스는 고의·중과실이 없는 한 책임지지 않아요. 무료 서비스이며, 사전 고지 후 기능을 바꾸거나 중단할 수 있어요.</p>
+  <h2>6. 지식재산</h2><p>서비스의 화면·정리 방식·문구는 운영자에게 권리가 있어요. 각 호텔 체인·브랜드의 이름과 상표는 해당 회사의 것이며, 서비스는 이들과 제휴 관계가 없어요.</p>
+  <h2>7. 약관 변경 · 준거법</h2><p>약관이 바뀌면 시행 7일 전(이용자에게 불리한 변경은 30일 전) 서비스 안에 공지해요. 이 약관은 대한민국 법을 따르고, 분쟁은 민사소송법상 관할 법원에서 다뤄요.</p>${legalFoot()}</div>`;
+}
+function viewPrivacy() {
+  $('#v-privacy').innerHTML = `<div class="legal"><h1>개인정보 처리방침</h1>
+  <p class="lead">Travel Radar는 <b>개인정보를 최소한만</b> 다뤄요. 전화번호·체인 계정 비밀번호·결제 정보는 받지 않아요. 이 방침은 「개인정보 보호법」에 따라 무엇을, 왜, 얼마나 보관하는지 설명해요.</p>
+  <h2>1. 수집하는 항목과 목적</h2>
+  <table class="ltab"><thead><tr><th>항목</th><th>언제</th><th>목적</th><th>보관</th></tr></thead><tbody>
+  <tr><td>이메일, 소셜 로그인 식별자(Google · 카카오 회원번호)</td><td>로그인할 때</td><td>계정 식별, 관심 호텔·알림 동기화, 알림 발송</td><td>탈퇴 시 즉시 삭제</td></tr>
+  <tr><td>관심 호텔 · 알림 설정 · 알림 수신 채널(이메일·푸시·카카오) 동의 여부</td><td>관심 등록·설정 시</td><td>혜택이 열렸을 때 알려 드리기</td><td>탈퇴 또는 삭제 시 즉시</td></tr>
+  <tr><td>브라우저 푸시 구독 토큰</td><td>알림 켤 때</td><td>앱 푸시 발송 (사람을 특정하지 않는 토큰)</td><td>알림 끄거나 탈퇴 시</td></tr>
+  <tr><td>카카오 메시지 발송 권한 토큰</td><td>카카오 알림을 켤 때</td><td>본인의 카카오톡으로 알림 보내기</td><td>연결 해제·탈퇴 시 즉시</td></tr>
+  <tr><td>멤버십 등급 · 포인트 · 바우처 수 · 만료일</td><td>내 프로필에 입력할 때</td><td>내가 쓸 수 있는 혜택만 골라 보여 주기</td><td><b>기본은 내 기기(브라우저)에만 저장</b>, 로그인 후 동기화를 켠 경우만 서버에 저장 · 탈퇴 시 삭제</td></tr>
+  <tr><td>접속 기록(IP · 브라우저 종류 · 시각)</td><td>이용 중 자동</td><td>오류 확인 · 부정 이용 방지</td><td>호스팅·DB 사업자 기본 보관 기간 (최대 90일)</td></tr></tbody></table>
+  <p class="muted small">받지 않는 것: 전화번호, 호텔 체인 계정 아이디·비밀번호, 결제 수단, 주소, 생년월일, 민감정보.</p>
+  <h2>2. 처리 위탁 · 국외 이전</h2>
+  <p>서비스는 다음 사업자의 인프라를 써요. 서버가 해외에 있어 개인정보가 국외로 이전·보관돼요.</p>
+  <table class="ltab"><thead><tr><th>사업자</th><th>맡기는 일</th><th>이전되는 정보</th><th>국가</th></tr></thead><tbody>
+  <tr><td>Supabase Inc.</td><td>데이터베이스 · 로그인</td><td>이메일, 로그인 식별자, 관심 호텔, 알림, 토큰</td><td>미국 등 (AWS)</td></tr>
+  <tr><td>GitHub Inc. (GitHub Pages)</td><td>사이트 호스팅</td><td>접속 기록</td><td>미국</td></tr>
+  <tr><td>Resend Inc.</td><td>알림 이메일 발송</td><td>이메일 주소, 알림 내용</td><td>미국</td></tr>
+  <tr><td>Google LLC · 카카오</td><td>소셜 로그인 · 카카오톡 메시지</td><td>각 사 로그인 정보 (각 사 방침 적용)</td><td>미국 · 한국</td></tr></tbody></table>
+  <p>이전은 서비스 제공에 꼭 필요한 범위에서 이뤄지고, 이용자는 이전을 거부할 수 있어요(이 경우 로그인·알림 기능은 쓸 수 없어요). 개인정보를 제3자에게 판매하거나 광고 목적으로 제공하지 않아요.</p>
+  <h2>3. 알림(광고성 정보)에 대해</h2><p>"관심 호텔에 혜택이 열렸다"는 알림은 이용자가 직접 요청한 서비스 안내예요. 프로모션·뉴스 성격의 알림은 별도로 동의한 경우에만, 밤 9시~아침 8시를 피해 보내요. 알림은 프로필 화면에서 채널별로 언제든 끌 수 있어요.</p>
+  <h2>4. 이용자의 권리</h2><p>언제든 본인 개인정보의 열람·정정·삭제·처리정지를 요구할 수 있고, 동의를 철회할 수 있어요. 내 계정 화면의 탈퇴 버튼 또는 아래 이메일로 요청하면 지체 없이(10일 이내) 처리해요. 만 14세 미만 아동의 개인정보는 수집하지 않아요.</p>
+  <h2>5. 안전조치</h2><p>모든 통신은 HTTPS로 암호화돼요. 데이터베이스는 행 단위 접근 제어(RLS)로 본인만 자기 데이터를 읽고 쓸 수 있고, 운영자용 키는 공개 저장소·클라이언트에 두지 않아요. 등급·포인트 같은 멤버십 정보는 기본적으로 이용자 기기에만 저장돼요.</p>
+  <h2>6. 쿠키 · 로컬 저장소</h2><p>로그인 유지와 내 프로필·설정 저장을 위해 브라우저 로컬 저장소를 써요. 광고·추적 쿠키는 쓰지 않아요. 브라우저 설정에서 삭제할 수 있고, 삭제하면 로그아웃되고 기기 저장 프로필이 지워져요.</p>
+  <h2>7. 개인정보 보호책임자</h2><p>${esc(cp('site.operator'))} · <a href="mailto:${esc(cp('site.contact'))}">${esc(cp('site.contact'))}</a><br>개인정보 침해 신고·상담: 개인정보침해신고센터 (privacy.kisa.or.kr · 118), 개인정보분쟁조정위원회 (kopico.go.kr · 1833-6972)</p>
+  <h2>8. 변경</h2><p>이 방침이 바뀌면 시행 7일 전 서비스 안에 공지해요.</p>${legalFoot()}</div>`;
+}
+function viewContact() {
+  $('#v-contact').innerHTML = `<div class="legal"><h1>문의</h1>
+  <p class="lead">버그, 틀린 혜택 정보, 추가하고 싶은 호텔, 개인정보 관련 요청 — 무엇이든 아래로 보내 주세요. 보통 하루 안에 답해요.</p>
+  <p><a class="btn primary" href="mailto:${esc(cp('site.contact'))}?subject=${encodeURIComponent('[Travel Radar] 문의')}">이메일 보내기 — ${esc(cp('site.contact'))}</a></p>
+  <h2>보내 주시면 좋은 것</h2><ul><li>어느 화면에서(호텔 이름·날짜) 무엇이 이상했는지</li><li>폰/PC, 브라우저 종류</li><li>개인정보 열람·삭제 요청은 로그인한 이메일로 보내 주세요 (본인 확인용)</li></ul>
+  <p class="muted small">체인 계정 비밀번호·회원번호·카드 정보는 절대 보내지 마세요. 저희는 그런 정보를 받지 않아요.</p>${legalFoot()}</div>`;
 }
 
 // ---------- 테마 (호텔명·브랜드 키워드) ----------
