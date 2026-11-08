@@ -1523,17 +1523,15 @@ function viewHome() {
   if (MOBILE()) {
     const mine = hasProfile() ? D.rows.filter(eligible) : D.rows; const groups = groupHotels(mine).sort((a, b) => b.tierValue - a.tierValue || (b.best?.sv || 0) - (a.best?.sv || 0));
     const H = mHeroHtml(mine, groups, { pill: hasProfile() ? 'Today' : 'Members only', title: hasProfile() ? `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다` : `내 등급을 넣으면<br><em>${groups.length.toLocaleString()}곳</em> 중 내 것이 보입니다` });
-    const today = todayStr(); const soon = addDays(today, 14); const g2 = groupHotels(mine.filter(r => r.d <= soon)).sort((a, b) => b.tierValue - a.tierValue).slice(0, 6);
-    const alerts = AUTH.s ? `<div class="mlab">내 알림 ${WATCH.unread ? `<b class="bdg">${WATCH.unread}</b>` : ''} <a href="#alerts" class="lnk small" style="float:right">전체</a></div>${WATCH.alerts.length ? `<ul class="alist home mpad">${WATCH.alerts.slice(0, 3).map(a => `<li class="${a.read_at ? '' : 'new'}">${alertText(a)}</li>`).join('')}</ul>` : `<p class="muted small mpad">관심 호텔을 걸어두면 혜택이 열릴 때 여기에 떠요. <a href="#alerts">관심 추가</a></p>`}` : '';
+    ui.hLimit = ui.hLimit || 24;
     el.innerHTML = `${H.heroHtml}${H.band}${H.wallet}
       ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
-      <div class="mlab">오늘 당신에게 열린 곳 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
-      <div class="mrow">${groups.slice(0, 8).map((o, i) => mPhotoCard(o, i)).join('')}</div>
       ${H.soonHtml}
-      ${hasProfile() ? `<div class="mlab">앞으로 2주, 내 등급으로 가장 이득 <a href="#best" class="lnk small" style="float:right">더 보기</a></div><div class="mlist">${g2.map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<p class="muted small mpad">2주 안에는 내 등급으로 쓸 수 있는 혜택이 없어요.</p>'}</div>` : ''}
-      ${alerts}
-      <div class="mlab">호텔 소식 <a href="#news" class="lnk small" style="float:right">전체</a></div><div class="nlist home mpad" id="homeNews"><p class="muted small">불러오는 중…</p></div>`;
-    loadNews().then(items => { const box = $('#homeNews'); if (box) box.innerHTML = items.slice(0, 3).map(newsCardHtml).join('') || '<p class="muted small">아직 소식이 없어요.</p>'; });
+      <div class="mlab">오늘 당신에게 열린 곳 ${groups.length.toLocaleString()}곳 · 가장 이득 순 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
+      <div class="mlist" id="hList">${groups.slice(0, ui.hLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<p class="muted small mpad">지금 열린 혜택이 없어요.</p>'}</div>
+      ${groups.length > ui.hLimit ? `<button type="button" class="mmore" id="hMore">호텔 ${(groups.length - ui.hLimit).toLocaleString()}곳 더 보기</button>` : ''}`;
+    // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
+    $('#hMore')?.addEventListener('click', () => { const from = ui.hLimit; ui.hLimit += 24; $('#hList').insertAdjacentHTML('beforeend', groups.slice(from, ui.hLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const bt = $('#hMore'); if (groups.length > ui.hLimit) bt.textContent = `호텔 ${(groups.length - ui.hLimit).toLocaleString()}곳 더 보기`; else bt.remove(); });
     return;
   }
   if (!hasProfile()) {
