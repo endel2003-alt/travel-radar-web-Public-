@@ -99,7 +99,7 @@ function link(r) {
   if (/six senses|식스 ?센스/i.test(`${h.brand || ''} ${h.name || ''}`)) {
     // 식스센스는 ihg.com 에 호텔 페이지가 없어 redirect 가 /explore 로 떨어진다 → sixsenses.com 예약 페이지로 직접 (호텔 코드 + 날짜)
     const us = (d) => `${d.slice(5, 7)}/${d.slice(8, 10)}/${d.slice(0, 4)}`;
-    const CTRY = { VN: 'vietnam', TH: 'thailand', JP: 'japan', SG: 'singapore', KR: 'south-korea', HK: 'hong-kong' };
+    const CTRY = { VN: 'vietnam', TH: 'thailand', JP: 'japan', SG: 'singapore', KR: 'south-korea', HK: 'hong-kong', MY: 'malaysia', ID: 'indonesia', PH: 'philippines' };
     const prop = SIXS_PATH[h.id] || `${h.name || ''}`.replace(/six senses|식스 ?센스/i, '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const q = new URLSearchParams({ Hotel: h.id, Arrive: us(r.d), Depart: us(out), Rooms: '1', Adult: '2', Child: '0' });
     return `https://www.sixsenses.com/en/hotels-resorts/asia-the-pacific/${CTRY[h.cc] || 'vietnam'}/${prop}/accommodation/?${q}`;
@@ -1387,7 +1387,7 @@ function viewBest() {
   if (!mine.length) note = `<p class="note">아직 불러온 데이터가 없어요. 잠시 뒤 다시 열어 주세요.</p>`;
   const pct = percentiles(mine);
   const byC = {}; for (const r of mine) { if (!r.cc) continue; (byC[r.cc] = byC[r.cc] || []).push(r); }
-  const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
+  const ORDER = ['KR', 'JP', 'TW', 'TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
   const all = bestOf(mine, pct); const overall = mixChains(all, 5);
   const KINDS = [['SUITE', '스위트 업그레이드', '스위트 vs 일반 객실 차액이 큰 곳'], ['FREE_NIGHT', '무료박', 'IHG 앰배서더 주말·아코르 Stay Plus·메리어트/힐튼 5박 무료'], ['POINTS', '포인트 가치', '포인트 1pt가 가장 비싸게 쓰이는 곳'], ['SALE', '세일', '회원 전용 특가']];
   const sections = KINDS.map(([b, title, sub]) => { const list = mixChains(bestOf(mine.filter(r => r.b === b), pct), 3, 2); return list.length ? `<h2>${title} <span class="muted small">${sub}</span></h2><div class="bgrid">${list.map(bestCard).join('')}</div>` : ''; }).join('');
@@ -1486,7 +1486,7 @@ const MAP = { map: null, layer: null, bounds: {} };
 // 좌표 없는 호텔은 지역 중심에 살짝 흩어서(대략 위치) 놓는다
 function hotelPos(h) {
   if (h.lat != null && h.lng != null && Math.abs(h.lat) <= 90) return { lat: h.lat, lng: h.lng, approx: false };
-  const CC = { KR: [36.5, 127.8, 60], JP: [36.2, 138.3, 80], TH: [13.75, 100.5, 60], VN: [16.0, 108.0, 60], SG: [1.35, 103.82, 10], HK: [22.32, 114.17, 10] };
+  const CC = { KR: [36.5, 127.8, 60], JP: [36.2, 138.3, 80], TH: [13.75, 100.5, 60], VN: [16.0, 108.0, 60], SG: [1.35, 103.82, 10], HK: [22.32, 114.17, 10], MY: [3.14, 101.69, 40], ID: [-8.65, 115.17, 40], PH: [14.56, 121.02, 40], TW: [25.04, 121.55, 35] };
   let a = ((D.meta.areaGeo || {})[h.cc] || []).find(x => x.name === h.city); if (!a && CC[h.cc]) a = { lat: CC[h.cc][0], lng: CC[h.cc][1], r: CC[h.cc][2] }; if (!a) return null;
   let seed = 0; for (const ch of h.key) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0; const ang = (seed % 360) * Math.PI / 180, dist = 0.004 + ((seed >> 9) % 100) / 100 * Math.min(a.r || 20, 25) * 0.004;
   return { lat: a.lat + Math.sin(ang) * dist, lng: a.lng + Math.cos(ang) * dist / Math.cos(a.lat * Math.PI / 180), approx: true };
@@ -1510,7 +1510,7 @@ function viewMap() {
   } else { chips.querySelectorAll('[data-mb]').forEach(c => c.classList.toggle('on', ui.benefits.has(c.dataset.mb))); chips.querySelectorAll('[data-mc]').forEach(c => c.classList.toggle('on', ui.chains.has(c.dataset.mc))); }
   if (!MAP.map) {
     MAP.map = L.map('map', { worldCopyJump: true, maxZoom: 19 }).setView([15, 108], 4); osmTiles().addTo(MAP.map); MAP.layer = L.layerGroup().addTo(MAP.map);
-    const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
+    const ORDER = ['KR', 'JP', 'TW', 'TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'HK']; const label = (cc) => (D.meta.countries || []).find(c => c.cc === cc)?.label || cc;
     $('#mapJump').innerHTML = '<button data-cc="">전체</button>' + ORDER.filter(cc => (D.meta.countries || []).some(c => c.cc === cc)).map(cc => `<button data-cc="${cc}">${label(cc)}</button>`).join('');
     $('#mapJump').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const bb = MAP.bounds[b.dataset.cc || 'ALL']; if (bb && bb.isValid()) MAP.map.fitBounds(bb, { padding: [30, 30], maxZoom: 12 }); }));
   }
@@ -1679,27 +1679,56 @@ function viewMe() {
   el.innerHTML = out.join(''); $('#meEdit')?.addEventListener('click', (e) => { e.preventDefault(); $('#profileBtn').click(); });
 }
 
-// ---------- 앱 링크 테스트 (#applinks) — 안드로이드에서 어떤 방식이 실제로 앱을 여는지 눌러 보는 페이지 ----------
-function viewAppLinks() {
-  const el = $('#v-applinks'); const fb = encodeURIComponent('https://endel2003-alt.github.io/travel-radar-web-Public-/#applinks');
-  const CAND = [
-    ['marriott', 'Marriott Bonvoy', 'com.marriott.mrt', 'https://www.marriott.com/', ['marriott', 'marriottbonvoy', 'bonvoy']],
-    ['hilton', 'Hilton Honors', 'com.hilton.android.hhonors', 'https://www.hilton.com/', ['hiltonhonors', 'hilton', 'hhonors']],
-    ['ihg', 'IHG One Rewards', 'com.ihg.apps.android', 'https://www.ihg.com/', ['ihg', 'ihgonerewards', 'ihgrewardsclub']],
-    ['accor', 'Accor ALL', 'com.accor.appli.hybrid', 'https://all.accor.com/', ['accorhotels', 'all', 'accor', 'allaccor']],
+// ---------- 앱 링크 테스트 (#applinks) — 버튼을 누르면 앱이 열리는지 스스로 기록 (앱이 열리면 ✓, 웹으로 떨어지면 ✗) ----------
+const AL_KEY = 'tr_applinks';
+const alLoad = () => { try { return JSON.parse(localStorage.getItem(AL_KEY) || '{}'); } catch (e) { return {}; } };
+const alSave = (o) => { try { localStorage.setItem(AL_KEY, JSON.stringify(o)); } catch (e) {} };
+function alCands() {
+  const first = (c) => [...D.hotels.values()].find(h => h.chain === c);
+  const m = first('marriott'), hl = first('hilton'), ac = first('accor'), ig = first('ihg');
+  const today = addDays(todayStr(), 7); const row = (h) => h ? { h: h.key, d: today, n: 1, b: 'SALE' } : null;
+  return [
+    ['marriott', 'Marriott Bonvoy', 'com.marriott.mrt', [
+      ['예약 주소 (지금 방식)', m ? link(row(m)) : 'https://www.marriott.com/reservation/availabilitySearch.mi?propertyCode=SELWI'],
+      ['호텔 페이지', `https://www.marriott.com/hotels/travel/${(m?.id || 'selwi').toLowerCase()}/`],
+      ['사이트 첫 화면', 'https://www.marriott.com/default.mi'],
+      ['앱 주소 marriott://', 'marriott://'], ['앱 주소 bonvoy://', 'bonvoy://'], ['앱만 지정', 'pkg']]],
+    ['hilton', 'Hilton Honors', 'com.hilton.android.hhonors', [
+      ['예약 주소 (지금 방식)', hl ? link(row(hl)) : 'https://www.hilton.com/ko/book/reservation/rooms/?ctyhocn=SELCOCI'],
+      ['호텔 페이지', `https://www.hilton.com/en/hotels/${(hl?.id || 'selcoci').toLowerCase()}/`],
+      ['사이트 첫 화면', 'https://www.hilton.com/'],
+      ['앱 주소 hiltonhonors://', 'hiltonhonors://'], ['앱 주소 hilton://', 'hilton://'], ['앱만 지정', 'pkg']]],
+    ['accor', 'Accor ALL', 'com.accor.appli.hybrid', [
+      ['예약 주소 (지금 방식)', ac ? link(row(ac)) : 'https://all.accor.com/booking/ko/accor/hotel/0966'],
+      ['호텔 페이지', `https://all.accor.com/hotel/${ac?.id || '0966'}/index.ko.shtml`],
+      ['사이트 첫 화면', 'https://all.accor.com/'],
+      ['앱 주소 accorhotels://', 'accorhotels://'], ['앱 주소 all://', 'all://'], ['앱만 지정', 'pkg']]],
+    ['ihg', 'IHG One Rewards (되는 체인 · 비교용)', 'com.ihg.apps.android', [
+      ['예약 주소 (지금 방식)', ig ? link(row(ig)) : 'https://www.ihg.com/'], ['사이트 첫 화면', 'https://www.ihg.com/'], ['앱만 지정', 'pkg']]],
   ];
-  const btn = (label, href, note) => `<a class="btn small" href="${href}" style="margin:4px 6px 4px 0">${label}</a><small class="muted">${note || ''}</small><br>`;
-  el.innerHTML = `<div class="legal"><h1>앱 링크 테스트</h1><p class="lead">안드로이드 폰에서 아래 버튼을 하나씩 눌러, <b>어떤 버튼이 실제로 앱을 여는지</b> 알려 주세요. 앱이 안 열리면 이 페이지로 돌아오거나 웹이 열려요. (iOS에선 동작하지 않아요)</p>
-  <p class="muted small">기기: ${esc(navigator.userAgent.slice(0, 120))}</p>
-  ${CAND.map(([c, name, pkg, home, schemes]) => `<h2>${cb(c)} ${name}</h2>
-    ${btn('① 일반 링크', home, '그냥 사이트 주소 — 폰 설정의 "기본으로 열기"가 켜져 있으면 앱이 뜸')}
-    ${btn('② https 인텐트', `intent://${home.replace('https://', '')}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${fb};end`, '지금 사이트가 쓰는 방식 (앱이 이 주소를 받아줘야 열림)')}
-    ${btn('③ 패키지만', `intent:#Intent;package=${pkg};S.browser_fallback_url=${fb};end`, '앱만 지정 — 앱 첫 화면')}
-    ${schemes.map((sc, i) => btn(`④-${i + 1} ${sc}://`, `intent://open#Intent;scheme=${sc};package=${pkg};S.browser_fallback_url=${fb};end`, '앱 전용 주소 후보')).join('')}
-    ${btn('⑤ 스토어', `https://play.google.com/store/apps/details?id=${pkg}`, '패키지 이름이 맞는지 확인용 — 해당 앱 스토어 페이지가 떠야 함')}`).join('')}
-  <h2>폰 설정에서 켜는 방법 (①이 안 될 때)</h2><p>설정 → 애플리케이션 → (예: Marriott Bonvoy) → <b>기본으로 설정</b> 또는 <b>기본으로 열기</b> → "지원되는 링크 열기" 켜기 → 링크 추가에서 marriott.com 체크. 안드로이드 12부터는 앱이 애플에 해당하는 "검증"을 해 두지 않으면 기본이 꺼져 있어요.</p></div>`;
 }
-
+function alIntent(target, pkg, key) {
+  const fb = encodeURIComponent(`${location.origin}${location.pathname}#applinks/fail-${key}`);
+  if (target === 'pkg') return `intent:#Intent;package=${pkg};S.browser_fallback_url=${fb};end`;
+  if (!/^https:/.test(target)) { const sc = target.replace('://', ''); return `intent://open#Intent;scheme=${sc};package=${pkg};S.browser_fallback_url=${fb};end`; }
+  const u = new URL(target); return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${fb};end`;
+}
+function viewAppLinks(arg) {
+  const el = $('#v-applinks'); const R = alLoad();
+  if (arg && arg.startsWith('fail-')) { R[arg.slice(5)] = 'fail'; delete R._pending; alSave(R); history.replaceState(null, '', '#applinks'); }
+  const cands = alCands();
+  const mark = (k) => R[k] === 'ok' ? '<b style="color:#6fcf97">✓ 앱 열림</b>' : R[k] === 'fail' ? '<b style="color:#e2735f">✗ 웹으로</b>' : '<span class="muted">—</span>';
+  el.innerHTML = `<div class="legal"><h1>앱 링크 테스트</h1><p class="lead">안드로이드에서 버튼을 <b>하나씩</b> 누르세요. 앱이 열리면 뒤로 돌아오고, 웹이 열리면 자동으로 이 페이지로 돌아와요. 결과는 버튼 옆에 ✓/✗로 저절로 기록돼요. 다 끝나면 아래 "결과 복사"를 눌러 저한테 붙여 주세요.</p>
+  ${cands.map(([c, name, pkg, list]) => `<h2>${cb(c)} ${name}</h2><div class="altab">${list.map(([label, target], i) => { const k = `${c}-${i}`; return `<div class="alrow"><a class="btn small" href="${alIntent(target, pkg, k)}" data-al="${k}">${label}</a>${mark(k)}</div>`; }).join('')}</div>`).join('')}
+  <p style="margin-top:22px"><button type="button" class="btn primary" id="alCopy">결과 복사</button> <button type="button" class="btn" id="alReset">초기화</button></p>
+  <p class="muted small">기기: ${esc(navigator.userAgent.slice(0, 140))}</p></div>`;
+  el.querySelectorAll('[data-al]').forEach(a => a.addEventListener('click', () => { const R2 = alLoad(); R2._pending = { k: a.dataset.al, t: Date.now() }; alSave(R2); }));
+  $('#alCopy').addEventListener('click', async () => { const R2 = alLoad(); const txt = cands.map(([c, name, , list]) => `${name}: ` + list.map(([label], i) => `${label}=${R2[`${c}-${i}`] === 'ok' ? '✓' : R2[`${c}-${i}`] === 'fail' ? '✗' : '-'}`).join(', ')).join('\n') + `\n${navigator.userAgent}`; try { await navigator.clipboard.writeText(txt); $('#alCopy').textContent = '복사됨 — 채팅에 붙여넣기'; } catch (e) { prompt('복사해서 보내 주세요', txt); } });
+  $('#alReset').addEventListener('click', () => { alSave({}); viewAppLinks(); });
+}
+// 앱이 열렸다가 돌아오면(페이지가 다시 보이면) 대기 중이던 버튼을 ✓로
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible') return; const R = alLoad(); if (R._pending && Date.now() - R._pending.t < 120000 && R[R._pending.k] !== 'fail') { R[R._pending.k] = 'ok'; delete R._pending; alSave(R); if (location.hash.startsWith('#applinks')) viewAppLinks(); } });
+window.addEventListener('pageshow', (e) => { if (e.persisted && location.hash.startsWith('#applinks')) { const R = alLoad(); if (R._pending && R[R._pending.k] !== 'fail') { R[R._pending.k] = 'ok'; delete R._pending; alSave(R); } viewAppLinks(); } });
 // ---------- 소개 · 이용약관 · 개인정보처리방침 · 문의 (정적 페이지, 운영자 이름·이메일·시행일은 Check 화면 문구 편집에서 수정) ----------
 const legalFoot = () => `<p class="muted small" style="margin-top:28px">시행일 ${esc(cp('site.effective'))} · 운영자 ${esc(cp('site.operator'))} · 문의 <a href="mailto:${esc(cp('site.contact'))}">${esc(cp('site.contact'))}</a></p>`;
 function viewAbout() {
@@ -1844,7 +1873,7 @@ function viewHotels() {
   const typical = (k) => { const a = (prices[k] || []).slice().sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };   // 중앙값
   const byC = {};
   for (const h of D.hotels.values()) { if (!h.cc) continue; const c = byC[h.cc] = byC[h.cc] || { label: h.country, cities: {} }; (c.cities[h.city || '기타'] = c.cities[h.city || '기타'] || []).push(h); }
-  const ORDER = ['KR', 'JP', 'TH', 'VN', 'SG', 'HK'];
+  const ORDER = ['KR', 'JP', 'TW', 'TH', 'VN', 'SG', 'MY', 'ID', 'PH', 'HK'];
   const theme = ui.theme || ''; if (theme) for (const c of Object.values(byC)) for (const k of Object.keys(c.cities)) { c.cities[k] = c.cities[k].filter(h => hotelTheme(h).includes(theme)); if (!c.cities[k].length) delete c.cities[k]; }
   const chips = `<div class="chips" style="margin:-4px 0 12px"><button class="chip ${theme ? '' : 'on'}" data-theme="">전체</button>${THEMES.map(([n]) => `<button class="chip ${theme === n ? 'on' : ''}" data-theme="${n}">${n}</button>`).join('')}<span class="muted small">호텔명·브랜드 키워드로 고른 테마라 빠지는 곳이 있을 수 있어요</span></div>`;
   el.innerHTML = `<h1>호텔</h1><p class="lead">국가 · 도시별로 묶고, 각 도시 안에서는 1박 기준가(비교 기준 요금의 중앙값)가 비싼 호텔부터 보여드려요. 숫자는 다음 30일 안에 가능한 혜택 날짜 수.</p>` + chips +

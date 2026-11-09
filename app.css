@@ -929,3 +929,7 @@ footer .flinks a:hover { color: var(--fg); }
 .vrow b { font-weight: 600; } .vrow small { color: var(--muted); margin-left: 4px; } .vrow small.hot { color: #e2735f; font-weight: 700; }
 .acard .btn { margin-top: 14px; }
 .dlegal.acc { padding: 10px 0 0; margin-top: 8px; }
+
+.altab { display: flex; flex-direction: column; gap: 8px; }
+.alrow { display: flex; align-items: center; gap: 12px; }
+.alrow .btn { min-width: 190px; text-align: left; }
