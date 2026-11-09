@@ -1164,8 +1164,8 @@ function openCal(btn) {
   };
   const render = () => { dlg.innerHTML = `<div class="shead"><b>${from && out ? `${fmtMD(from)} → ${fmtMD(out)} · ${daysBetween(from, out)}박` : from ? `${fmtMD(from)} 체크인 · 체크아웃 날을 고르세요` : '체크인 날을 고르세요'}</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody">${months.map(grid).join('')}</div><div class="cfoot"><button type="button" class="lnk" id="calClear">지우기</button><button type="button" class="mgo" id="calOk" ${from && out ? '' : 'disabled'}>${from && out ? `${daysBetween(from, out)}박 적용` : '적용'}</button></div>`;
     dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
-    dlg.querySelector('#calClear').addEventListener('click', () => { from = ''; out = ''; render(); });
-    dlg.querySelector('#calOk').addEventListener('click', () => { btn.dataset.from = from; btn.dataset.out = out; btn.innerHTML = datesLabel(from, out); dlg.close(); });
+    dlg.querySelector('#calClear').addEventListener('click', () => { from = ''; out = ''; btn.dataset.from = ''; btn.dataset.out = ''; btn.innerHTML = '<span class="ph">날짜를 고르세요 · 안 고르면 전체 기간</span>'; dlg.close(); btn.dispatchEvent(new Event('change')); });
+    dlg.querySelector('#calOk').addEventListener('click', () => { btn.dataset.from = from; btn.dataset.out = out; btn.innerHTML = datesLabel(from, out); dlg.close(); btn.dispatchEvent(new Event('change')); });
     dlg.querySelectorAll('.cgrid button').forEach(b => b.addEventListener('click', () => { const d = b.dataset.d; if (!from || (from && out) || d <= from) { from = d; out = ''; } else { out = d; } const top = dlg.querySelector('.cbody').scrollTop; render(); dlg.querySelector('.cbody').scrollTop = top; }));
   };
   render(); dlg.showModal();
@@ -1187,9 +1187,8 @@ function mobileHome(rows, groups) {
       <form class="mform" id="mForm">
         <label class="mf"><small>Destination</small><select id="mWhere">${whereOpts}</select></label>
         <div class="mf"><small>Dates</small><button type="button" class="mdates" id="mDates" data-from="${ui.mDatesSet ? esc(from) : ''}" data-out="${ui.mDatesSet && to ? esc(addDays(to, 1)) : ''}">${ui.mDatesSet ? datesLabel(from, to ? addDays(to, 1) : '') : '<span class="ph">날짜를 고르세요 · 안 고르면 전체 기간</span>'}</button></div>
-        <label class="mf"><small>Keyword</small><input type="search" id="mText" placeholder="소피텔 · 라운지 · 포인트" value="${esc(kwOnly(q))}"></label>
-        <div class="mchips">${M_CHIPS.map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}">${c}</button>`).join('')}</div>
-        <button type="submit" class="mgo">호텔 찾기</button>
+        <div class="mf"><small>Benefits · 누르면 바로 적용</small><div class="mchips wrap">${M_CHIPS.map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}" aria-pressed="${q.includes(c)}">${c}</button>`).join('')}${kwOnly(q) ? `<button type="button" class="on kw" data-mkw title="이 검색어 지우기">“${esc(kwOnly(q))}” ✕</button>` : ''}</div></div>
+        <button type="submit" class="mgo">호텔 ${groups.length.toLocaleString()}곳 보기</button>
         <button type="button" class="mflt lnk">자세한 필터</button>
       </form>
     </div>
@@ -1233,8 +1232,13 @@ function viewRadar() {
   $('#resTitle').innerHTML = resTitle(rows, groups); $('#heroEyebrow').textContent = heroEyebrow(rows); $('#resSub').textContent = heroSub(rows, groups);
   const isCards = ui.view === 'cards'; const mob = MOBILE() && isCards; document.body.classList.toggle('app-m', mob);
   const mApp = $('#mApp'); if (mApp) { mApp.hidden = !mob; if (mob) { mApp.innerHTML = mobileHome(rows, groups);
-      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; const md = m.querySelector('#mDates'); if (md.dataset.from && md.dataset.out) { $('#fFrom').value = md.dataset.from; $('#fTo').value = addDays(md.dataset.out, -1); ui.mDatesSet = true; } else if (ui.mDatesSet && !md.dataset.from) { ui.mDatesSet = false; $('#fFrom').value = ''; $('#fTo').value = ''; } const n = ''; const kw = kwOnly(m.querySelector('#mText').value.trim()); const chips = [...m.querySelectorAll('.mchips button.on')].map(b => b.dataset.mq); $('#fText').value = [kw, n ? `${n}박` : '', ...chips].filter(Boolean).join(' '); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); });
-      mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => b.classList.toggle('on')));   // 칩은 폼 안에서 고르기만, 적용은 '호텔 찾기'
+      // 검색 조건은 바꾸는 즉시 적용 (지역 · 날짜 · 혜택 칩). 화면 위치는 그대로 두고 결과만 바뀐다
+      const applyM = (dropKw) => { const m = mApp; $('#fWhere').value = m.querySelector('#mWhere').value; const md = m.querySelector('#mDates'); if (md.dataset.from && md.dataset.out) { $('#fFrom').value = md.dataset.from; $('#fTo').value = addDays(md.dataset.out, -1); ui.mDatesSet = true; } else if (ui.mDatesSet && !md.dataset.from) { ui.mDatesSet = false; $('#fFrom').value = ''; $('#fTo').value = ''; } const kw = dropKw ? '' : kwOnly($('#fText').value); const chips = [...m.querySelectorAll('.mchips button.on[data-mq]')].map(b => b.dataset.mq); $('#fText').value = [kw, ...chips].filter(Boolean).join(' '); ui.mLimit = 24; const y = window.scrollY; viewRadar(); window.scrollTo(0, y); };
+      mApp.querySelector('#mForm').addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      mApp.querySelectorAll('[data-mq]').forEach(b => b.addEventListener('click', () => { b.classList.toggle('on'); applyM(false); }));
+      mApp.querySelector('[data-mkw]')?.addEventListener('click', () => applyM(true));
+      mApp.querySelector('#mWhere').addEventListener('change', () => applyM(false));
+      mApp.querySelector('#mDates').addEventListener('change', () => applyM(false));
       mApp.querySelector('#mDates').addEventListener('click', (e) => openCal(e.currentTarget));
       mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
