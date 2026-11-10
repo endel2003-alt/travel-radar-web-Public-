@@ -1593,7 +1593,7 @@ function viewHome() {
     const H = mHeroHtml(mine, groups, { pill: hasProfile() ? 'Today' : 'Members only', title: hasProfile() ? `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다` : `내 등급을 넣으면<br><em>${groups.length.toLocaleString()}곳</em> 중 내 것이 보입니다` });
     ui.hLimit = ui.hLimit || 24;
     el.innerHTML = `${H.heroHtml}${H.band}${H.wallet}
-      ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
+      ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-onb>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
       ${H.soonHtml}
       <div class="mlab">오늘 열린 곳 ${groups.length.toLocaleString()}곳 <a href="#radar" class="lnk small" style="float:right">검색 →</a></div>
       <div class="mlist" id="hList">${groups.slice(0, ui.hLimit).map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<p class="muted small mpad">지금 열린 혜택이 없어요.</p>'}</div>
@@ -1603,7 +1603,7 @@ function viewHome() {
     return;
   }
   if (!hasProfile()) {
-    el.innerHTML = `<h1>${esc(cp('home.title.noprofile'))}</h1><div class="onb"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-open-profile>내 등급 넣기</button><a class="btn ghost" href="#radar">먼저 둘러보기</a></div>
+    el.innerHTML = `<h1>${esc(cp('home.title.noprofile'))}</h1><div class="onb"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-onb>내 등급 넣기</button><a class="btn ghost" href="#radar">먼저 둘러보기</a></div>
       <h2>이번 달 베스트 <span class="muted small">전체 회원 기준</span></h2><div class="mlist" id="homeBest"></div>`;
     const g = groupHotels(D.rows).sort((a, b) => (b.best?.sv || 0) - (a.best?.sv || 0)).slice(0, 6); $('#homeBest').innerHTML = g.map((o, i) => mPhotoCard(o, i, { small: true })).join('') || '<div class="empty">데이터를 불러오는 중이에요.</div>';
     return;
@@ -1634,7 +1634,7 @@ function viewAccount() {
   const vouchers = vs.length ? `<div class="vlist">${vs.map(([n, k, e]) => { const d = daysTo(e); return `<div class="vrow"><span>${esc(n)}</span><b>${k}장${e ? ` <small class="${d != null && d <= 45 ? 'hot' : ''}">D-${d}</small>` : ''}</b></div>`; }).join('')}</div>` : '';
   const item = (href, title, sub, attrs) => `<a class="mi" href="${href}" ${attrs || ''}><span><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</span><i>›</i></a>`;
   el.innerHTML = `<h1>내 정보</h1>
-    <div class="acard">${rows || '<p class="muted">아직 등급을 넣지 않았어요. 등급을 넣으면 내가 쓸 수 있는 혜택만 골라 보여 드려요.</p>'}${vouchers}<button type="button" class="btn ${rows ? '' : 'primary'}" data-open-profile>${rows ? '등급 · 포인트 · 쿠폰 수정' : '내 등급 넣기'}</button></div>
+    <div class="acard">${rows || '<p class="muted">아직 등급을 넣지 않았어요. 등급을 넣으면 내가 쓸 수 있는 혜택만 골라 보여 드려요.</p>'}${vouchers}${rows ? `<div class="abtns"><button type="button" class="btn" data-onb>등급 빠르게 바꾸기</button><button type="button" class="btn" data-open-profile>포인트 · 쿠폰 · 만료일</button></div>` : '<button type="button" class="btn primary" data-onb>내 등급 넣기</button>'}</div>
     <div class="mlist2">
       ${item('#', AUTH.s ? 'Log out' : 'Log in', AUTH.s ? (AUTH.s.email || '') : '이메일 또는 Google · 관심·알림·기기 간 동기화', AUTH.s ? 'id="accLogout"' : 'data-login')}
       ${item('#alerts', 'Watchlist & alerts', AUTH.s ? `관심 호텔 ${WATCH.list.length} · 안 읽은 알림 ${WATCH.unread}` : '관심 호텔 · 혜택 알림 · 로그인 필요')}
@@ -2118,6 +2118,70 @@ if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.
   let reloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded || !hadController) return; reloaded = true; location.reload(); });
   navigator.serviceWorker.register('sw.js?v=' + (document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '0')).then(r => r.update()).catch(() => {});
 }
+// ---------- 첫 사용 안내 (온보딩): 멤버십 고르기 → 등급 고르기 → 시작 ----------
+// 등급이 없으면 이 서비스는 그냥 호텔 목록이라, 처음 들어온 사람에게 30초 안에 등급만 받는다. 포인트·쿠폰은 나중에 '내 정보'에서.
+const ONB_CHAINS = [
+  { c: 'accor', name: 'Accor ALL', brands: '소피텔 · 풀만 · 노보텔 · 이비스', tiers: ['Classic', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Limitless'], extra: { k: 'explorer', label: 'Accor+ 구독 중 (1박 무료 쿠폰)' } },
+  { c: 'ihg', name: 'IHG One Rewards', brands: '인터컨티넨탈 · 크라운플라자 · 홀리데이인', tiers: ['Club', 'Silver', 'Gold', 'Platinum', 'Diamond'], extra: { k: 'ambassador', label: '앰배서더 회원 (주말 1+1)' } },
+  { c: 'marriott', name: 'Marriott Bonvoy', brands: '리츠칼튼 · 웨스틴 · 쉐라톤 · JW', tiers: ['Member', 'Silver', 'Gold', 'Platinum', 'Titanium', 'Ambassador'] },
+  { c: 'hilton', name: 'Hilton Honors', brands: '콘래드 · 월도프 · 힐튼 · 더블트리', tiers: ['Member', 'Silver', 'Gold', 'Diamond'] },
+];
+const ONB_KEY = 'tr_onb';
+function onbMaybe() { try { if (localStorage.getItem(ONB_KEY)) return; } catch (e) {} if (hasProfile() || document.getElementById('gate')) return; openOnb(); }
+function openOnb() {
+  document.getElementById('onb')?.remove();
+  const st = { step: 1, sel: {}, tier: {}, extra: { explorer: !!profile.explorer, ambassador: !!profile.ambassador }, snu: profile.snu || 0, stayPlus: profile.stayPlus || 0 };
+  for (const o of ONB_CHAINS) { const t = profile[o.c + 'Tier']; if (t) { st.sel[o.c] = true; st.tier[o.c] = t; } }
+  const el = document.createElement('div'); el.id = 'onb'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); document.body.appendChild(el); document.body.classList.add('gated');
+  const chosen = () => ONB_CHAINS.filter(o => st.sel[o.c]);
+  const head = (n, title, sub) => `<div class="ohead"><div class="osteps">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</div><button type="button" class="oskip" data-oskip>나중에</button></div><h2 class="otitle">${title}</h2>${sub ? `<p class="osub">${sub}</p>` : ''}`;
+  const stepper = (k, label) => `<div class="ostep"><span>${label}</span><div><button type="button" data-dec="${k}" aria-label="빼기">−</button><b>${st[k]}</b><button type="button" data-inc="${k}" aria-label="더하기">+</button></div></div>`;
+  const render = () => {
+    if (st.step === 1) {
+      el.innerHTML = `<div class="ocard">${head(1, '어떤 멤버십이 있나요?', '있는 걸 모두 골라 주세요. 등급에 맞는 혜택만 보여 드려요.')}
+        <div class="ochains">${ONB_CHAINS.map(o => `<button type="button" class="ochain ${st.sel[o.c] ? 'on' : ''}" data-oc="${o.c}" aria-pressed="${!!st.sel[o.c]}">${cb(o.c, 'lg')}<span><b>${o.name}</b><small>${o.brands}</small></span><i class="ock">✓</i></button>`).join('')}</div>
+        <div class="ofoot"><button type="button" class="mgo" data-next ${chosen().length ? '' : 'disabled'}>다음</button><button type="button" class="lnk" data-onone>멤버십 없이 둘러볼게요</button></div></div>`;
+    } else if (st.step === 2) {
+      const ready = chosen().every(o => st.tier[o.c]);
+      el.innerHTML = `<div class="ocard">${head(2, '등급을 골라 주세요', '지금 등급 기준이에요. 나중에 언제든 바꿀 수 있어요.')}
+        <div class="otiers">${chosen().map(o => `<div class="otier"><div class="otn">${cb(o.c)}<b>${o.name}</b></div><div class="opills">${o.tiers.map(t => `<button type="button" class="${st.tier[o.c] === t ? 'on' : ''}" data-ot="${o.c}" data-tv="${t}">${tierKo(t)}</button>`).join('')}</div>${o.extra ? `<label class="oextra"><input type="checkbox" data-ox="${o.extra.k}" ${st.extra[o.extra.k] ? 'checked' : ''}> ${o.extra.label}</label>` : ''}</div>`).join('')}</div>
+        <div class="ofoot"><button type="button" class="mgo" data-next ${ready ? '' : 'disabled'}>다음</button><button type="button" class="lnk" data-prev>이전</button></div></div>`;
+    } else {
+      const acc = st.sel.accor;
+      el.innerHTML = `<div class="ocard">${head(3, '준비됐어요', '이제 내 등급으로 받을 수 있는 혜택만 골라 보여 드려요.')}
+        <div class="osum">${chosen().map(o => `<span>${cb(o.c, 'sm')} ${o.name.split(' ')[0]} <b>${tierKo(st.tier[o.c])}</b></span>`).join('')}</div>
+        ${acc ? `<div class="ocoupon"><p class="osub" style="margin:0 0 8px">아코르 쿠폰이 있으면 개수만 알려 주세요 <span class="muted">(선택)</span></p>${stepper('snu', '스위트 업그레이드 쿠폰 (SNU)')}${st.extra.explorer ? stepper('stayPlus', '1박 무료 쿠폰 (Stay Plus)') : ''}</div>` : ''}
+        <p class="osub small">포인트·쿠폰 만료일은 <b>내 정보</b>에서 언제든 넣을 수 있어요. 이 정보는 이 기기에만 저장돼요.</p>
+        <div class="ofoot"><button type="button" class="mgo" data-done>시작하기</button><button type="button" class="lnk" data-prev>이전</button></div></div>`;
+    }
+    bind();
+  };
+  const close = (save) => {
+    if (save) {
+      const up = {}; for (const o of ONB_CHAINS) up[o.c + 'Tier'] = st.sel[o.c] ? (st.tier[o.c] || '') : '';
+      up.explorer = !!(st.sel.accor && st.extra.explorer); up.ambassador = !!(st.sel.ihg && st.extra.ambassador);
+      if (st.sel.accor) { up.snu = st.snu; up.stayPlus = up.explorer ? st.stayPlus : 0; }
+      profile = Object.assign({}, profile, up); try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {} profilePush();
+    }
+    try { localStorage.setItem(ONB_KEY, String(Date.now())); } catch (e) {}
+    el.remove(); document.body.classList.remove('gated'); renderProfileBtn?.(); route();
+  };
+  const bind = () => {
+    el.querySelector('[data-oskip]')?.addEventListener('click', () => close(false));
+    el.querySelector('[data-onone]')?.addEventListener('click', () => close(false));
+    el.querySelector('[data-prev]')?.addEventListener('click', () => { st.step--; render(); });
+    el.querySelector('[data-next]')?.addEventListener('click', () => { st.step++; render(); });
+    el.querySelector('[data-done]')?.addEventListener('click', () => close(true));
+    el.querySelectorAll('[data-oc]').forEach(b => b.addEventListener('click', () => { st.sel[b.dataset.oc] = !st.sel[b.dataset.oc]; render(); }));
+    el.querySelectorAll('[data-ot]').forEach(b => b.addEventListener('click', () => { st.tier[b.dataset.ot] = b.dataset.tv; render(); }));
+    el.querySelectorAll('[data-ox]').forEach(i => i.addEventListener('change', () => { st.extra[i.dataset.ox] = i.checked; }));
+    el.querySelectorAll('[data-inc]').forEach(b => b.addEventListener('click', () => { st[b.dataset.inc] = Math.min(20, st[b.dataset.inc] + 1); render(); }));
+    el.querySelectorAll('[data-dec]').forEach(b => b.addEventListener('click', () => { st[b.dataset.dec] = Math.max(0, st[b.dataset.dec] - 1); render(); }));
+  };
+  render();
+}
+document.addEventListener('click', (e) => { if (e.target.closest('[data-onb]')) { e.preventDefault(); openOnb(); } });
+
 // ---------- 베타 초대 코드 ----------
 // 첫 화면에서 초대 코드를 넣어야 들어올 수 있다. 코드 확인은 서버(tr_redeem_invite)가, 코드 목록은 운영자만 본다.
 // 저장하는 건 코드와 '기기 임의 번호'(이 브라우저가 만든 무작위 값)뿐. 한 번 들어온 기기는 다음부터 바로 열리고, 운영자가 코드를 끄면 다시 잠긴다.
@@ -2148,7 +2212,7 @@ function gateShow(msg) {
   }
   if (msg) g.querySelector('#gateMsg').textContent = msg;
 }
-function gateHide() { document.getElementById('gate')?.remove(); document.body.classList.remove('gated'); }
+function gateHide() { const had = !!document.getElementById('gate'); document.getElementById('gate')?.remove(); document.body.classList.remove('gated'); if (had && !D.meta?.owner) setTimeout(onbMaybe, 50); }
 async function gateRedeem(code) {
   const msg = document.getElementById('gateMsg'); const btn = document.getElementById('gateGo'); const c = String(code || '').trim().toUpperCase();
   if (!/^TR-[A-Z0-9]{6}$/.test(c)) { if (msg) msg.textContent = '코드는 TR- 뒤에 6자리예요.'; return; }
@@ -2183,6 +2247,7 @@ async function invAdmin() {
   box.querySelectorAll('[data-inv-copy]').forEach(b => b.addEventListener('click', async () => { const t = link(b.dataset.invCopy); try { await navigator.clipboard.writeText(t); b.textContent = '복사됨'; } catch (e) { prompt('복사해서 보내세요', t); } }));
 }
 gateInit();
+if (!document.getElementById('gate')) setTimeout(onbMaybe, 0);
 load().catch(e => { $('#loadingNote')?.remove(); $('#cards').innerHTML = ''; $('#empty').hidden = false; $('#empty').textContent = '데이터를 불러오지 못했어요: ' + e.message; });
 // 창 폭이 720px 경계를 넘으면 앱 모드 ↔ 레저 모드 다시 그리기
 { let wasM = MOBILE(); window.addEventListener('resize', () => { const m = MOBILE(); if (m !== wasM) { wasM = m; if (!location.hash || /^#\/?radar/.test(location.hash)) viewRadar(); } }); }
