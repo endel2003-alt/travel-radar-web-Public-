@@ -502,10 +502,10 @@ const COPY_DEFAULT = {
   'nav.search.sub': 'by my tier', 'nav.today.sub': 'my benefits', 'nav.best.sub': 'of the month', 'nav.plan.sub': 'my trip', 'nav.map.sub': 'all hotels', 'nav.hotels.sub': 'by city', 'nav.guide.sub': 'tiers compared', 'nav.offers.sub': 'live promos', 'nav.news.sub': 'from my inbox',
   'group.find': 'Find', 'group.mine': 'Mine', 'group.learn': 'Learn', 'group.settings': 'Settings',
   'home.title.noprofile': '내 등급으로 보는 호텔', 'home.onb': '아코르·IHG·메리어트·힐튼 중 내 등급(티어)을 넣으면, 그 등급으로 받을 수 있는 혜택만 골라 보여드려요. 로그인 없이도 되고, 이 기기에만 저장돼요.',
-  'site.operator': 'Travel Radar 운영자', 'site.contact': 'endel2003@gmail.com', 'site.effective': '2026-11-09',
+  'site.operator': 'Travel Radar 운영자', 'site.contact': 'endel2003@gmail.com', 'site.effective': '2026-11-09', 'site.kakao': '',
   'footer.line1': '개인 수집 데이터 기반, 예약은 각 체인 공식 사이트에서 본인 계정으로 진행됩니다.', 'footer.line2': '혜택 자격(티어·바우처)은 본인 계정 기준으로 확인하세요.',
 };
-const COPY_LABEL = { 'nav.search.sub': 'PC 메뉴 · Search', 'nav.today.sub': 'PC 메뉴 · Today', 'nav.best.sub': 'PC 메뉴 · Best', 'nav.plan.sub': 'PC 메뉴 · Plan', 'nav.map.sub': 'PC 메뉴 · Map', 'nav.hotels.sub': 'PC 메뉴 · Hotels', 'nav.guide.sub': 'PC 메뉴 · Guide', 'nav.offers.sub': 'PC 메뉴 · Offers', 'nav.news.sub': 'PC 메뉴 · News', 'menu.search.sub': '서랍 · Search 설명', 'menu.map.sub': 'Map 설명', 'menu.hotels.sub': 'Hotels 설명', 'menu.best.sub': 'Best 설명', 'menu.home.sub': 'Home 설명', 'menu.today.sub': 'Today 설명', 'menu.plan.sub': 'Plan 설명', 'menu.alerts.sub': 'Alerts 설명', 'menu.news.sub': 'News 설명', 'menu.offers.sub': 'Offers 설명', 'menu.guide.sub': 'Guide 설명', 'menu.tier.sub': 'My tier 설명', 'menu.mail.sub': 'Email alerts 설명', 'menu.install.sub': 'Install app 설명', 'group.find': '묶음 1 이름', 'group.mine': '묶음 2 이름', 'group.learn': '묶음 3 이름', 'group.settings': '묶음 4 이름', 'home.title.noprofile': '홈 제목 (등급 없을 때)', 'home.onb': '홈 안내문 (등급 없을 때)', 'footer.line1': '푸터 1줄', 'footer.line2': '푸터 2줄', 'site.operator': '운영자(개인정보 보호책임자) 이름', 'site.contact': '문의·개인정보 이메일', 'site.effective': '약관·방침 시행일 (YYYY-MM-DD)' };
+const COPY_LABEL = { 'nav.search.sub': 'PC 메뉴 · Search', 'nav.today.sub': 'PC 메뉴 · Today', 'nav.best.sub': 'PC 메뉴 · Best', 'nav.plan.sub': 'PC 메뉴 · Plan', 'nav.map.sub': 'PC 메뉴 · Map', 'nav.hotels.sub': 'PC 메뉴 · Hotels', 'nav.guide.sub': 'PC 메뉴 · Guide', 'nav.offers.sub': 'PC 메뉴 · Offers', 'nav.news.sub': 'PC 메뉴 · News', 'menu.search.sub': '서랍 · Search 설명', 'menu.map.sub': 'Map 설명', 'menu.hotels.sub': 'Hotels 설명', 'menu.best.sub': 'Best 설명', 'menu.home.sub': 'Home 설명', 'menu.today.sub': 'Today 설명', 'menu.plan.sub': 'Plan 설명', 'menu.alerts.sub': 'Alerts 설명', 'menu.news.sub': 'News 설명', 'menu.offers.sub': 'Offers 설명', 'menu.guide.sub': 'Guide 설명', 'menu.tier.sub': 'My tier 설명', 'menu.mail.sub': 'Email alerts 설명', 'menu.install.sub': 'Install app 설명', 'group.find': '묶음 1 이름', 'group.mine': '묶음 2 이름', 'group.learn': '묶음 3 이름', 'group.settings': '묶음 4 이름', 'home.title.noprofile': '홈 제목 (등급 없을 때)', 'home.onb': '홈 안내문 (등급 없을 때)', 'footer.line1': '푸터 1줄', 'footer.line2': '푸터 2줄', 'site.operator': '운영자(개인정보 보호책임자) 이름', 'site.kakao': '카카오톡 오픈채팅 링크 (https://open.kakao.com/o/… · 비우면 숨김)', 'site.contact': '문의·개인정보 이메일', 'site.effective': '약관·방침 시행일 (YYYY-MM-DD)' };
 const COPY = Object.assign({}, COPY_DEFAULT);
 const cp = (k) => COPY[k] ?? COPY_DEFAULT[k] ?? '';
 function applyCopy() { document.querySelectorAll('[data-copy]').forEach(el => { const v = cp(el.dataset.copy); if (v) el.textContent = v; }); }
@@ -1817,10 +1817,12 @@ function viewPrivacy() {
   <h2>7. 개인정보 보호책임자</h2><p>${esc(cp('site.operator'))} · <a href="mailto:${esc(cp('site.contact'))}">${esc(cp('site.contact'))}</a><br>개인정보 침해 신고·상담: 개인정보침해신고센터 (privacy.kisa.or.kr · 118), 개인정보분쟁조정위원회 (kopico.go.kr · 1833-6972)</p>
   <h2>8. 변경</h2><p>이 방침이 바뀌면 시행 7일 전 서비스 안에 공지해요.</p>${legalFoot()}</div>`;
 }
+const kakaoUrl = () => { const u = (cp('site.kakao') || '').trim(); return /^https:\/\/open\.kakao\.com\//.test(u) ? u : ''; };
 function viewContact() {
   $('#v-contact').innerHTML = `<div class="legal"><h1>문의</h1>
   <p class="lead">버그, 틀린 혜택 정보, 추가하고 싶은 호텔, 개인정보 관련 요청 — 무엇이든 아래로 보내 주세요. 보통 하루 안에 답해요.</p>
-  <p><a class="btn primary" href="mailto:${esc(cp('site.contact'))}?subject=${encodeURIComponent('[Travel Radar] 문의')}">이메일 보내기 — ${esc(cp('site.contact'))}</a></p>
+  <p><a class="btn primary" href="mailto:${esc(cp('site.contact'))}?subject=${encodeURIComponent('[Travel Radar] 문의')}">이메일 보내기 — ${esc(cp('site.contact'))}</a>${kakaoUrl() ? ` <a class="btn" href="${esc(kakaoUrl())}" target="_blank" rel="noopener">카카오톡 오픈채팅</a>` : ''}</p>
+  <p class="muted small">사이트 안에서 바로 보내려면 화면의 <a href="#" data-fb="other">의견 보내기</a>를 눌러도 돼요.</p>
   <h2>보내 주시면 좋은 것</h2><ul><li>어느 화면에서(호텔 이름·날짜) 무엇이 이상했는지</li><li>폰/PC, 브라우저 종류</li><li>개인정보 열람·삭제 요청은 로그인한 이메일로 보내 주세요 (본인 확인용)</li></ul>
   <p class="muted small">체인 계정 비밀번호·회원번호·카드 정보는 절대 보내지 마세요. 저희는 그런 정보를 받지 않아요.</p>${legalFoot()}</div>`;
 }
@@ -2284,7 +2286,7 @@ function openFeedback(kind, hotelKey) {
       const ctx = { build: document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '', w: innerWidth, h: innerHeight, mobile: MOBILE(), standalone: matchMedia('(display-mode: standalone)').matches, ua: navigator.userAgent.slice(0, 160), date: selDate || undefined, tiers: ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => `${c}:${myTier(c)}`) };
       try {
         const r = await invRpc('tr_send_feedback', { p: { kind: k, message: msg, page, hotel: h?.key || null, ctx, device: invDevice() } }, !!AUTH.s);
-        if (r?.ok) { track('feedback_sent'); dlg.querySelector('.fbbody').innerHTML = '<div class="fbdone"><b>고마워요!</b><p>보내 주신 의견은 바로 확인할게요. 답이 필요한 내용이면 오픈채팅방이나 문의 메일로도 알려 주세요.</p><button type="button" class="mgo" data-close2>닫기</button></div>'; dlg.querySelector('[data-close2]').addEventListener('click', () => dlg.close()); return; }
+        if (r?.ok) { track('feedback_sent'); dlg.querySelector('.fbbody').innerHTML = `<div class="fbdone"><b>고마워요!</b><p>보내 주신 의견은 바로 확인할게요. 답이 필요한 내용이면 ${kakaoUrl() ? `<a href="${esc(kakaoUrl())}" target="_blank" rel="noopener">오픈채팅방</a>이나 ` : ''}<a href="mailto:${esc(cp('site.contact'))}">문의 메일</a>로도 알려 주세요.</p><button type="button" class="mgo" data-close2>닫기</button></div>`; dlg.querySelector('[data-close2]').addEventListener('click', () => dlg.close()); return; }
         out.textContent = r?.reason === 'limit' ? '오늘은 더 보낼 수 없어요. 내일 다시 보내 주세요.' : '보내지 못했어요. 다시 시도해 주세요.';
       } catch (err) { out.textContent = '연결이 불안정해요. 잠시 뒤 다시 시도해 주세요.'; }
       btn.disabled = false;
