@@ -1042,3 +1042,18 @@ body.gated .fbfab { display: none; }
 .fblist { list-style: none; padding: 0; margin: 8px 0; } .fblist li { padding: 12px 0; border-bottom: 1px solid var(--line); } .fblist li.done { opacity: .5; }
 .fblist .fbh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .fblist .fbh .lnk { margin-left: auto; } .fblist p { margin: 6px 0 0; white-space: pre-wrap; }
 .bdg2 { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.08); } .bdg2.wrong { background: rgba(226,115,95,.2); color: #f0a08f; } .bdg2.idea { background: rgba(212,168,75,.18); color: #e5c27a; } .bdg2.bug { background: rgba(142,168,232,.2); color: #b3c6f2; }
+
+/* 베타 표시 · 데이터 신선도 */
+.beta { display: inline-block; vertical-align: top; margin-left: 6px; padding: 1px 5px 0; border: 1px solid var(--gold); border-radius: 4px; color: var(--gold); font: 600 8px/1.4 system-ui, sans-serif; font-style: normal; letter-spacing: .12em; text-transform: uppercase; transform: translateY(1px); }
+.dlogo .beta { font-size: 8.5px; }
+@media (max-width: 380px) { .logo .beta { margin-left: 4px; padding: 0 3px; font-size: 7px; } }
+.fresh { font-size: 12px; font-weight: 400; letter-spacing: 0; white-space: nowrap; }
+h2 .fresh { margin-left: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(127,196,143,.12); color: #8fcf9e; font-family: system-ui, sans-serif; vertical-align: middle; }
+h2 .fresh.warn { background: rgba(212,168,75,.15); color: #e5c27a; } h2 .fresh.stale { background: rgba(226,115,95,.16); color: #f0a08f; }
+.topbar #meta.fresh.warn { color: #e5c27a; } .topbar #meta.fresh.stale { color: #f0a08f; }
+#staleBar { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: #3a2a1c; border-bottom: 1px solid rgba(212,168,75,.4); color: #f2dcc0; font-size: 13px; line-height: 1.45; }
+#staleBar span { flex: 1; max-width: 1200px; margin: 0 auto; } #staleBar b { color: #ffd38a; }
+#staleBar button { background: none; border: 0; color: inherit; font-size: 15px; cursor: pointer; padding: 4px; }
+body.gated #staleBar { display: none; }
+.mlab .fresh { font-size: inherit; color: #8fcf9e; } .mlab .fresh.warn { color: #e5c27a; } .mlab .fresh.stale { color: #f0a08f; }
+body.app-m #staleBar { padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px; font-size: 12.5px; }
