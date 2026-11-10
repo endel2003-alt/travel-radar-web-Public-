@@ -153,7 +153,8 @@ async function load() {
     const guidesP = loadGuides(); const cached = await dataCacheGet(); const prof0 = JSON.stringify(profile);
     const fresh = Promise.all([profilePull(), loadFromServer()]).then(([, d]) => d); loadWatches();
     if (cached?.rows) {
-      applyData(Object.assign({}, cached, { guides: await guidesP }));
+      FRESH_LOADING = true; applyData(Object.assign({}, cached, { guides: await guidesP }));
+      fresh.finally(() => { FRESH_LOADING = false; freshPaint(); }).catch(() => {});
       fresh.then(async (d) => {
         if (!d) return; dataCachePut(d);
         const changed = JSON.stringify([d.meta?.uploadedAt, d.meta?.pro, d.meta?.horizon, d.rows.length]) !== JSON.stringify([cached.meta?.uploadedAt, cached.meta?.pro, cached.meta?.horizon, cached.rows.length]) || JSON.stringify(profile) !== prof0;
@@ -853,7 +854,8 @@ function fillWhere() {
     for (const ct of c.cities) { const oc = document.createElement('option'); oc.value = `t:${c.cc}:${ct.name}`; oc.textContent = `${ct.name} (${ct.count})`; og.appendChild(oc); }
     sel.appendChild(og);
   }
-  const today = new Date().toISOString().slice(0, 10); if (!$('#fFrom').value) $('#fFrom').value = D.meta.dateFrom > today ? D.meta.dateFrom : today; if (!$('#fTo').value) $('#fTo').value = D.meta.dateTo || addDays(today, 30);
+  const today = new Date().toISOString().slice(0, 10); { const fF = $('#fFrom'), fT = $('#fTo'); const nf = D.meta.dateFrom > today ? D.meta.dateFrom : today, nt = D.meta.dateTo || addDays(today, 30);   // 자동으로 채운 값이면 새 데이터 범위를 따라간다
+    if (!fF.value || fF.value === fF.dataset.auto) { fF.value = nf; fF.dataset.auto = nf; } if (!fT.value || fT.value === fT.dataset.auto) { fT.value = nt; fT.dataset.auto = nt; } }
   if (!hasProfile()) $('#fSort').value = 'cost';
 }
 let lastQ = null;
@@ -2201,7 +2203,7 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-onb]')) 
 
 // ---------- 데이터 신선도 ----------
 // 수집 시각(meta.collectedAt) 기준 "N시간 전 확인". 36시간 넘으면 노랑, 72시간 넘으면 위에 안내 띠.
-const FRESH_WARN_H = 36, FRESH_STALE_H = 72;
+const FRESH_WARN_H = 36, FRESH_STALE_H = 72; var FRESH_LOADING = false;
 function freshHours() { const t = Date.parse(D.meta?.collectedAt || ''); return isFinite(t) ? (Date.now() - t) / 36e5 : null; }
 function agoText(h) { if (h == null) return ''; if (h < 1 / 6) return '방금'; if (h < 1) return `${Math.round(h * 60)}분 전`; if (h < 24) return `${Math.floor(h)}시간 전`; return `${Math.floor(h / 24)}일 전`; }
 function freshText(withTime) {
@@ -2210,10 +2212,10 @@ function freshText(withTime) {
 }
 const freshLevel = () => { const h = freshHours(); return h == null ? '' : h >= FRESH_STALE_H ? 'stale' : h >= FRESH_WARN_H ? 'warn' : 'ok'; };
 function freshPaint() {
-  const m = $('#meta'); if (m) { m.textContent = D.meta?.collectedAt ? `업데이트 ${freshText()}` : ''; m.title = freshText(true); m.className = `muted small fresh ${freshLevel()}`; }
+  const m = $('#meta'); if (m) { m.textContent = D.meta?.collectedAt ? `업데이트 ${freshText()}${FRESH_LOADING ? ' · 새 데이터 받는 중…' : ''}` : ''; m.title = freshText(true); m.className = `muted small fresh ${freshLevel()}`; }
   document.querySelectorAll('.fresh[data-live]').forEach(x => { x.textContent = freshText(); x.className = `fresh ${freshLevel()}`; });
   const h = freshHours(); let bar = document.getElementById('staleBar'); let off = false; try { off = sessionStorage.getItem('tr_stale_off') === D.meta?.collectedAt; } catch (e) {}
-  if (h == null || h < FRESH_STALE_H || off) { bar?.remove(); return; }
+  if (h == null || h < FRESH_STALE_H || off || FRESH_LOADING) { bar?.remove(); return; }
   if (!bar) { bar = document.createElement('div'); bar.id = 'staleBar'; bar.setAttribute('role', 'status'); document.querySelector('header.topbar')?.after(bar); }
   bar.innerHTML = (MOBILE() ? `<span><b>${agoText(h)}</b> 확인한 혜택이에요 · 예약 전 공식 사이트에서 다시 확인하세요</span>` : `<span>지금 보이는 혜택은 <b>${agoText(h)}</b> 확인한 내용이에요. 그 사이 마감됐을 수 있으니 예약 전 공식 사이트에서 꼭 확인하세요.</span>`) + `<button type="button" aria-label="닫기">✕</button>`;
   bar.querySelector('button').addEventListener('click', () => { try { sessionStorage.setItem('tr_stale_off', D.meta?.collectedAt || ''); } catch (e) {} bar.remove(); });
