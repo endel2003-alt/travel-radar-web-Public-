@@ -965,5 +965,5 @@ footer .flinks a:hover { color: var(--fg); }
 .calnav .mtabs button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
 .calnav .mtabs button.on { border-color: var(--gold); color: var(--fg); }
 .calnav .mtabs em { font-style: normal; color: var(--gold); font-weight: 700; margin-left: 2px; }
-.cal .cell.blank { background: transparent; border-color: transparent; pointer-events: none; }
+.cal .cell.blank { pointer-events: none; }   /* 그달이 아닌 칸: 선은 그대로, 내용·클릭만 없음 */
 @media (max-width: 720px) { .calnav .mtabs { width: 100%; margin-left: 0; overflow-x: auto; flex-wrap: nowrap; } }
