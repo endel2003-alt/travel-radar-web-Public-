@@ -34,7 +34,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
 const dow = (s) => new Date(s + 'T00:00:00Z').getUTCDay();
 const fmtD = (s) => `${s.slice(5, 7)}.${s.slice(8, 10)} (${DOW[dow(s)]})`;
 // ---------- 한국 공휴일 (2026~2027, 관공서 공휴일 + 근로자의 날·선거일) — 기능 플래그 FEAT.holiday ----------
-const FEAT = { holiday: true, flex: true, share: true, history: true, appLinks: true };   // 기능 켜고 끄기 (별로면 false)
+const FEAT = { holiday: true, flex: true, share: true, history: true, appLinks: true, invite: true };   // 기능 켜고 끄기 (별로면 false)
 const HOLI_KR = { '2026-01-01': '신정', '2026-02-16': '설 연휴', '2026-02-17': '설날', '2026-02-18': '설 연휴', '2026-03-01': '삼일절', '2026-03-02': '대체휴일', '2026-05-01': '근로자의 날', '2026-05-05': '어린이날', '2026-05-24': '부처님오신날', '2026-05-25': '대체휴일', '2026-06-03': '지방선거', '2026-06-06': '현충일', '2026-08-15': '광복절', '2026-08-17': '대체휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴', '2026-10-03': '개천절', '2026-10-05': '대체휴일', '2026-10-09': '한글날', '2026-12-25': '성탄절',
   '2027-01-01': '신정', '2027-02-06': '설 연휴', '2027-02-07': '설날', '2027-02-08': '설 연휴', '2027-02-09': '대체휴일', '2027-03-01': '삼일절', '2027-05-01': '근로자의 날', '2027-05-05': '어린이날', '2027-05-13': '부처님오신날', '2027-06-06': '현충일', '2027-08-15': '광복절', '2027-08-16': '대체휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴', '2027-10-03': '개천절', '2027-10-04': '대체휴일', '2027-10-09': '한글날', '2027-10-11': '대체휴일', '2027-12-25': '성탄절', '2027-12-27': '대체휴일' };
 const holiName = (d) => FEAT.holiday ? (HOLI_KR[d] || '') : '';
@@ -280,6 +280,7 @@ function renderAuth() {
   const u = authUser(); const pro = !!D.meta?.pro;
   for (const el of document.querySelectorAll('.authBtn')) { el.hidden = !window.TR_SERVER?.url; el.innerHTML = u ? `<span class="who">${esc(u.email.split('@')[0])}</span>${pro ? '<b class="pro">PRO</b>' : ''}` : '로그인'; el.title = u ? u.email : ''; }
   const ck = $('#checkLink'); if (ck) ck.hidden = !D.meta?.owner; const mck = $('#moreCheck'); if (mck) mck.hidden = !D.meta?.owner;
+  if (D.meta?.owner) gateHide();   // 운영자는 초대 코드 없이
   const m = $('#moreAuth'); if (m) m.textContent = u ? `Account — ${u.email}${pro ? ' · PRO' : ''} · 로그아웃` : 'Login — 이메일로 로그인';
   for (const lim of document.querySelectorAll('.limitNote')) { const t = limitText(); lim.hidden = !t; lim.innerHTML = t; }
 }
@@ -552,6 +553,7 @@ function viewCheck() {
     ${sec('혜택이 하나도 없는 호텔', noRows.length, list(noRows, h => `<li>${hl(h)}</li>`))}
     ${sec('운영자가 수정한 호텔', edited.length, list(edited, h => `<li>${hl(h)} <span class="small muted">· ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span></li>`))}`;
   el.insertAdjacentHTML('beforeend', copyEditorHtml());
+  if (FEAT.invite) { el.insertAdjacentHTML('beforeend', '<div id="invAdmin"></div>'); invAdmin(); }
   $('#copySave')?.addEventListener('click', async () => { const m = $('#copyMsg'); m.textContent = '저장 중…'; try { await saveCopy(el); m.textContent = '저장됐어요 — 사이트에 바로 반영'; } catch (e) { m.textContent = '실패: ' + e.message + (/404|tr_save_copy/.test(e.message) ? ' (07-copy.sql 실행 필요)' : ''); } });
 }
 
@@ -1793,6 +1795,7 @@ function viewPrivacy() {
   <tr><td>브라우저 푸시 구독 토큰</td><td>알림 켤 때</td><td>앱 푸시 발송 (사람을 특정하지 않는 토큰)</td><td>알림 끄거나 탈퇴 시</td></tr>
   <tr><td>카카오 메시지 발송 권한 토큰</td><td>카카오 알림을 켤 때</td><td>본인의 카카오톡으로 알림 보내기</td><td>연결 해제·탈퇴 시 즉시</td></tr>
   <tr><td>멤버십 등급 · 포인트 · 바우처 수 · 만료일</td><td>내 프로필에 입력할 때</td><td>내가 쓸 수 있는 혜택만 골라 보여 주기</td><td><b>기본은 내 기기(브라우저)에만 저장</b>, 로그인 후 동기화를 켠 경우만 서버에 저장 · 탈퇴 시 삭제</td></tr>
+  <tr><td>베타 초대 코드 · 기기 임의 번호(이 브라우저가 만든 무작위 값)</td><td>초대 코드를 넣을 때</td><td>초대받은 기기만 들어오게 하기, 코드별 사용 기기 수 제한</td><td>베타 종료 또는 코드 삭제 시</td></tr>
   <tr><td>접속 기록(IP · 브라우저 종류 · 시각)</td><td>이용 중 자동</td><td>오류 확인 · 부정 이용 방지</td><td>호스팅·DB 사업자 기본 보관 기간 (최대 90일)</td></tr></tbody></table>
   <p class="muted small">받지 않는 것: 전화번호, 호텔 체인 계정 아이디·비밀번호, 결제 수단, 주소, 생년월일, 민감정보.</p>
   <h2>2. 처리 위탁 · 국외 이전</h2>
@@ -2115,6 +2118,71 @@ if ('serviceWorker' in navigator && location.protocol === 'https:' && !/claude\.
   let reloaded = false; navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloaded || !hadController) return; reloaded = true; location.reload(); });
   navigator.serviceWorker.register('sw.js?v=' + (document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '0')).then(r => r.update()).catch(() => {});
 }
+// ---------- 베타 초대 코드 ----------
+// 첫 화면에서 초대 코드를 넣어야 들어올 수 있다. 코드 확인은 서버(tr_redeem_invite)가, 코드 목록은 운영자만 본다.
+// 저장하는 건 코드와 '기기 임의 번호'(이 브라우저가 만든 무작위 값)뿐. 한 번 들어온 기기는 다음부터 바로 열리고, 운영자가 코드를 끄면 다시 잠긴다.
+// (정적 사이트라 화면을 가리는 방식 — 데이터 자체를 막는 건 유료 출시 때 로그인 전용으로 바꾼다)
+const INV_KEY = 'tr_invite';
+const invLoad = () => { try { return JSON.parse(localStorage.getItem(INV_KEY) || 'null'); } catch (e) { return null; } };
+const invDevice = () => { try { let d = localStorage.getItem('tr_device'); if (!d) { d = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)); localStorage.setItem('tr_device', d); } return d; } catch (e) { return 'nolocal-' + Math.random().toString(36).slice(2); } };
+async function invRpc(fn, body, auth) {
+  const S = window.TR_SERVER; const headers = auth && AUTH.s ? restHeaders() : Object.assign(guestHeaders(), { 'Content-Type': 'application/json' });
+  const r = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/${fn}`, { method: 'POST', headers, body: JSON.stringify(body) });
+  if (!r.ok) { const e = new Error('server ' + r.status); e.status = r.status; throw e; } return r.json();
+}
+function gateShow(msg) {
+  if (!FEAT.invite) return; document.body.classList.add('gated');
+  let g = document.getElementById('gate');
+  if (!g) {
+    g = document.createElement('div'); g.id = 'gate'; g.setAttribute('role', 'dialog'); g.setAttribute('aria-modal', 'true');
+    g.innerHTML = `<div class="gcard"><svg class="glogo" viewBox="0 0 200 200" aria-hidden="true"><rect x="10" y="10" width="180" height="180" rx="40" fill="#d4a84b"/><path d="M52 72 H108 M80 72 V140 M110 140 V96 H130 a14 14 0 0 1 0 28 H110 M126 124 L146 140" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <b class="gname">Travel Radar</b><small class="gsub">Members only · Beta</small>
+      <p class="glead">지금은 초대받은 분만 쓸 수 있는 베타예요.<br>받은 초대 코드를 넣어 주세요.</p>
+      <form id="gateForm" autocomplete="off"><input id="gateCode" inputmode="latin" autocapitalize="characters" spellcheck="false" placeholder="TR-XXXXXX" maxlength="12" aria-label="초대 코드"><button type="submit" class="mgo" id="gateGo">입장하기</button></form>
+      <p class="gmsg" id="gateMsg" role="status"></p>
+      <p class="glinks"><a href="mailto:${esc(cp('site.contact'))}?subject=${encodeURIComponent('[Travel Radar] 베타 초대 요청')}">초대 코드 요청</a> · <a href="#" data-login>운영자 로그인</a></p></div>`;
+    document.body.appendChild(g);
+    g.querySelector('#gateCode').addEventListener('input', (e) => { let v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); if (v.startsWith('TR')) v = v.slice(2); e.target.value = v ? 'TR-' + v.slice(0, 6) : ''; });
+    g.querySelector('#gateForm').addEventListener('submit', (e) => { e.preventDefault(); gateRedeem(g.querySelector('#gateCode').value); });
+    setTimeout(() => g.querySelector('#gateCode')?.focus(), 50);
+  }
+  if (msg) g.querySelector('#gateMsg').textContent = msg;
+}
+function gateHide() { document.getElementById('gate')?.remove(); document.body.classList.remove('gated'); }
+async function gateRedeem(code) {
+  const msg = document.getElementById('gateMsg'); const btn = document.getElementById('gateGo'); const c = String(code || '').trim().toUpperCase();
+  if (!/^TR-[A-Z0-9]{6}$/.test(c)) { if (msg) msg.textContent = '코드는 TR- 뒤에 6자리예요.'; return; }
+  if (msg) msg.textContent = '확인 중…'; if (btn) btn.disabled = true;
+  try {
+    const r = await invRpc('tr_redeem_invite', { p_code: c, p_device: invDevice() });
+    if (r?.ok) { try { localStorage.setItem(INV_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} gateHide(); return; }
+    if (msg) msg.textContent = r?.reason === 'used' ? '이 코드는 이미 다른 기기에서 다 쓰였어요. 새 코드를 요청해 주세요.' : '맞지 않는 코드예요. 다시 확인해 주세요.';
+  } catch (e) { if (msg) msg.textContent = e.status === 404 ? '서버 준비 중이에요. 잠시 뒤 다시 시도해 주세요.' : '연결이 불안정해요. 잠시 뒤 다시 시도해 주세요.'; }
+  finally { if (btn) btn.disabled = false; }
+}
+function gateInit() {
+  if (!FEAT.invite || !window.TR_SERVER?.url) return;
+  const qs = new URLSearchParams(location.search).get('invite'); const saved = invLoad();
+  if (qs) { history.replaceState(null, '', location.pathname + location.hash); if (!saved || saved.code !== qs.toUpperCase()) { gateShow(); const i = document.getElementById('gateCode'); if (i) i.value = qs.toUpperCase(); gateRedeem(qs); return; } }
+  if (!saved) { gateShow(); return; }
+  // 이미 들어온 기기: 막지 않고 뒤에서 확인 → 코드가 꺼졌으면 다시 잠금 (연결 오류면 그대로 둔다)
+  invRpc('tr_invite_valid', { p_code: saved.code, p_device: invDevice() }).then(ok => { if (ok === false && !D.meta?.owner) { try { localStorage.removeItem(INV_KEY); } catch (e) {} gateShow('초대 코드가 만료됐어요. 새 코드를 받아 주세요.'); } }).catch(() => {});
+}
+// 운영자 Check 화면: 코드 목록 · 만들기 · 끄기/켜기 · 초대 링크 복사
+async function invAdmin() {
+  const box = document.getElementById('invAdmin'); if (!box || !AUTH.s) return; const S = window.TR_SERVER; const base = `${S.url.replace(/\/$/, '')}/rest/v1`;
+  let list = []; try { const r = await fetch(`${base}/tr_invites?select=code,note,max_uses,uses,active,created_at&order=created_at.desc,code.asc`, { headers: restHeaders() }); if (r.ok) list = await r.json(); else throw new Error(r.status); } catch (e) { box.innerHTML = `<h2>베타 초대 코드</h2><p class="muted small">불러오지 못했어요 (SQL 08을 실행했는지 확인): ${esc(String(e.message))}</p>`; return; }
+  const link = (c) => `${location.origin}${location.pathname}?invite=${c}`;
+  const used = list.reduce((a, x) => a + x.uses, 0), on = list.filter(x => x.active).length;
+  box.innerHTML = `<h2>베타 초대 코드 <span class="muted small">${list.length}개 · 켜짐 ${on} · 들어온 기기 ${used}</span></h2>
+    <form id="invMake" class="invmake"><label>개수 <input name="n" type="number" min="1" max="100" value="5"></label><label>기기 수 <input name="m" type="number" min="1" max="20" value="2"></label><label>메모 <input name="note" placeholder="예: 회사 동료"></label><button class="btn primary">코드 만들기</button><span class="muted small" id="invMsg"></span></form>
+    <div class="tablewrap"><table class="invtab"><thead><tr><th>코드</th><th>메모</th><th>사용</th><th>상태</th><th></th></tr></thead><tbody>${list.map(x => `<tr class="${x.active ? '' : 'off'}"><td><b>${esc(x.code)}</b></td><td class="muted small">${esc(x.note || '')}</td><td>${x.uses}/${x.max_uses}</td><td><button type="button" class="lnk small" data-inv-toggle="${esc(x.code)}" data-on="${x.active}">${x.active ? '켜짐 · 끄기' : '꺼짐 · 켜기'}</button></td><td><button type="button" class="lnk small" data-inv-copy="${esc(x.code)}">초대 링크 복사</button></td></tr>`).join('')}</tbody></table></div>
+    <p class="muted small">초대 링크를 보내면 코드를 입력하지 않아도 바로 들어와요. 코드를 끄면 그 코드로 들어온 기기도 다음 방문 때 다시 잠겨요.</p>`;
+  box.querySelector('#invMake').addEventListener('submit', async (e) => { e.preventDefault(); const f = e.target; const m = box.querySelector('#invMsg'); m.textContent = '만드는 중…'; try { const codes = await invRpc('tr_make_invites', { p_n: +f.n.value || 1, p_max_uses: +f.m.value || 2, p_note: f.note.value.trim() || null }, true); m.textContent = `${codes.length}개 만들었어요`; invAdmin(); } catch (err) { m.textContent = '실패: ' + err.message; } });
+  box.querySelectorAll('[data-inv-toggle]').forEach(b => b.addEventListener('click', async () => { const on = b.dataset.on === 'true'; try { await fetch(`${base}/tr_invites?code=eq.${encodeURIComponent(b.dataset.invToggle)}`, { method: 'PATCH', headers: Object.assign(restHeaders(), { Prefer: 'return=minimal' }), body: JSON.stringify({ active: !on }) }); invAdmin(); } catch (e) { alert('실패: ' + e.message); } }));
+  box.querySelectorAll('[data-inv-copy]').forEach(b => b.addEventListener('click', async () => { const t = link(b.dataset.invCopy); try { await navigator.clipboard.writeText(t); b.textContent = '복사됨'; } catch (e) { prompt('복사해서 보내세요', t); } }));
+}
+gateInit();
 load().catch(e => { $('#loadingNote')?.remove(); $('#cards').innerHTML = ''; $('#empty').hidden = false; $('#empty').textContent = '데이터를 불러오지 못했어요: ' + e.message; });
 // 창 폭이 720px 경계를 넘으면 앱 모드 ↔ 레저 모드 다시 그리기
 { let wasM = MOBILE(); window.addEventListener('resize', () => { const m = MOBILE(); if (m !== wasM) { wasM = m; if (!location.hash || /^#\/?radar/.test(location.hash)) viewRadar(); } }); }

@@ -967,3 +967,25 @@ footer .flinks a:hover { color: var(--fg); }
 .calnav .mtabs em { font-style: normal; color: var(--gold); font-weight: 700; margin-left: 2px; }
 .cal .cell.blank { pointer-events: none; }   /* 그달이 아닌 칸: 선은 그대로, 내용·클릭만 없음 */
 @media (max-width: 720px) { .calnav .mtabs { width: 100%; margin-left: 0; overflow-x: auto; flex-wrap: nowrap; } }
+
+/* 베타 초대 코드 화면 */
+body.gated { overflow: hidden; }
+#gate { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: radial-gradient(120% 80% at 50% 0%, #1d2747 0%, #10172a 60%); color: var(--fg); }
+#gate .gcard { width: 100%; max-width: 380px; text-align: center; display: flex; flex-direction: column; align-items: center; }
+#gate .glogo { width: 64px; height: 64px; margin-bottom: 16px; }
+#gate .gname { font-family: var(--serif); font-size: 24px; font-weight: 500; letter-spacing: .2em; text-transform: uppercase; }
+#gate .gsub { font-size: 9.5px; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); font-weight: 700; margin-top: 6px; }
+#gate .glead { margin: 26px 0 18px; line-height: 1.7; color: #c9cfdf; font-size: 15px; }
+#gate form { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+#gate input { width: 100%; box-sizing: border-box; text-align: center; font-size: 22px; letter-spacing: .18em; font-weight: 600; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--fg); text-transform: uppercase; }
+#gate input:focus { outline: none; border-color: var(--gold); }
+#gate .mgo { margin: 0; }
+#gate .gmsg { min-height: 1.4em; margin: 12px 0 0; font-size: 13.5px; color: #e9a28f; }
+#gate .glinks { margin-top: 22px; font-size: 12.5px; color: var(--muted); }
+#gate .glinks a { color: var(--muted); }
+/* 운영자: 초대 코드 관리 */
+.invmake { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin: 8px 0 12px; }
+.invmake label { display: flex; flex-direction: column; font-size: 11px; color: var(--muted); gap: 4px; }
+.invmake input { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); width: 90px; }
+.invmake input[name=note] { width: 180px; }
+.invtab tr.off td { opacity: .5; }
