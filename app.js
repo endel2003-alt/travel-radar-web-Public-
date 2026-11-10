@@ -553,7 +553,7 @@ function viewCheck() {
     ${sec('혜택이 하나도 없는 호텔', noRows.length, list(noRows, h => `<li>${hl(h)}</li>`))}
     ${sec('운영자가 수정한 호텔', edited.length, list(edited, h => `<li>${hl(h)} <span class="small muted">· ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span></li>`))}`;
   el.insertAdjacentHTML('beforeend', copyEditorHtml());
-  el.insertAdjacentHTML('beforeend', '<div id="fbAdmin"></div>'); fbAdmin();
+  el.insertAdjacentHTML('beforeend', '<div id="usageAdmin"></div><div id="fbAdmin"></div>'); usageAdmin(); fbAdmin();
   if (FEAT.invite) { el.insertAdjacentHTML('beforeend', '<div id="invAdmin"></div>'); invAdmin(); }
   $('#copySave')?.addEventListener('click', async () => { const m = $('#copyMsg'); m.textContent = '저장 중…'; try { await saveCopy(el); m.textContent = '저장됐어요 — 사이트에 바로 반영'; } catch (e) { m.textContent = '실패: ' + e.message + (/404|tr_save_copy/.test(e.message) ? ' (07-copy.sql 실행 필요)' : ''); } });
 }
@@ -583,7 +583,7 @@ async function markAlertsRead() {
   try { await fetch(restUrl(`tr_alerts?id=in.(${ids.join(',')})`), { method: 'PATCH', headers: restHeaders(), body: JSON.stringify({ read_at: new Date().toISOString() }) }); for (const a of WATCH.alerts) a.read_at = a.read_at || new Date().toISOString(); WATCH.unread = 0; renderBell(); } catch (e) {}
 }
 async function addWatch(p) {
-  await authEnsure();
+  track('watch_add'); await authEnsure();
   const r = await fetch(restUrl('rpc/tr_add_watch'), { method: 'POST', headers: restHeaders(), body: JSON.stringify({ p }) });
   if (!r.ok) { const t = await r.json().catch(() => ({})); throw new Error((t.message || t.hint || ('HTTP ' + r.status)).replace(/^.*?: /, '')); }
   await loadWatches();
@@ -729,7 +729,7 @@ function route() {
   document.querySelectorAll('.nav a, .tabbar a').forEach(a => a.classList.toggle('on', a.dataset.v === name || (name === 'hotel' && a.dataset.v === 'hotels')));
   document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== 'v-' + (views[name] ? name : 'radar'));
   document.body.classList.toggle('app-m', MOBILE() && name === 'home');   // 홈은 사진 헤더가 상단바를 대신한다 (검색 탭은 viewRadar 가 직접 정함)
-  (views[name] || viewRadar)(arg); applyCopy(); if (!QUIET) window.scrollTo({ top: 0 });
+  (views[name] || viewRadar)(arg); track('view:' + (views[name] ? name : 'radar')); applyCopy(); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
   const EYE = { about: 'About', terms: 'Terms of use', privacy: 'Privacy policy', contact: 'Contact', home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
@@ -1797,6 +1797,7 @@ function viewPrivacy() {
   <tr><td>브라우저 푸시 구독 토큰</td><td>알림 켤 때</td><td>앱 푸시 발송 (사람을 특정하지 않는 토큰)</td><td>알림 끄거나 탈퇴 시</td></tr>
   <tr><td>카카오 메시지 발송 권한 토큰</td><td>카카오 알림을 켤 때</td><td>본인의 카카오톡으로 알림 보내기</td><td>연결 해제·탈퇴 시 즉시</td></tr>
   <tr><td>멤버십 등급 · 포인트 · 바우처 수 · 만료일</td><td>내 프로필에 입력할 때</td><td>내가 쓸 수 있는 혜택만 골라 보여 주기</td><td><b>기본은 내 기기(브라우저)에만 저장</b>, 로그인 후 동기화를 켠 경우만 서버에 저장 · 탈퇴 시 삭제</td></tr>
+  <tr><td>사용 횟수 합계 (어느 화면이 몇 번 열렸는지, 예약 버튼이 몇 번 눌렸는지 등 하루 단위 숫자)</td><td>사이트를 쓸 때 자동</td><td>서비스 개선</td><td>2년</td></tr>
   <tr><td>보내 주신 의견 · 보던 화면·호텔 · 기기 종류(화면 크기·브라우저) · 기기 임의 번호 · 로그인했다면 계정 번호</td><td>의견 보내기를 쓸 때</td><td>틀린 정보 수정, 서비스 개선</td><td>처리 후 1년 또는 탈퇴 시</td></tr>
   <tr><td>베타 초대 코드 · 기기 임의 번호(이 브라우저가 만든 무작위 값)</td><td>초대 코드를 넣을 때</td><td>초대받은 기기만 들어오게 하기, 코드별 사용 기기 수 제한</td><td>베타 종료 또는 코드 삭제 시</td></tr>
   <tr><td>접속 기록(IP · 브라우저 종류 · 시각)</td><td>이용 중 자동</td><td>오류 확인 · 부정 이용 방지</td><td>호스팅·DB 사업자 기본 보관 기간 (최대 90일)</td></tr></tbody></table>
@@ -2167,7 +2168,7 @@ function openOnb() {
       profile = Object.assign({}, profile, up); try { localStorage.setItem('tr_profile', JSON.stringify(profile)); } catch (e) {} profilePush();
     }
     try { localStorage.setItem(ONB_KEY, String(Date.now())); } catch (e) {}
-    el.remove(); document.body.classList.remove('gated'); renderProfileBtn?.(); route();
+    el.remove(); document.body.classList.remove('gated'); track('onb_done'); renderProfileBtn?.(); route();
   };
   const bind = () => {
     el.querySelector('[data-oskip]')?.addEventListener('click', () => close(false));
@@ -2206,6 +2207,58 @@ function freshPaint() {
 }
 setInterval(() => { if (D.meta) freshPaint(); }, 5 * 60e3);
 
+// ---------- 익명 사용 통계 ----------
+// "어느 화면이 몇 번 열렸나", "예약 버튼이 몇 번 눌렸나" 같은 하루 합계 숫자만 서버(tr_usage)에 쌓는다.
+// 기기 번호·계정·IP·검색어는 보내지 않는다. 방문자 수는 이 기기에서 오늘 첫 방문일 때만 'visit'을 1 올리는 방식으로 센다.
+// 운영자 본인 화면은 세지 않는다.
+const TQ = []; let tTimer = 0; let tLastView = '';
+function track(ev) {
+  if (!window.TR_SERVER?.url || window.TR_PROVIDER) return;
+  ev = String(ev).toLowerCase().replace(/[^a-z0-9_.:-]/g, '').slice(0, 48); if (!ev) return;
+  if (ev.startsWith('view:')) { if (ev === tLastView) return; tLastView = ev; }
+  TQ.push(ev); clearTimeout(tTimer); tTimer = setTimeout(trackFlush, 4000);
+}
+function trackFlush() {
+  clearTimeout(tTimer); if (!TQ.length) return; if (D.meta?.owner) { TQ.length = 0; return; }
+  const evs = TQ.splice(0, 40); const S = window.TR_SERVER;
+  try { fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_track`, { method: 'POST', keepalive: true, headers: Object.assign(guestHeaders(), { 'Content-Type': 'application/json' }), body: JSON.stringify({ p_events: evs }) }).catch(() => {}); } catch (e) {}
+  if (TQ.length) tTimer = setTimeout(trackFlush, 1000);
+}
+addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') trackFlush(); });
+addEventListener('pagehide', trackFlush);
+(function trackVisit() {
+  const today = new Date(Date.now() + 9 * 36e5).toISOString().slice(0, 10); let seen = ''; try { seen = localStorage.getItem('tr_seen_day') || ''; localStorage.setItem('tr_seen_day', today); } catch (e) { return; }
+  if (seen === today) return;
+  const app = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  track('visit'); track(app ? 'visit:app' : MOBILE() ? 'visit:mobile' : 'visit:pc'); if (!seen) track('visit:new');
+})();
+// 예약 클릭(체인 공식 사이트·앱으로 나가는 링크)
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]'); if (!a) return; const u = a.getAttribute('href') || '';
+  const c = /accor\.com|accorhotels/i.test(u) ? 'accor' : /ihg\.com/i.test(u) ? 'ihg' : /marriott\.com/i.test(u) ? 'marriott' : /hilton\.com/i.test(u) ? 'hilton' : '';
+  if (c) track('book:' + c);
+}, true);
+document.addEventListener('click', (e) => { if (e.target.closest('[data-share]')) track('share'); if (e.target.closest('#dInstall, #accInstall')) track('install_tap'); }, true);
+// 운영자 Check 화면: 최근 14일 숫자
+async function usageAdmin() {
+  const box = document.getElementById('usageAdmin'); if (!box || !AUTH.s) return; const base = `${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1`;
+  const from = new Date(Date.now() + 9 * 36e5 - 13 * 864e5).toISOString().slice(0, 10);
+  let list = []; try { const r = await fetch(`${base}/tr_usage?select=day,event,n&day=gte.${from}&order=day.desc&limit=5000`, { headers: restHeaders() }); if (!r.ok) throw new Error(r.status); list = await r.json(); } catch (e) { box.innerHTML = `<h2>사용 통계</h2><p class="muted small">불러오지 못했어요: ${esc(String(e.message))}</p>`; return; }
+  const by = {}; const tot = {}; for (const x of list) { (by[x.day] = by[x.day] || {})[x.event] = x.n; tot[x.event] = (tot[x.event] || 0) + x.n; }
+  const days = []; for (let i = 0; i < 14; i++) days.push(new Date(Date.now() + 9 * 36e5 - i * 864e5).toISOString().slice(0, 10));
+  const sumP = (o, pre) => Object.entries(o || {}).filter(([k]) => k.startsWith(pre)).reduce((a, [, v]) => a + v, 0);
+  const cols = [['방문', o => o?.visit || 0], ['처음', o => o?.['visit:new'] || 0], ['모바일', o => o?.['visit:mobile'] || 0], ['PC', o => o?.['visit:pc'] || 0], ['앱', o => o?.['visit:app'] || 0], ['화면', o => sumP(o, 'view:')], ['예약 클릭', o => sumP(o, 'book:')], ['의견', o => o?.feedback_sent || 0]];
+  const views = Object.entries(tot).filter(([k]) => k.startsWith('view:')).sort((a, b) => b[1] - a[1]);
+  const books = Object.entries(tot).filter(([k]) => k.startsWith('book:')).sort((a, b) => b[1] - a[1]);
+  const etc = ['invite_ok', 'onb_done', 'watch_add', 'share', 'install_tap', 'feedback_open', 'feedback_sent'].map(k => [k, tot[k] || 0]);
+  const EL = { invite_ok: '초대 코드 입력', onb_done: '등급 입력 완료', watch_add: '알림 신청', share: '공유', install_tap: '앱 설치 누름', feedback_open: '의견 창 열기', feedback_sent: '의견 보냄' };
+  box.innerHTML = `<h2>사용 통계 <span class="muted small">최근 14일 · 익명 합계 · 운영자 본인 제외</span></h2>
+    <div class="ustat"><table><thead><tr><th>날짜</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr></thead><tbody>${days.map(d => `<tr><td>${+d.slice(5, 7)}/${+d.slice(8)}</td>${cols.map(([, f]) => { const v = f(by[d]); return `<td class="${v ? '' : 'z'}">${v.toLocaleString()}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="ugrid"><div><h3>많이 본 화면</h3>${views.length ? views.slice(0, 12).map(([k, v]) => `<p><span>${esc(k.slice(5))}</span><b>${v.toLocaleString()}</b></p>`).join('') : '<p class="muted small">아직 없어요</p>'}</div>
+    <div><h3>예약 클릭 · 체인별</h3>${books.length ? books.map(([k, v]) => `<p><span>${cb(k.slice(5), 'sm')} ${CHAIN[k.slice(5)] || k.slice(5)}</span><b>${v.toLocaleString()}</b></p>`).join('') : '<p class="muted small">아직 없어요</p>'}</div>
+    <div><h3>기타</h3>${etc.map(([k, v]) => `<p><span>${EL[k]}</span><b>${v.toLocaleString()}</b></p>`).join('')}</div></div>`;
+}
+
 // ---------- 의견 보내기 (베타 피드백) ----------
 // 보던 화면·호텔·고른 날짜를 자동으로 붙여 tr_send_feedback 으로 저장. 이름·이메일은 받지 않는다(로그인했다면 계정 번호만 서버가 붙임).
 const FB_KINDS = [['wrong', '틀린 정보'], ['idea', '이런 기능 원해요'], ['bug', '오류 · 불편'], ['other', '기타']];
@@ -2231,13 +2284,13 @@ function openFeedback(kind, hotelKey) {
       const ctx = { build: document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '', w: innerWidth, h: innerHeight, mobile: MOBILE(), standalone: matchMedia('(display-mode: standalone)').matches, ua: navigator.userAgent.slice(0, 160), date: selDate || undefined, tiers: ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => `${c}:${myTier(c)}`) };
       try {
         const r = await invRpc('tr_send_feedback', { p: { kind: k, message: msg, page, hotel: h?.key || null, ctx, device: invDevice() } }, !!AUTH.s);
-        if (r?.ok) { dlg.querySelector('.fbbody').innerHTML = '<div class="fbdone"><b>고마워요!</b><p>보내 주신 의견은 바로 확인할게요. 답이 필요한 내용이면 오픈채팅방이나 문의 메일로도 알려 주세요.</p><button type="button" class="mgo" data-close2>닫기</button></div>'; dlg.querySelector('[data-close2]').addEventListener('click', () => dlg.close()); return; }
+        if (r?.ok) { track('feedback_sent'); dlg.querySelector('.fbbody').innerHTML = '<div class="fbdone"><b>고마워요!</b><p>보내 주신 의견은 바로 확인할게요. 답이 필요한 내용이면 오픈채팅방이나 문의 메일로도 알려 주세요.</p><button type="button" class="mgo" data-close2>닫기</button></div>'; dlg.querySelector('[data-close2]').addEventListener('click', () => dlg.close()); return; }
         out.textContent = r?.reason === 'limit' ? '오늘은 더 보낼 수 없어요. 내일 다시 보내 주세요.' : '보내지 못했어요. 다시 시도해 주세요.';
       } catch (err) { out.textContent = '연결이 불안정해요. 잠시 뒤 다시 시도해 주세요.'; }
       btn.disabled = false;
     });
   };
-  render(); dlg.showModal(); setTimeout(() => dlg.querySelector('#fbMsg')?.focus(), 50);
+  track('feedback_open'); render(); dlg.showModal(); setTimeout(() => dlg.querySelector('#fbMsg')?.focus(), 50);
 }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-fb]'); if (!b) return; e.preventDefault(); document.getElementById('drawer')?.open && document.getElementById('drawer').close(); openFeedback(b.dataset.fb, b.dataset.fbHotel); });
 // 운영자 Check 화면: 최근 의견 50건 · 처리 표시
@@ -2286,7 +2339,7 @@ async function gateRedeem(code) {
   if (msg) msg.textContent = '확인 중…'; if (btn) btn.disabled = true;
   try {
     const r = await invRpc('tr_redeem_invite', { p_code: c, p_device: invDevice() });
-    if (r?.ok) { try { localStorage.setItem(INV_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} gateHide(); return; }
+    if (r?.ok) { try { localStorage.setItem(INV_KEY, JSON.stringify({ code: c, at: Date.now() })); } catch (e) {} track(r.again ? 'invite_again' : 'invite_ok'); gateHide(); return; }
     if (msg) msg.textContent = r?.reason === 'used' ? '이 코드는 이미 다른 기기에서 다 쓰였어요. 새 코드를 요청해 주세요.' : '맞지 않는 코드예요. 다시 확인해 주세요.';
   } catch (e) { if (msg) msg.textContent = e.status === 404 ? '서버 준비 중이에요. 잠시 뒤 다시 시도해 주세요.' : '연결이 불안정해요. 잠시 뒤 다시 시도해 주세요.'; }
   finally { if (btn) btn.disabled = false; }

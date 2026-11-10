@@ -1057,3 +1057,10 @@ h2 .fresh.warn { background: rgba(212,168,75,.15); color: #e5c27a; } h2 .fresh.s
 body.gated #staleBar { display: none; }
 .mlab .fresh { font-size: inherit; color: #8fcf9e; } .mlab .fresh.warn { color: #e5c27a; } .mlab .fresh.stale { color: #f0a08f; }
 body.app-m #staleBar { padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8px; font-size: 12.5px; }
+
+/* 운영자 사용 통계 */
+.ustat { overflow-x: auto; margin: 8px 0 16px; } .ustat table { border-collapse: collapse; width: 100%; font-size: 13px; min-width: 560px; }
+.ustat th, .ustat td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; } .ustat th:first-child, .ustat td:first-child { text-align: left; color: var(--muted); }
+.ustat th { font-weight: 600; color: var(--muted); font-size: 12px; } .ustat td.z { color: rgba(255,255,255,.25); }
+.ugrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px; }
+.ugrid h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 6px; } .ugrid p { display: flex; justify-content: space-between; gap: 10px; margin: 0; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
