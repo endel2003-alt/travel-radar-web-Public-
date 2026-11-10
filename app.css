@@ -948,3 +948,10 @@ footer .flinks a:hover { color: var(--fg); }
 .wrow.on b, .wrow.on i { color: var(--gold); }
 .shead .back { font-size: 26px; line-height: 1; padding: 0 12px 0 0; }
 .shead b { flex: 1; }
+
+/* 달력: 한 달씩 + 좌우 이동 */
+.cnav { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 8px; }
+.cnav h3 { margin: 0; }
+.cnav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--fg); font-size: 22px; line-height: 1; }
+.cnav button:disabled { opacity: .25; }
+#dlgCal .cbody { flex: 0 0 auto; min-height: 340px; }

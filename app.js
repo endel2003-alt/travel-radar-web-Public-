@@ -1184,17 +1184,20 @@ function openCal(btn) {
     const [y, mo] = ym.split('-').map(Number); const first = `${ym}-01`; const days = new Date(Date.UTC(y, mo, 0)).getUTCDate(); const pad = dow(first);
     const cells = []; for (let i = 0; i < pad; i++) cells.push('<i></i>');
     for (let d = 1; d <= days; d++) { const ds = `${ym}-${String(d).padStart(2, '0')}`; const dis = ds < minD || ds > addDays(maxD, 1); const hol = HOLI_KR[ds]; const cls = [dis ? 'dis' : '', ds === from ? (out ? 'a ar' : 'a') : '', ds === out ? 'b' : '', from && out && ds > from && ds < out ? 'in' : '', hol || dow(ds) === 0 ? 'off' : '', ds === today ? 'td' : ''].filter(Boolean).join(' '); cells.push(`<button type="button" class="${cls}" data-d="${ds}" ${dis ? 'disabled' : ''}><b>${d}</b>${hol ? `<small>${esc(hol)}</small>` : ''}</button>`); }
-    return `<div class="cmon"><h3>${y}년 ${mo}월</h3><div class="cdow">${DOW.map((w, i) => `<span class="${i === 0 ? 'off' : ''}">${w}</span>`).join('')}</div><div class="cgrid">${cells.join('')}</div></div>`;
+    return `<div class="cmon"><div class="cnav"><button type="button" data-mv="-1" ${mi <= 0 ? 'disabled' : ''} aria-label="이전 달">‹</button><h3>${y}년 ${mo}월</h3><button type="button" data-mv="1" ${mi >= months.length - 1 ? 'disabled' : ''} aria-label="다음 달">›</button></div><div class="cdow">${DOW.map((w, i) => `<span class="${i === 0 ? 'off' : ''}">${w}</span>`).join('')}</div><div class="cgrid">${cells.join('')}</div></div>`;
   };
-  const render = () => { dlg.innerHTML = `<div class="shead"><b>${from && out ? `${fmtMD(from)} → ${fmtMD(out)} · ${daysBetween(from, out)}박` : from ? `${fmtMD(from)} 체크인 · 체크아웃 날을 고르세요` : '체크인 날을 고르세요'}</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody">${months.map(grid).join('')}</div><div class="cfoot"><button type="button" class="lnk" id="calClear">지우기</button><button type="button" class="mgo" id="calOk" ${from && out ? '' : 'disabled'}>${from && out ? `${daysBetween(from, out)}박 적용` : '적용'}</button></div>`;
+  const render = () => { dlg.innerHTML = `<div class="shead"><b>${from && out ? `${fmtMD(from)} → ${fmtMD(out)} · ${daysBetween(from, out)}박` : from ? `${fmtMD(from)} 체크인 · 체크아웃 날을 고르세요` : '체크인 날을 고르세요'}</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody">${grid(months[mi])}</div><div class="cfoot"><button type="button" class="lnk" id="calClear">지우기</button><button type="button" class="mgo" id="calOk" ${from && out ? '' : 'disabled'}>${from && out ? `${daysBetween(from, out)}박 적용` : '적용'}</button></div>`;
     dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
     dlg.querySelector('#calClear').addEventListener('click', () => { from = ''; out = ''; btn.dataset.from = ''; btn.dataset.out = ''; btn.innerHTML = '<span class="ph">날짜를 고르세요 · 안 고르면 전체 기간</span>'; dlg.close(); btn.dispatchEvent(new Event('change')); });
     dlg.querySelector('#calOk').addEventListener('click', () => { btn.dataset.from = from; btn.dataset.out = out; btn.innerHTML = datesLabel(from, out); dlg.close(); btn.dispatchEvent(new Event('change')); });
-    dlg.querySelectorAll('.cgrid button').forEach(b => b.addEventListener('click', () => { const d = b.dataset.d; if (!from || (from && out) || d <= from) { from = d; out = ''; } else { out = d; } const top = dlg.querySelector('.cbody').scrollTop; render(); dlg.querySelector('.cbody').scrollTop = top; }));
+    dlg.querySelectorAll('.cgrid button').forEach(b => b.addEventListener('click', () => { const d = b.dataset.d; if (!from || (from && out) || d <= from) { from = d; out = ''; } else { out = d; } render(); }));
+    dlg.querySelectorAll('[data-mv]').forEach(b => b.addEventListener('click', () => { mi = Math.max(0, Math.min(months.length - 1, mi + Number(b.dataset.mv))); render(); }));
+    // 좌우로 밀어서 달 넘기기
+    const body = dlg.querySelector('.cbody'); let sx = null; body.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true }); body.addEventListener('touchend', (e) => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 50) { const n = mi + (dx < 0 ? 1 : -1); if (n >= 0 && n < months.length) { mi = n; render(); } } });
   };
+  // 한 달씩 보여 준다: 처음엔 고른 체크인 달(없으면 이번 달)
+  let mi = Math.max(0, months.indexOf((from || minD).slice(0, 7)));
   render(); dlg.showModal();
-  // 선택된 달(없으면 이번 달)이 보이게
-  const tgt = dlg.querySelector(from ? `[data-d="${from}"]` : '.td'); if (tgt) tgt.scrollIntoView({ block: 'center' });
 }
 const cb = (c, size = '') => `<i class="cb ${c} ${size}" aria-label="${CHAIN[c] || c}"></i>`;   // 체인 뱃지 (CSS .cb)
 const M_CHIPS = ['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'];
