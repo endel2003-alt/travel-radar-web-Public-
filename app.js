@@ -126,7 +126,18 @@ async function loadFromServer() {
   }
   if (!res.ok) throw new Error('server ' + res.status);
   const d = await res.json(); if (!d || !Array.isArray(d.rows)) return null;
-  d.meta = d.meta || {}; d.meta.source = 'server'; return d;
+  d.meta = d.meta || {}; d.meta.source = 'server';
+  // 서버가 첫 7일만 주고(chunked) 나머지는 tr_rows 로 10일씩 나눠 받는다 — 한 번에 받으면 8초 제한에 걸린다
+  if (d.meta.chunked && d.meta.rowsTo) {
+    const end = [d.meta.horizon, d.meta.fullDateTo].filter(Boolean).sort()[0] || d.meta.rowsTo; const parts = [];
+    for (let f = addDays(d.meta.rowsTo, 1); f <= end; f = addDays(f, 10)) { const t = addDays(f, 9); parts.push([f, t < end ? t : end]); }
+    const url = `${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_rows`; const got = new Array(parts.length); let i = 0, fail = 0;
+    const one = async (k) => { for (let tries = 0; tries < 2; tries++) { try { const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ p_from: parts[k][0], p_to: parts[k][1] }) }); if (r.ok) { got[k] = await r.json() || []; return; } } catch (e) {} } fail++; got[k] = []; };
+    await Promise.all(Array.from({ length: Math.min(4, parts.length) }, async () => { while (i < parts.length) await one(i++); }));
+    for (const g of got) if (g?.length) d.rows.push(...g);
+    if (fail) { d.meta.partial = fail; if (fail === parts.length) throw new Error('rows chunks failed'); }
+  }
+  return d;
 }
 // ---------- 데이터 로드 ----------
 // 서버 데이터 캐시: 마지막으로 받은 tr_data를 브라우저(Cache API)에 보관 → 다음 방문 땐 즉시 그리고, 뒤에서 새 데이터를 받아 바뀌었으면 조용히 다시 그림
