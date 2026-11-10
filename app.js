@@ -553,6 +553,7 @@ function viewCheck() {
     ${sec('혜택이 하나도 없는 호텔', noRows.length, list(noRows, h => `<li>${hl(h)}</li>`))}
     ${sec('운영자가 수정한 호텔', edited.length, list(edited, h => `<li>${hl(h)} <span class="small muted">· ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span></li>`))}`;
   el.insertAdjacentHTML('beforeend', copyEditorHtml());
+  el.insertAdjacentHTML('beforeend', '<div id="fbAdmin"></div>'); fbAdmin();
   if (FEAT.invite) { el.insertAdjacentHTML('beforeend', '<div id="invAdmin"></div>'); invAdmin(); }
   $('#copySave')?.addEventListener('click', async () => { const m = $('#copyMsg'); m.textContent = '저장 중…'; try { await saveCopy(el); m.textContent = '저장됐어요 — 사이트에 바로 반영'; } catch (e) { m.textContent = '실패: ' + e.message + (/404|tr_save_copy/.test(e.message) ? ' (07-copy.sql 실행 필요)' : ''); } });
 }
@@ -1639,6 +1640,7 @@ function viewAccount() {
       ${item('#', AUTH.s ? 'Log out' : 'Log in', AUTH.s ? (AUTH.s.email || '') : '이메일 또는 Google · 관심·알림·기기 간 동기화', AUTH.s ? 'id="accLogout"' : 'data-login')}
       ${item('#alerts', 'Watchlist & alerts', AUTH.s ? `관심 호텔 ${WATCH.list.length} · 안 읽은 알림 ${WATCH.unread}` : '관심 호텔 · 혜택 알림 · 로그인 필요')}
       ${item('#', 'Email alerts', P.mailAlerts ? '켜짐 · 새 혜택을 하루 한 통으로' : '꺼짐 · 등급 설정에서 켤 수 있어요', 'data-open-profile')}
+      ${item('#', 'Send feedback', '틀린 정보 · 원하는 기능 · 불편한 점', 'data-fb="other"')}
       ${item('#', 'Install app', '홈 화면에 추가 · 업데이트 자동', 'id="accInstall"')}
       ${D.meta?.owner ? item('#check', 'Data check', '운영자') : ''}
     </div>
@@ -1795,6 +1797,7 @@ function viewPrivacy() {
   <tr><td>브라우저 푸시 구독 토큰</td><td>알림 켤 때</td><td>앱 푸시 발송 (사람을 특정하지 않는 토큰)</td><td>알림 끄거나 탈퇴 시</td></tr>
   <tr><td>카카오 메시지 발송 권한 토큰</td><td>카카오 알림을 켤 때</td><td>본인의 카카오톡으로 알림 보내기</td><td>연결 해제·탈퇴 시 즉시</td></tr>
   <tr><td>멤버십 등급 · 포인트 · 바우처 수 · 만료일</td><td>내 프로필에 입력할 때</td><td>내가 쓸 수 있는 혜택만 골라 보여 주기</td><td><b>기본은 내 기기(브라우저)에만 저장</b>, 로그인 후 동기화를 켠 경우만 서버에 저장 · 탈퇴 시 삭제</td></tr>
+  <tr><td>보내 주신 의견 · 보던 화면·호텔 · 기기 종류(화면 크기·브라우저) · 기기 임의 번호 · 로그인했다면 계정 번호</td><td>의견 보내기를 쓸 때</td><td>틀린 정보 수정, 서비스 개선</td><td>처리 후 1년 또는 탈퇴 시</td></tr>
   <tr><td>베타 초대 코드 · 기기 임의 번호(이 브라우저가 만든 무작위 값)</td><td>초대 코드를 넣을 때</td><td>초대받은 기기만 들어오게 하기, 코드별 사용 기기 수 제한</td><td>베타 종료 또는 코드 삭제 시</td></tr>
   <tr><td>접속 기록(IP · 브라우저 종류 · 시각)</td><td>이용 중 자동</td><td>오류 확인 · 부정 이용 방지</td><td>호스팅·DB 사업자 기본 보관 기간 (최대 90일)</td></tr></tbody></table>
   <p class="muted small">받지 않는 것: 전화번호, 호텔 체인 계정 아이디·비밀번호, 결제 수단, 주소, 생년월일, 민감정보.</p>
@@ -1884,7 +1887,7 @@ function viewHotel(key) {
   const calNav = () => { const [y, m] = months[mi].split('-').map(Number); return `<div class="calnav"><button type="button" data-cm="-1" ${mi <= 0 ? 'disabled' : ''} aria-label="이전 달">‹</button><b>${y}년 ${m}월</b><span class="muted small">혜택 ${benDays(months[mi])}일</span><button type="button" data-cm="1" ${mi >= months.length - 1 ? 'disabled' : ''} aria-label="다음 달">›</button><span class="mtabs">${months.map((ym, i) => `<button type="button" data-mi="${i}" class="${i === mi ? 'on' : ''}">${+ym.slice(5)}월${benDays(ym) ? ` <em>${benDays(ym)}</em>` : ''}</button>`).join('')}</span></div>`; };
   const gid = h.chain || 'accor'; const tb = tierBenefits(h); const tier = myTier(h.chain);
   el.innerHTML = `<p><a href="#hotels">← 호텔 목록</a></p>
-    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button>${FEAT.share ? ` <button type="button" class="btn ghost" data-share="${esc(key)}">이미지로 공유</button>` : ''}</p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
+    <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a> · <a href="#" class="fbwrong" data-fb="wrong" data-fb-hotel="${esc(key)}">이 정보가 틀렸어요</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button>${FEAT.share ? ` <button type="button" class="btn ghost" data-share="${esc(key)}">이미지로 공유</button>` : ''}</p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
       ${tier ? `<div class="band ${h.chain}" style="margin:8px 0"><b>${esc(tierKo(tier))}인 당신은</b>${(tb || []).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : b.s === 'maybe' ? '△' : '✗'}${b.note ? ` <em>${esc(b.note)}</em>` : ''}</span>`).join('')}</div>` : ''}<div class="stats"><div class="stat"><b>${rows.length}</b><span>혜택 날짜</span></div><div class="stat"><b style="color:var(--suite)">${c.SUITE}</b><span>스위트</span></div><div class="stat"><b style="color:var(--free)">${c.FREE_NIGHT}</b><span>무료박</span></div><div class="stat"><b style="color:var(--points)">${c.POINTS}</b><span>포인트</span></div><div class="stat"><b style="color:var(--sale)">${c.SALE}</b><span>세일</span></div></div></div>
     ${h.lat != null && h.lng != null && window.L ? '<div class="hmap" id="hmap"></div>' : ''}
     <h2>가능한 혜택 · 월별</h2>
@@ -2181,6 +2184,49 @@ function openOnb() {
   render();
 }
 document.addEventListener('click', (e) => { if (e.target.closest('[data-onb]')) { e.preventDefault(); openOnb(); } });
+
+// ---------- 의견 보내기 (베타 피드백) ----------
+// 보던 화면·호텔·고른 날짜를 자동으로 붙여 tr_send_feedback 으로 저장. 이름·이메일은 받지 않는다(로그인했다면 계정 번호만 서버가 붙임).
+const FB_KINDS = [['wrong', '틀린 정보'], ['idea', '이런 기능 원해요'], ['bug', '오류 · 불편'], ['other', '기타']];
+function openFeedback(kind, hotelKey) {
+  let dlg = document.getElementById('dlgFb');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'dlgFb'; dlg.className = 'sheet fbsheet'; document.body.appendChild(dlg); dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); }
+  const h = hotelKey ? D.hotels.get(hotelKey) : (location.hash.startsWith('#hotel/') ? D.hotels.get(decodeURIComponent(location.hash.slice(7))) : null);
+  const selDate = document.querySelector('#v-hotel .cell.sel')?.dataset.d || '';
+  const page = location.hash || '#home'; let k = kind || 'other';
+  const ph = { wrong: '예: 12월 20일 SNU 가능이라고 나오는데 예약 화면에선 안 돼요', idea: '예: 연휴만 모아 보는 화면이 있으면 좋겠어요', bug: '예: 달력에서 다음 달로 안 넘어가요', other: '무엇이든 편하게 적어 주세요' };
+  const render = () => {
+    dlg.innerHTML = `<div class="shead"><b>의견 보내기</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div>
+      <form class="fbbody" id="fbForm"><div class="fbkinds">${FB_KINDS.map(([v, l]) => `<button type="button" class="${v === k ? 'on' : ''}" data-k="${v}">${l}</button>`).join('')}</div>
+      <textarea id="fbMsg" rows="5" maxlength="2000" placeholder="${esc(ph[k])}"></textarea>
+      <p class="fbctx">함께 보내는 정보: 보던 화면 <b>${esc(page.slice(0, 40))}</b>${h ? ` · 호텔 <b>${esc(h.name)}</b>` : ''}${selDate ? ` · 날짜 <b>${esc(fmtD(selDate))}</b>` : ''} · 기기 종류 · 앱 버전 <span class="muted">(이름·이메일은 받지 않아요)</span></p>
+      <button type="submit" class="mgo" id="fbSend">보내기</button><p class="fbmsg" id="fbOut" role="status"></p></form>`;
+    dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+    dlg.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => { const t = dlg.querySelector('#fbMsg').value; k = b.dataset.k; render(); dlg.querySelector('#fbMsg').value = t; }));
+    dlg.querySelector('#fbForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); const msg = dlg.querySelector('#fbMsg').value.trim(); const out = dlg.querySelector('#fbOut'); const btn = dlg.querySelector('#fbSend');
+      if (!msg) { out.textContent = '내용을 적어 주세요.'; return; }
+      btn.disabled = true; out.textContent = '보내는 중…';
+      const ctx = { build: document.querySelector('script[src^="app.js"]')?.src.split('v=')[1] || '', w: innerWidth, h: innerHeight, mobile: MOBILE(), standalone: matchMedia('(display-mode: standalone)').matches, ua: navigator.userAgent.slice(0, 160), date: selDate || undefined, tiers: ['accor', 'ihg', 'marriott', 'hilton'].filter(myTier).map(c => `${c}:${myTier(c)}`) };
+      try {
+        const r = await invRpc('tr_send_feedback', { p: { kind: k, message: msg, page, hotel: h?.key || null, ctx, device: invDevice() } }, !!AUTH.s);
+        if (r?.ok) { dlg.querySelector('.fbbody').innerHTML = '<div class="fbdone"><b>고마워요!</b><p>보내 주신 의견은 바로 확인할게요. 답이 필요한 내용이면 오픈채팅방이나 문의 메일로도 알려 주세요.</p><button type="button" class="mgo" data-close2>닫기</button></div>'; dlg.querySelector('[data-close2]').addEventListener('click', () => dlg.close()); return; }
+        out.textContent = r?.reason === 'limit' ? '오늘은 더 보낼 수 없어요. 내일 다시 보내 주세요.' : '보내지 못했어요. 다시 시도해 주세요.';
+      } catch (err) { out.textContent = '연결이 불안정해요. 잠시 뒤 다시 시도해 주세요.'; }
+      btn.disabled = false;
+    });
+  };
+  render(); dlg.showModal(); setTimeout(() => dlg.querySelector('#fbMsg')?.focus(), 50);
+}
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-fb]'); if (!b) return; e.preventDefault(); document.getElementById('drawer')?.open && document.getElementById('drawer').close(); openFeedback(b.dataset.fb, b.dataset.fbHotel); });
+// 운영자 Check 화면: 최근 의견 50건 · 처리 표시
+async function fbAdmin() {
+  const box = document.getElementById('fbAdmin'); if (!box || !AUTH.s) return; const base = `${window.TR_SERVER.url.replace(/\/$/, '')}/rest/v1`;
+  let list = []; try { const r = await fetch(`${base}/tr_feedback?select=id,created_at,kind,message,page,hotel,ctx,status&order=created_at.desc&limit=50`, { headers: restHeaders() }); if (!r.ok) throw new Error(r.status); list = await r.json(); } catch (e) { box.innerHTML = `<h2>베타 의견</h2><p class="muted small">불러오지 못했어요: ${esc(String(e.message))}</p>`; return; }
+  const KL = Object.fromEntries(FB_KINDS); const fresh = list.filter(x => x.status === 'new').length;
+  box.innerHTML = `<h2>베타 의견 <span class="muted small">최근 ${list.length}건 · 새 의견 ${fresh}</span></h2>${list.length ? `<ul class="fblist">${list.map(x => `<li class="${x.status}"><div class="fbh"><span class="bdg2 ${x.kind}">${KL[x.kind] || x.kind}</span> <span class="muted small">${new Date(x.created_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} · ${esc(x.page || '')}${x.hotel ? ` · <a href="#hotel/${encodeURIComponent(x.hotel)}">${esc(D.hotels.get(x.hotel)?.name || x.hotel)}</a>` : ''}${x.ctx?.date ? ` · ${esc(x.ctx.date)}` : ''}${x.ctx?.mobile ? ' · 모바일' : ' · PC'}</span><button type="button" class="lnk small" data-fbs="${x.id}" data-st="${x.status}">${x.status === 'new' ? '처리함으로' : '새 의견으로'}</button></div><p>${esc(x.message)}</p></li>`).join('')}</ul>` : '<p class="muted small">아직 들어온 의견이 없어요.</p>'}`;
+  box.querySelectorAll('[data-fbs]').forEach(b => b.addEventListener('click', async () => { try { await fetch(`${base}/tr_feedback?id=eq.${b.dataset.fbs}`, { method: 'PATCH', headers: Object.assign(restHeaders(), { Prefer: 'return=minimal' }), body: JSON.stringify({ status: b.dataset.st === 'new' ? 'done' : 'new' }) }); fbAdmin(); } catch (e) {} }));
+}
 
 // ---------- 베타 초대 코드 ----------
 // 첫 화면에서 초대 코드를 넣어야 들어올 수 있다. 코드 확인은 서버(tr_redeem_invite)가, 코드 목록은 운영자만 본다.

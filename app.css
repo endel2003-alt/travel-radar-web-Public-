@@ -1022,3 +1022,23 @@ body.gated { overflow: hidden; }
 #onb .ofoot .mgo { width: 100%; margin: 0; } #onb .ofoot .mgo:disabled { opacity: .35; }
 #onb .ofoot .lnk { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13.5px; cursor: pointer; }
 .abtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; } .abtns .btn { margin: 0; }
+
+/* 의견 보내기 */
+.fbfab { position: fixed; right: 20px; bottom: 20px; z-index: 900; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--gold); background: #141b31; color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.fbfab:hover { background: var(--gold); color: #10172a; }
+@media (max-width: 720px) { .fbfab { display: none; } }
+body.gated .fbfab { display: none; }
+@media (min-width: 721px) { dialog.sheet.fbsheet { margin: auto; width: 520px; max-width: calc(100% - 40px); border-radius: 20px; } }
+.fbbody { padding: 14px 18px calc(18px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.fbkinds { display: flex; flex-wrap: wrap; gap: 8px; }
+.fbkinds button { padding: 8px 13px; border-radius: 999px; border: 1px solid var(--line); background: none; color: var(--fg); font: inherit; font-size: 13.5px; cursor: pointer; }
+.fbkinds button.on { background: var(--gold); border-color: var(--gold); color: #10172a; font-weight: 700; }
+.fbbody textarea { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--fg); font: inherit; font-size: 15px; line-height: 1.5; resize: vertical; }
+.fbbody textarea:focus { outline: none; border-color: var(--gold); }
+.fbctx { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.6; } .fbctx b { color: #c3c9da; font-weight: 600; }
+.fbbody .mgo { margin: 0; } .fbmsg { margin: 0; min-height: 1.2em; font-size: 13px; color: #e9a28f; }
+.fbdone { text-align: center; padding: 16px 0 4px; } .fbdone b { font-size: 20px; } .fbdone p { color: #c3c9da; line-height: 1.6; }
+.fbwrong { color: var(--muted); font-size: 12.5px; }
+.fblist { list-style: none; padding: 0; margin: 8px 0; } .fblist li { padding: 12px 0; border-bottom: 1px solid var(--line); } .fblist li.done { opacity: .5; }
+.fblist .fbh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; } .fblist .fbh .lnk { margin-left: auto; } .fblist p { margin: 6px 0 0; white-space: pre-wrap; }
+.bdg2 { font-size: 11px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.08); } .bdg2.wrong { background: rgba(226,115,95,.2); color: #f0a08f; } .bdg2.idea { background: rgba(212,168,75,.18); color: #e5c27a; } .bdg2.bug { background: rgba(142,168,232,.2); color: #b3c6f2; }
