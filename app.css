@@ -955,3 +955,15 @@ footer .flinks a:hover { color: var(--fg); }
 .cnav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--fg); font-size: 22px; line-height: 1; }
 .cnav button:disabled { opacity: .25; }
 #dlgCal .cbody { flex: 0 0 auto; min-height: 340px; }
+
+/* 호텔 페이지 달력: 월별 */
+.calnav { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 4px 0 10px; }
+.calnav > b { font-family: var(--serif); font-size: 20px; font-weight: 500; min-width: 120px; text-align: center; }
+.calnav > button { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: none; color: var(--fg); font-size: 20px; line-height: 1; cursor: pointer; }
+.calnav > button:disabled { opacity: .25; cursor: default; }
+.calnav .mtabs { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.calnav .mtabs button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.calnav .mtabs button.on { border-color: var(--gold); color: var(--fg); }
+.calnav .mtabs em { font-style: normal; color: var(--gold); font-weight: 700; margin-left: 2px; }
+.cal .cell.blank { background: transparent; border-color: transparent; pointer-events: none; }
+@media (max-width: 720px) { .calnav .mtabs { width: 100%; margin-left: 0; overflow-x: auto; flex-wrap: nowrap; } }

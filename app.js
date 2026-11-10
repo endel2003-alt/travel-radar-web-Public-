@@ -1864,33 +1864,48 @@ function viewHotel(key) {
   const rows = D.rows.filter(r => r.h === key).sort((a, b) => a.d.localeCompare(b.d) || (b.sv || 0) - (a.sv || 0));
   const c = { SUITE: 0, FREE_NIGHT: 0, POINTS: 0, SALE: 0 }; for (const r of rows) c[r.b]++;
   const byDay = {}; for (const r of rows) (byDay[r.d] = byDay[r.d] || []).push(r);
-  // 달력: 수집 범위 첫날이 속한 주의 일요일부터
-  const from = D.meta.dateFrom, to = D.meta.dateTo; let start = addDays(from, -dow(from)); const cells = [];
-  for (let d = start; d <= to || dow(d) !== 0; d = addDays(d, 1)) {
+  // 달력: 한 달씩 (‹ › 로 넘기기). 수집 범위 밖 날짜는 흐리게
+  const from = D.meta.dateFrom, to = D.meta.dateTo;
+  const months = []; for (let m = from.slice(0, 7); m <= to.slice(0, 7);) { months.push(m); const [y, mo] = m.split('-').map(Number); m = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, '0')}`; }
+  const benDays = (ym) => Object.keys(byDay).filter(d => d.startsWith(ym)).length;
+  const monthCells = (ym) => {
+    const cells = []; const first = `${ym}-01`; const [yy, mm] = ym.split('-').map(Number); const last = `${ym}-${String(new Date(Date.UTC(yy, mm, 0)).getUTCDate()).padStart(2, '0')}`;
+    for (let d = addDays(first, -dow(first)); d <= addDays(last, 6 - dow(last)); d = addDays(d, 1)) {
+      if (!d.startsWith(ym)) { cells.push('<div class="cell blank"></div>'); continue; }
     const inR = d >= from && d <= to; const rs = byDay[d] || []; const kinds = [...new Set(rs.map(r => r.b))]; const min = rs.length ? Math.min(...rs.map(r => r.my ?? Infinity)) : null;
-    cells.push(`<div class="cell ${inR ? '' : 'off'} ${[0, 6].includes(dow(d)) ? 'we' : ''} ${holiName(d) ? 'hol' : ''}" data-d="${d}" ${holiName(d) ? `title="${esc(holiName(d))}"` : ''}><span class="dn">${+d.slice(8) === 1 ? `${+d.slice(5, 7)}/1` : +d.slice(8)}</span>${holiName(d) ? `<span class="hn">${esc(holiName(d))}</span>` : ''}${kinds.length ? `<div class="dots">${kinds.map(k => `<i class="${k}" title="${BEN[k].label}"></i>`).join('')}</div><div class="mn">${isFinite(min) ? (NARROW() ? wonShort(min) : won(min)) : ''}</div>${(() => { const p = rs.filter(r => r.pt).sort((a, b) => a.pt - b.pt)[0]; return p ? `<div class="mp">${NARROW() ? ptShort(p.pt) : p.pt.toLocaleString() + 'pt'}${(p.n || 1) > 1 ? `/${p.n}박` : ''}</div>` : ''; })()}` : ''}</div>`);
-    if (d >= to && dow(d) === 6) break;
-  }
+      cells.push(`<div class="cell ${inR ? '' : 'off'} ${[0, 6].includes(dow(d)) ? 'we' : ''} ${holiName(d) ? 'hol' : ''}" data-d="${d}" ${holiName(d) ? `title="${esc(holiName(d))}"` : ''}><span class="dn">${+d.slice(8) === 1 ? `${+d.slice(5, 7)}/1` : +d.slice(8)}</span>${holiName(d) ? `<span class="hn">${esc(holiName(d))}</span>` : ''}${kinds.length ? `<div class="dots">${kinds.map(k => `<i class="${k}" title="${BEN[k].label}"></i>`).join('')}</div><div class="mn">${isFinite(min) ? (NARROW() ? wonShort(min) : won(min)) : ''}</div>${(() => { const p = rs.filter(r => r.pt).sort((a, b) => a.pt - b.pt)[0]; return p ? `<div class="mp">${NARROW() ? ptShort(p.pt) : p.pt.toLocaleString() + 'pt'}${(p.n || 1) > 1 ? `/${p.n}박` : ''}</div>` : ''; })()}` : ''}</div>`);
+    }
+    return cells.join('');
+  };
+  let mi = Math.max(0, months.indexOf((Object.keys(byDay).sort()[0] || from).slice(0, 7)));   // 혜택이 있는 첫 달부터
+  const calNav = () => { const [y, m] = months[mi].split('-').map(Number); return `<div class="calnav"><button type="button" data-cm="-1" ${mi <= 0 ? 'disabled' : ''} aria-label="이전 달">‹</button><b>${y}년 ${m}월</b><span class="muted small">혜택 ${benDays(months[mi])}일</span><button type="button" data-cm="1" ${mi >= months.length - 1 ? 'disabled' : ''} aria-label="다음 달">›</button><span class="mtabs">${months.map((ym, i) => `<button type="button" data-mi="${i}" class="${i === mi ? 'on' : ''}">${+ym.slice(5)}월${benDays(ym) ? ` <em>${benDays(ym)}</em>` : ''}</button>`).join('')}</span></div>`; };
   const gid = h.chain || 'accor'; const tb = tierBenefits(h); const tier = myTier(h.chain);
   el.innerHTML = `<p><a href="#hotels">← 호텔 목록</a></p>
     <div class="hhead">${hImg(h) && !NO_EXT_IMG ? `<img class="hphoto" src="${esc(hImg(h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(h.img ? h.image || '' : '')}')">` : ''}<div class="t"><h1>${esc(h.name)}</h1><div class="hsub"><span class="ctag ${h.chain}">${CHAIN[h.chain]}</span>${esc(h.brand || '')} ${starsHtml(h)} · ${esc(h.country || '')} ${esc(h.city || '')}${h.city0 && h.city0 !== h.city ? ` <span class="muted">(${esc(h.city0)})</span>` : ''} · <a href="#guide/${gid}">${CHAIN[h.chain]} 멤버십 가이드</a></div>${h.note ? `<p class="hnote">${esc(h.note)}</p>` : ''}<p class="hedit"><button type="button" class="btn" data-watch-hotel="${esc(key)}">열리면 알려줘</button>${FEAT.share ? ` <button type="button" class="btn ghost" data-share="${esc(key)}">이미지로 공유</button>` : ''}</p>${D.meta?.owner ? `<p class="hedit"><button type="button" class="btn" data-edit-hotel="${esc(key)}">호텔 정보 수정</button>${h._edited ? ` <span class="muted small">수정됨 · ${Object.keys(h._edited).map(k => EDIT_LABEL[k] || k).join(', ')}</span>` : ''}</p>` : ''}</div>
       ${tier ? `<div class="band ${h.chain}" style="margin:8px 0"><b>${esc(tierKo(tier))}인 당신은</b>${(tb || []).map(b => `<span class="bf ${b.s}">${esc(b.label)} ${b.s === 'ok' ? '✓' : b.s === 'maybe' ? '△' : '✗'}${b.note ? ` <em>${esc(b.note)}</em>` : ''}</span>`).join('')}</div>` : ''}<div class="stats"><div class="stat"><b>${rows.length}</b><span>혜택 날짜</span></div><div class="stat"><b style="color:var(--suite)">${c.SUITE}</b><span>스위트</span></div><div class="stat"><b style="color:var(--free)">${c.FREE_NIGHT}</b><span>무료박</span></div><div class="stat"><b style="color:var(--points)">${c.POINTS}</b><span>포인트</span></div><div class="stat"><b style="color:var(--sale)">${c.SALE}</b><span>세일</span></div></div></div>
     ${h.lat != null && h.lng != null && window.L ? '<div class="hmap" id="hmap"></div>' : ''}
-    <h2>다음 30일 가능한 혜택</h2>
+    <h2>가능한 혜택 · 월별</h2>
     <div class="legend">${Object.entries(BEN).map(([k, v]) => `<span><i class="${k}"></i>${v.label}</span>`).join('')}<span class="muted">· 칸의 금액은 그날 가장 낮은 내 비용</span></div>
-    <div class="cal">${DOW.map((d, i) => `<div class="dh ${i === 0 || i === 6 ? 'we' : ''}">${d}</div>`).join('')}${cells.join('')}</div>
+    <div id="hcalwrap">${calNav()}<div class="cal">${DOW.map((d, i) => `<div class="dh ${i === 0 || i === 6 ? 'we' : ''}">${d}</div>`).join('')}${monthCells(months[mi])}</div></div>
     ${FEAT.history ? `<h2>가격·포인트 추이 <span class="muted small">달력에서 날짜를 누르면 그 날짜의 추이</span></h2><div id="hhist"><p class="muted small">불러오는 중…</p></div>` : ''}
     <h2 id="hdays">날짜별 상세 <span class="muted small" id="hsel"></span></h2>
     <div class="tablewrap"><table><thead><tr><th>체크인</th><th>호텔</th><th>혜택</th><th>내 비용 (₩)</th><th>비교 기준</th><th>절약</th><th>객실</th><th>예약</th></tr></thead><tbody id="htbody">${rows.map(r => rowHtml(r, false)).join('')}</tbody></table></div>
     ${rows.length ? '' : '<div class="empty">이 호텔은 현재 수집 범위에서 가능한 혜택이 없어요.</div>'}`;
   if ($('#hmap')) { try { const m = L.map('hmap', { scrollWheelZoom: false, attributionControl: false }).setView([h.lat, h.lng], 14); osmTiles().addTo(m); L.circleMarker([h.lat, h.lng], Object.assign(markerStyle(h.chain, 9), { fillOpacity: .95 })).addTo(m).bindTooltip(h.name); } catch (e) {} }
   if (FEAT.history) loadHistory(key).then(hist => { if (location.hash.includes(encodeURIComponent(key)) || location.hash.includes(key)) renderHistory(el, hist, el.querySelector('.cell.sel')?.dataset.d); });
-  el.querySelectorAll('.cell').forEach(cell => cell.addEventListener('click', () => {
-    const d = cell.dataset.d; const sel = cell.classList.contains('sel'); el.querySelectorAll('.cell').forEach(x => x.classList.remove('sel'));
-    const list = sel ? rows : rows.filter(r => r.d === d); if (!sel) cell.classList.add('sel');
-    $('#htbody').innerHTML = list.map(r => rowHtml(r, false)).join(''); $('#hsel').textContent = sel ? '' : `· ${fmtD(d)}만 표시 (다시 누르면 전체)`;
-    if (FEAT.history && HIST.has(key)) renderHistory(el, HIST.get(key), sel ? null : d);
-  }));
+  const bindCal = () => {
+    el.querySelectorAll('.cal .cell[data-d]').forEach(cell => cell.addEventListener('click', () => {
+      const d = cell.dataset.d; const sel = cell.classList.contains('sel'); el.querySelectorAll('.cell').forEach(x => x.classList.remove('sel'));
+      const list = sel ? rows : rows.filter(r => r.d === d); if (!sel) cell.classList.add('sel');
+      $('#htbody').innerHTML = list.map(r => rowHtml(r, false)).join(''); $('#hsel').textContent = sel ? '' : `· ${fmtD(d)}만 표시 (다시 누르면 전체)`;
+      if (FEAT.history && HIST.has(key)) renderHistory(el, HIST.get(key), sel ? null : d);
+    }));
+    const go = (n) => { if (n < 0 || n >= months.length || n === mi) return; mi = n; $('#hcalwrap').innerHTML = `${calNav()}<div class="cal">${DOW.map((d, i) => `<div class="dh ${i === 0 || i === 6 ? 'we' : ''}">${d}</div>`).join('')}${monthCells(months[mi])}</div>`; $('#htbody').innerHTML = rows.map(r => rowHtml(r, false)).join(''); $('#hsel').textContent = ''; bindCal(); };
+    el.querySelectorAll('[data-cm]').forEach(b => b.addEventListener('click', () => go(mi + Number(b.dataset.cm))));
+    el.querySelectorAll('[data-mi]').forEach(b => b.addEventListener('click', () => go(Number(b.dataset.mi))));
+    const cal = el.querySelector('.cal'); let sx = null; cal.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true }); cal.addEventListener('touchend', (e) => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) go(mi + (dx < 0 ? 1 : -1)); });
+  };
+  bindCal();
 }
 
 // ---------- 호텔 목록 ---------- (국가 → 도시별로 묶고, 각 묶음 안에서는 1박 기준가가 비싼 호텔부터)
