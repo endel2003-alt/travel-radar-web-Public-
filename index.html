@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611102232">
+<link rel="stylesheet" href="app.css?v=202611130034">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -53,7 +53,7 @@
         <div class="fgroup"><div class="ft">Benefit</div><div class="chips">
           <button class="chip on" data-b="SUITE">스위트</button><button class="chip on" data-b="FREE_NIGHT">무료박</button><button class="chip on" data-b="POINTS">포인트</button><button class="chip on" data-b="SALE">세일</button></div></div>
         <div class="fgroup"><div class="ft">Chain</div><div class="chips">
-          <button class="chip on" data-c="accor">Accor</button><button class="chip on" data-c="ihg">IHG</button><button class="chip on" data-c="marriott">Marriott</button><button class="chip on" data-c="hilton">Hilton</button></div></div>
+          <button class="chip on" data-c="accor">Accor</button><button class="chip on" data-c="ihg">IHG</button><button class="chip on" data-c="marriott">Marriott</button><button class="chip on" data-c="hilton">Hilton</button><button class="chip" type="button" id="fBrand">브랜드</button></div></div>
         <div class="fgroup"><div class="ft">Sort</div><select id="fSort"><option value="tier">티어 가치순</option><option value="cost">내 비용 낮은 순</option><option value="saving">절약 큰 순</option><option value="date">날짜순</option><option value="new">새로 열림</option><option value="pricey">비싼 호텔 순 (정가)</option><option value="hotel">호텔명</option></select></div>
         <div class="fgroup fend"><label class="mini"><input id="fMine" type="checkbox"> 내가 쓸 수 있는 것만</label><button class="lnk" type="button" data-watch-query title="지금 조건이 열리면 알림">알려줘</button><button class="lnk" id="fReset">초기화</button></div>
       </div></details>
@@ -214,8 +214,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611102232"></script>
-<script src="config.js?v=202611102232"></script>
-<script src="app.js?v=202611102232"></script>
+<script src="compare.js?v=202611130034"></script>
+<script src="config.js?v=202611130034"></script>
+<script src="app.js?v=202611130034"></script>
 </body>
 </html>

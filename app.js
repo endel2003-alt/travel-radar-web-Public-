@@ -750,7 +750,7 @@ function route() {
 window.addEventListener('hashchange', route);
 
 // ---------- 홈 = 내 티어로 검색 (시안 E) ----------
-const ui = { benefits: new Set(['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE']), chains: new Set(['accor', 'ihg', 'marriott', 'hilton']), limit: 300, view: 'cards', cardLimit: 24, mLimit: 24 };
+const ui = { benefits: new Set(['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE']), chains: new Set(['accor', 'ihg', 'marriott', 'hilton']), brands: new Set(), limit: 300, view: 'cards', cardLimit: 24, mLimit: 24 };
 try { ui.view = localStorage.getItem('tr_view') || 'cards'; } catch (e) {}
 const TIER_KEY = { accor: 'accorTier', ihg: 'ihgTier', marriott: 'marriottTier', hilton: 'hiltonTier' };
 const myTier = (chain) => profile[TIER_KEY[chain]] || '';
@@ -887,6 +887,7 @@ function filtered() {
   if (qp.five4) rows = rows.filter(r => r.br === 'FIVE4');
   if (qp.onePlusOne) rows = rows.filter(r => r.br === 'STAY_PLUS' || r.br === 'AMB');   // 2박 중 1박 무료 (아코르 Stay Plus · IHG 앰배서더 주말)
   if (qp.chains.size) rows = rows.filter(r => qp.chains.has(r.chain));
+  if (ui.brands.size) rows = rows.filter(r => { const h = D.hotels.get(r.h); return h && ui.brands.has(brandOf(h).key); });
   if (qp.bens.size) rows = rows.filter(r => qp.bens.has(r.b));
   if (qp.voucher) rows = rows.filter(isVoucher);
   if (qp.city) rows = rows.filter(r => r.city === qp.city);
@@ -995,7 +996,7 @@ function cardHtml(o, i) {
 function noBenefitHotels(groups) {
   const have = new Set(groups.map(o => o.h.key)); const where = $('#fWhere').value; const qp = lastQ || {}; const t = (qp.text || []).join(' ');
   const inWhere = (h) => !where || (where.startsWith('c:') ? h.cc === where.slice(2) : (() => { const [, cc, city] = where.split(':'); return h.cc === cc && h.city === city; })());
-  return [...D.hotels.values()].filter(h => !have.has(h.key) && h.name && ui.chains.has(h.chain) && inWhere(h) && (!qp.chains?.size || qp.chains.has(h.chain)) && (!qp.city || h.city === qp.city)
+  return [...D.hotels.values()].filter(h => !have.has(h.key) && h.name && ui.chains.has(h.chain) && (!ui.brands.size || ui.brands.has(brandOf(h).key)) && inWhere(h) && (!qp.chains?.size || qp.chains.has(h.chain)) && (!qp.city || h.city === qp.city)
     && (!t || `${h.name} ${h.city || ''} ${h.brand || ''}`.toLowerCase().includes(t)) && !(qp.lounge && hasLounge(h) === false))
     .sort((a, b) => (a.country || '').localeCompare(b.country || '', 'ko') || (a.city || '').localeCompare(b.city || '', 'ko') || a.name.localeCompare(b.name, 'ko'));
 }
@@ -1183,6 +1184,96 @@ function openWhere(btn) {
   const m = cur.match(/^[ct]:([A-Z]{2})/); if (m && tree.some(x => x.cc === m[1])) cities(m[1]); else countries();
   dlg.showModal();
 }
+
+// ---------- 브랜드 (체인 → 브랜드 2단계) ----------
+// 비슷한 이름은 하나로 묶는다 (ANA 인터컨티넨탈 → 인터컨티넨탈, 홀리데이 인 리조트 → 홀리데이 인). 순서 = 등급(L 럭셔리·라이프스타일 · P 프리미엄 · M 미드스케일). 위에서부터 먼저 맞는 것.
+const BRANDS = {
+  accor: [['L', 'raffles', '래플스', /raffles/i], ['L', 'orient', '오리엔트 익스프레스', /orient/i], ['L', 'banyan', '반얀트리', /banyan/i], ['L', 'fairmont', '페어몬트', /fairmont/i], ['L', 'sofitel', '소피텔', /sofitel/i], ['L', 'so', 'SO/', /^so\b|so\//i], ['L', 'mgallery', 'M갤러리', /mgallery/i], ['L', 'emblems', '엠블럼', /emblem/i], ['L', '25h', '25아워스', /25\s*hours/i], ['L', 'ennismore', '몬드리안 · SLS · 델라노', /mondrian|sls|delano|morgans|hyde/i], ['L', 'angsana', '앙사나', /angsana/i], ['L', 'garrya', '가리야', /garrya/i],
+    ['P', 'pullman', '풀만', /pullman/i], ['P', 'swissotel', '스위소텔', /swiss/i], ['P', 'movenpick', '뫼벤픽', /m[oö]venpick/i], ['P', 'grandmercure', '그랜드 머큐어', /grand mercure/i], ['P', 'peppers', '페퍼스', /peppers/i], ['P', 'artseries', '아트 시리즈', /art series/i], ['P', 'mantis', '만티스', /mantis/i], ['P', 'mama', '마마 쉘터', /mama/i], ['P', 'tribe', '트라이브', /tribe/i], ['P', 'cassia', '카시아', /cassia/i], ['P', 'dhawa', '다와', /dhawa/i], ['P', 'folio', '폴리오', /folio/i],
+    ['M', 'novotel', '노보텔', /novotel/i], ['M', 'mercure', '머큐어', /mercure/i], ['M', 'handwritten', '핸드리튼 컬렉션', /handwritten/i], ['M', 'adagio', '아다지오', /adagio/i], ['M', 'mantra', '만트라', /mantra/i], ['M', 'ibisstyles', '이비스 스타일 · 올시즌', /ibis styles|all seasons/i], ['M', 'ibisbudget', '이비스 버젯 · F1', /ibis budget|hotel ?f1/i], ['M', 'ibis', '이비스', /ibis/i], ['M', 'greet', '그릿', /greet/i]],
+  marriott: [['L', 'rcreserve', '리츠칼튼 리저브', /ritz.*reserve/i], ['L', 'ritz', '리츠칼튼', /ritz/i], ['L', 'stregis', '세인트 레지스', /st\.? ?regis/i], ['L', 'bvlgari', '불가리', /bvlgari|bulgari/i], ['L', 'edition', '에디션', /edition/i], ['L', 'jw', 'JW 메리어트', /\bjw\b/i], ['L', 'luxury', '럭셔리 컬렉션', /luxury collection/i], ['L', 'w', 'W 호텔', /^w\b|w hotels/i],
+    ['P', 'mea', '메리어트 이그제큐티브 아파트먼트', /executive apartments/i], ['P', 'marriott', '메리어트', /^marriott|marriott hotels/i], ['P', 'sheraton', '쉐라톤', /^sheraton/i], ['P', 'westin', '웨스틴', /westin/i], ['P', 'lemeridien', '르 메리디앙', /m[eé]ridien/i], ['P', 'renaissance', '르네상스', /renaissance/i], ['P', 'autograph', '오토그래프 컬렉션', /autograph/i], ['P', 'tribute', '트리뷰트 포트폴리오', /tribute/i], ['P', 'design', '디자인 호텔', /design hotels/i], ['P', 'delta', '델타', /delta/i], ['P', 'gaylord', '게일로드', /gaylord/i],
+    ['M', 'courtyard', '코트야드', /courtyard/i], ['M', 'fourpoints', '포포인츠', /four points/i], ['M', 'aloft', '알로프트', /aloft/i], ['M', 'ac', 'AC 호텔', /\bac hotel/i], ['M', 'moxy', '목시', /moxy/i], ['M', 'element', '엘리먼트', /element/i], ['M', 'residence', '레지던스 인', /residence inn/i], ['M', 'fairfield', '페어필드', /fairfield/i], ['M', 'springhill', '스프링힐', /springhill/i], ['M', 'citizenm', '시티즌M', /citizenm/i], ['M', 'cityexpress', '시티 익스프레스', /city express/i], ['M', 'protea', '프로티아', /protea/i], ['M', 'apartments', '아파트먼트 바이 메리어트', /apartments/i]],
+  ihg: [['L', 'sixsenses', '식스 센스', /six senses/i], ['L', 'regent', '리젠트', /regent/i], ['L', 'ic', '인터컨티넨탈', /intercontinental/i], ['L', 'kimpton', '킴튼', /kimpton/i], ['L', 'vignette', '비네트 컬렉션', /vignette/i],
+    ['P', 'crowne', '크라운플라자', /crowne/i], ['P', 'indigo', '호텔 인디고', /indigo/i], ['P', 'voco', '보코', /voco/i], ['P', 'even', '이븐', /\beven\b/i],
+    ['M', 'hiex', '홀리데이 인 익스프레스', /holiday inn express/i], ['M', 'hi', '홀리데이 인', /holiday inn/i], ['M', 'garner', '가너 · 스테이브릿지', /garner|staybridge|candlewood|avid/i]],
+  hilton: [['L', 'waldorf', '월도프 아스토리아', /waldorf/i], ['L', 'lxr', 'LXR', /lxr/i], ['L', 'conrad', '콘래드', /conrad/i], ['L', 'signia', '시그니아', /signia/i],
+    ['P', 'hgi', '힐튼 가든 인', /garden inn/i], ['P', 'hgv', '힐튼 그랜드 베케이션', /grand vacation/i], ['P', 'hilton', '힐튼', /^hilton/i], ['P', 'curio', '큐리오 컬렉션', /curio/i], ['P', 'canopy', '캐노피', /canopy/i], ['P', 'tapestry', '태피스트리', /tapestry/i], ['P', 'motto', '모토', /motto/i], ['P', 'doubletree', '더블트리', /doubletree/i], ['P', 'embassy', '엠버시 스위트', /embassy/i], ['P', 'tempo', '템포', /tempo/i],
+    ['M', 'hampton', '햄튼', /hampton/i], ['M', 'home2', '홈2 스위트', /home2|homewood/i], ['M', 'tru', '트루', /\btru\b/i], ['M', 'spark', '스파크', /spark/i]],
+};
+const BRAND_TIER = { L: '럭셔리 · 라이프스타일', P: '프리미엄', M: '미드스케일 · 기타' };
+function brandOf(h) {
+  if (h._bk) return h._bk; const chain = h.chain || String(h.key || '').split('|')[0]; const b = String(h.brand || '').trim();
+  for (const [t, k, ko, re] of (BRANDS[chain] || [])) if (re.test(b)) return (h._bk = { key: `${chain}:${k}`, ko, t, chain, order: (BRANDS[chain] || []).findIndex(x => x[1] === k) });
+  return (h._bk = { key: `${chain}:x:${b || '기타'}`, ko: b || '기타', t: 'M', chain, order: 999 });
+}
+function brandTree() {
+  const m = new Map(); for (const h of D.hotels.values()) { if (!h.name) continue; const b = brandOf(h); const c = m.get(b.chain) || new Map(); const x = c.get(b.key) || Object.assign({ n: 0 }, b); x.n++; c.set(b.key, x); m.set(b.chain, c); }
+  return ['accor', 'marriott', 'ihg', 'hilton'].filter(c => m.has(c)).map(c => ({ chain: c, brands: [...m.get(c).values()].sort((a, b) => 'LPM'.indexOf(a.t) - 'LPM'.indexOf(b.t) || a.order - b.order || b.n - a.n) }));
+}
+const brandLabel = (set) => { if (!set.size) return '브랜드'; const all = brandTree().flatMap(c => c.brands); const first = all.find(b => set.has(b.key)); return `${first ? first.ko : '브랜드'}${set.size > 1 ? ` 외 ${set.size - 1}` : ''}`; };
+// 시트: 고르는 동안은 아무것도 바뀌지 않고, [적용]을 눌러야 onApply(새 Set)
+function openBrand(cur, onApply) {
+  let dlg = document.getElementById('dlgBrand');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'dlgBrand'; dlg.className = 'sheet bsheet'; document.body.appendChild(dlg); dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); }
+  const tree = brandTree(); const sel = new Set(cur); const total = tree.reduce((a, c) => a + c.brands.reduce((x, b) => x + b.n, 0), 0);
+  const foot = (left) => `<div class="bfoot">${left}<button type="button" class="mgo" data-apply>적용${sel.size ? ` · ${sel.size}개 브랜드` : ''}</button></div>`;
+  const chains = () => {
+    dlg.innerHTML = `<div class="shead"><b>브랜드 고르기</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody wlist">
+      <button type="button" class="wrow ${sel.size ? '' : 'on'}" data-all><span class="bl">${cb('all', 'lg')}<span><b>모든 브랜드</b><small>호텔 ${total.toLocaleString()}곳</small></span></span><i>${sel.size ? '' : '✓'}</i></button>
+      ${tree.map(c => { const k = c.brands.filter(b => sel.has(b.key)).length; return `<button type="button" class="wrow ${k ? 'on' : ''}" data-chain="${c.chain}"><span class="bl">${cb(c.chain, 'lg')}<span><b>${CHAIN[c.chain]}</b><small>${c.brands.length}개 브랜드 · ${c.brands.reduce((a, b) => a + b.n, 0).toLocaleString()}곳${k ? ` · ${k}개 선택됨` : ''}</small></span></span><i>›</i></button>`; }).join('')}</div>${foot('<button type="button" class="lnk" data-clear>초기화</button>')}`;
+    bind(); dlg.querySelector('[data-all]').addEventListener('click', () => { sel.clear(); chains(); });
+    dlg.querySelectorAll('[data-chain]').forEach(b => b.addEventListener('click', () => brands(b.dataset.chain)));
+    dlg.querySelector('[data-clear]').addEventListener('click', () => { sel.clear(); chains(); });
+  };
+  const brands = (chain) => {
+    const c = tree.find(x => x.chain === chain); let last = '';
+    dlg.innerHTML = `<div class="shead"><button type="button" class="x back" data-back aria-label="체인 목록">‹</button><b>${CHAIN[chain]} 브랜드</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody blist">
+      ${c.brands.map(b => { const g = b.t !== last ? `<div class="bgrp">${BRAND_TIER[b.t]}</div>` : ''; last = b.t; return `${g}<label class="brow"><input type="checkbox" value="${esc(b.key)}" ${sel.has(b.key) ? 'checked' : ''}><b>${esc(b.ko)}</b>${b.key === 'ihg:ic' ? '<span class="amb">주말 1+1</span>' : ''}<small>${b.n}</small></label>`; }).join('')}</div>${foot(`<button type="button" class="lnk" data-chainall>${CHAIN[chain]} 전체</button>`)}`;
+    bind(); dlg.querySelector('[data-back]').addEventListener('click', chains);
+    dlg.querySelectorAll('.brow input').forEach(i => i.addEventListener('change', () => { if (i.checked) sel.add(i.value); else sel.delete(i.value); dlg.querySelector('[data-apply]').textContent = `적용${sel.size ? ` · ${sel.size}개 브랜드` : ''}`; }));
+    dlg.querySelector('[data-chainall]').addEventListener('click', () => { const all = c.brands.every(b => sel.has(b.key)); c.brands.forEach(b => all ? sel.delete(b.key) : sel.add(b.key)); brands(chain); });
+  };
+  const bind = () => { dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close()); dlg.querySelector('[data-apply]').addEventListener('click', () => { dlg.close(); onApply(new Set(sel)); }); };
+  chains(); dlg.showModal();
+}
+// ---------- 자세한 필터 (모바일): 고르는 동안은 화면이 그대로, [적용]을 눌러야 바뀐다 ----------
+function openMFilter() {
+  let dlg = document.getElementById('dlgMF');
+  if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'dlgMF'; dlg.className = 'sheet mfsheet'; document.body.appendChild(dlg); dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); }
+  const st = { we: $('#fWeekend').checked, mine: $('#fMine').checked, sort: $('#fSort').value, bens: new Set(ui.benefits), chains: new Set(ui.chains), brands: new Set(ui.brands) };
+  const BEN = [['SUITE', '스위트'], ['FREE_NIGHT', '무료박'], ['POINTS', '포인트'], ['SALE', '세일']];
+  const SORTS = [...$('#fSort').options].map(o => [o.value, o.textContent]);
+  const count = () => {   // 지금 고른 조건이면 몇 곳인지 (적용 전 미리 계산 후 원래대로 되돌림)
+    const keep = { we: $('#fWeekend').checked, mine: $('#fMine').checked, b: ui.benefits, c: ui.chains, br: ui.brands, lq: lastQ };
+    $('#fWeekend').checked = st.we; $('#fMine').checked = st.mine; ui.benefits = st.bens; ui.chains = st.chains; ui.brands = st.brands;
+    let n = 0; try { n = groupHotels(filtered()).length; } catch (e) {}
+    $('#fWeekend').checked = keep.we; $('#fMine').checked = keep.mine; ui.benefits = keep.b; ui.chains = keep.c; ui.brands = keep.br; lastQ = keep.lq; return n;
+  };
+  const render = () => {
+    dlg.innerHTML = `<div class="shead"><b>자세한 필터</b><button type="button" class="x" data-close aria-label="닫기">✕</button></div><div class="cbody mfbody">
+      <div class="mfg"><div class="mft">혜택 종류</div><div class="mchips wrap">${BEN.map(([k, l]) => `<button type="button" class="${st.bens.has(k) ? 'on' : ''}" data-ben="${k}">${l}</button>`).join('')}</div></div>
+      <div class="mfg"><div class="mft">체인</div><div class="mchips wrap">${['accor', 'ihg', 'marriott', 'hilton'].map(c => `<button type="button" class="${st.chains.has(c) ? 'on' : ''}" data-chn="${c}">${cb(c, 'sm')} ${CHAIN[c]}</button>`).join('')}</div></div>
+      <div class="mfg"><div class="mft">브랜드</div><button type="button" class="mdates" data-brand>${esc(brandLabel(st.brands))} <span class="muted">›</span></button></div>
+      <div class="mfg"><label class="mfsw"><span><b>금·토 체크인만</b><small>주말 여행만 볼 때</small></span><input type="checkbox" data-we ${st.we ? 'checked' : ''}></label>
+        <label class="mfsw"><span><b>내가 쓸 수 있는 것만</b><small>내 등급·바우처 기준</small></span><input type="checkbox" data-mine ${st.mine ? 'checked' : ''}></label></div>
+      <div class="mfg"><div class="mft">정렬</div><div class="mfsort">${SORTS.map(([v, l]) => `<label><input type="radio" name="mfsort" value="${v}" ${st.sort === v ? 'checked' : ''}> ${esc(l)}</label>`).join('')}</div></div>
+    </div><div class="bfoot"><button type="button" class="lnk" data-reset>초기화</button><button type="button" class="mgo" data-apply>적용 · 호텔 ${count().toLocaleString()}곳</button></div>`;
+    dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+    const upd = () => { dlg.querySelector('[data-apply]').textContent = `적용 · 호텔 ${count().toLocaleString()}곳`; };
+    dlg.querySelectorAll('[data-ben]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.ben; if (st.bens.has(k) && st.bens.size > 1) st.bens.delete(k); else st.bens.add(k); b.classList.toggle('on', st.bens.has(k)); upd(); }));
+    dlg.querySelectorAll('[data-chn]').forEach(b => b.addEventListener('click', () => { const k = b.dataset.chn; if (st.chains.has(k) && st.chains.size > 1) st.chains.delete(k); else st.chains.add(k); b.classList.toggle('on', st.chains.has(k)); upd(); }));
+    dlg.querySelector('[data-we]').addEventListener('change', (e) => { st.we = e.target.checked; upd(); });
+    dlg.querySelector('[data-mine]').addEventListener('change', (e) => { st.mine = e.target.checked; upd(); });
+    dlg.querySelectorAll('[name=mfsort]').forEach(r => r.addEventListener('change', () => { st.sort = r.value; }));
+    dlg.querySelector('[data-brand]').addEventListener('click', () => { dlg.close(); openBrand(st.brands, (set) => { st.brands = set; render(); dlg.showModal(); }); });
+    dlg.querySelector('[data-reset]').addEventListener('click', () => { st.we = false; st.mine = false; st.sort = hasProfile() ? 'tier' : 'cost'; st.bens = new Set(['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE']); st.chains = new Set(['accor', 'ihg', 'marriott', 'hilton']); st.brands = new Set(); render(); });
+    dlg.querySelector('[data-apply]').addEventListener('click', () => { dlg.close(); $('#fWeekend').checked = st.we; $('#fMine').checked = st.mine; $('#fSort').value = st.sort; ui.benefits = st.bens; ui.chains = st.chains; ui.brands = st.brands; syncFilterChips(); ui.mLimit = 24; viewRadar(); setTimeout(() => document.getElementById('mResHead')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); });
+  };
+  render(); dlg.showModal();
+}
+// PC 필터 칩(혜택·체인)을 ui 상태에 맞춰 다시 표시
+function syncFilterChips() { document.querySelectorAll('#filtersBox [data-b]').forEach(b => b.classList.toggle('on', ui.benefits.has(b.dataset.b))); document.querySelectorAll('#filtersBox [data-c]').forEach(b => b.classList.toggle('on', ui.chains.has(b.dataset.c))); const pb = document.getElementById('fBrand'); if (pb) { pb.textContent = brandLabel(ui.brands); pb.classList.toggle('on', ui.brands.size > 0); } }
 // ---------- 기간 달력 (모바일 검색): 한 달력에서 체크인 → 체크아웃을 찍는다 ----------
 const fmtMD = (d) => d ? `${+d.slice(5, 7)}.${+d.slice(8, 10)} ${DOW[dow(d)]}` : '';
 function datesLabel(from, out) {
@@ -1230,8 +1321,9 @@ function mobileHome(rows, groups) {
         <div class="mf"><small>Destination</small><button type="button" class="mdates" id="mWhere" data-v="${esc(where.value)}">${esc(whereLabel(where.value))}</button></div>
         <div class="mf"><small>Dates</small><button type="button" class="mdates" id="mDates" data-from="${ui.mDatesSet ? esc(from) : ''}" data-out="${ui.mDatesSet && to ? esc(addDays(to, 1)) : ''}">${ui.mDatesSet ? datesLabel(from, to ? addDays(to, 1) : '') : '<span class="ph">날짜를 고르세요 · 안 고르면 전체 기간</span>'}</button></div>
         <div class="mf"><small>Benefits · 누르면 바로 적용</small><div class="mchips wrap">${M_CHIPS.map(c => `<button type="button" class="${q.includes(c) ? 'on' : ''}" data-mq="${c}" aria-pressed="${q.includes(c)}">${c}</button>`).join('')}${kwOnly(q) ? `<button type="button" class="on kw" data-mkw title="이 검색어 지우기">“${esc(kwOnly(q))}” ✕</button>` : ''}</div></div>
+        <div class="mf"><small>Brand</small><button type="button" class="mdates ${ui.brands.size ? 'set' : ''}" id="mBrand">${ui.brands.size ? esc(brandLabel(ui.brands)) : '<span class="ph">모든 브랜드 · 눌러서 고르기</span>'}</button></div>
         <button type="submit" class="mgo">호텔 ${groups.length.toLocaleString()}곳 보기</button>
-        <button type="button" class="mflt lnk">자세한 필터</button>
+        <button type="button" class="mflt lnk">자세한 필터${(ui.benefits.size < 4 || ui.chains.size < 4 || $('#fWeekend').checked || $('#fMine').checked) ? ' · 적용 중' : ''}</button>
       </form>
     </div>
     ${limitText() ? `<p class="limitNote m">${limitText()}</p>` : ''}
@@ -1283,7 +1375,8 @@ function viewRadar() {
       mApp.querySelector('#mWhere').addEventListener('change', () => applyM(false));
       mApp.querySelector('#mDates').addEventListener('change', () => applyM(false));
       mApp.querySelector('#mDates').addEventListener('click', (e) => openCal(e.currentTarget));
-      mApp.querySelector('.mflt').addEventListener('click', () => { document.body.classList.remove('app-m'); mApp.hidden = true; $('#filtersBox').open = true; $('#filtersBox').scrollIntoView({ behavior: 'smooth' }); });
+      mApp.querySelector('.mflt').addEventListener('click', openMFilter);
+      mApp.querySelector('#mBrand').addEventListener('click', () => openBrand(ui.brands, (set) => { ui.brands = set; syncFilterChips(); ui.mLimit = 24; viewRadar(); }));
       // 더 보기: 24곳씩 이어 붙인다 (화면을 다시 그리지 않아 스크롤 위치 유지)
       mApp.querySelector('#mMore')?.addEventListener('click', () => { const from = ui.mLimit; ui.mLimit += 24; mApp.querySelector('#mList').insertAdjacentHTML('beforeend', groups.slice(from, ui.mLimit).map((o, i) => mPhotoCard(o, from + i, { small: true })).join('')); const b = mApp.querySelector('#mMore'); if (groups.length > ui.mLimit) b.textContent = `호텔 ${(groups.length - ui.mLimit).toLocaleString()}곳 더 보기`; else b.remove(); }); } }
   $('#cards').hidden = !isCards || mob; $('#tableWrap').hidden = isCards;
@@ -1380,7 +1473,8 @@ document.addEventListener('click', (e) => {
 });
 document.querySelectorAll('#viewSeg button').forEach(b => b.addEventListener('click', () => { ui.view = b.dataset.view; try { localStorage.setItem('tr_view', ui.view); } catch (e) {} viewRadar(); }));
 $('#more button').addEventListener('click', () => { ui.limit += 300; ui.cardLimit += 24; viewRadar(); });
-$('#fReset').addEventListener('click', () => { $('#fFrom').value = ''; $('#fTo').value = ''; $('#fWhere').value = ''; $('#fText').value = ''; $('#fWeekend').checked = false; $('#fMine').checked = false; $('#fSort').value = hasProfile() ? 'tier' : 'cost'; ['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE'].forEach(b => ui.benefits.add(b)); ['accor', 'ihg', 'marriott', 'hilton'].forEach(c => ui.chains.add(c)); document.querySelectorAll('.chip[data-b],.chip[data-c]').forEach(c => c.classList.add('on')); fillWhere(); viewRadar(); });
+$('#fBrand')?.addEventListener('click', () => openBrand(ui.brands, (set) => { ui.brands = set; syncFilterChips(); viewRadar(); }));
+$('#fReset').addEventListener('click', () => { ui.brands = new Set(); syncFilterChips(); $('#fFrom').value = ''; $('#fTo').value = ''; $('#fWhere').value = ''; $('#fText').value = ''; $('#fWeekend').checked = false; $('#fMine').checked = false; $('#fSort').value = hasProfile() ? 'tier' : 'cost'; ['SUITE', 'FREE_NIGHT', 'POINTS', 'SALE'].forEach(b => ui.benefits.add(b)); ['accor', 'ihg', 'marriott', 'hilton'].forEach(c => ui.chains.add(c)); document.querySelectorAll('.chip[data-b],.chip[data-c]').forEach(c => c.classList.add('on')); fillWhere(); viewRadar(); });
 $('#moreTab')?.addEventListener('click', () => $('#dlgMore').showModal());
 $('#dlgMore')?.addEventListener('click', (e) => { if (e.target.tagName === 'A') $('#dlgMore').close(); });
 $('#moreProfile')?.addEventListener('click', (e) => { e.preventDefault(); $('#dlgMore').close(); $('#profileBtn').click(); });

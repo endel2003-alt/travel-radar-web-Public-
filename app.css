@@ -1064,3 +1064,34 @@ body.app-m #staleBar { padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8
 .ustat th { font-weight: 600; color: var(--muted); font-size: 12px; } .ustat td.z { color: rgba(255,255,255,.25); }
 .ugrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 24px; }
 .ugrid h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 6px; } .ugrid p { display: flex; justify-content: space-between; gap: 10px; margin: 0; padding: 5px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+
+/* 브랜드 시트 · 자세한 필터 시트 */
+.cb.all { background: #3a4566; } .cb.all::before { content: '✦'; font-family: var(--font); }
+.wrow .bl { display: flex; align-items: center; gap: 12px; }
+.wrow.on { background: rgba(212,168,75,.08); }
+.blist { overflow-y: auto; padding-bottom: 8px; }
+.bgrp { padding: 14px 20px 6px; font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: .04em; }
+.brow { display: flex; align-items: center; gap: 12px; padding: 11px 20px; cursor: pointer; }
+.brow input { width: 20px; height: 20px; accent-color: var(--gold); flex-shrink: 0; margin: 0; }
+.brow b { font-size: 15px; font-weight: 500; } .brow input:checked ~ b { font-weight: 700; }
+.brow small { margin-left: auto; color: var(--muted); font-size: 12.5px; }
+.brow .amb { font-size: 11px; padding: 1px 7px; border-radius: 6px; background: var(--free-soft); color: var(--free); font-weight: 700; }
+.bfoot { display: flex; align-items: center; gap: 14px; padding: 12px 18px calc(16px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); margin-top: auto; }
+.bfoot .lnk { flex: 0 0 auto; color: var(--muted); }
+.bfoot .mgo { flex: 1; margin: 0; }
+.bsheet .cbody, .mfsheet .cbody { overflow-y: auto; }
+@media (min-width: 721px) { dialog.sheet.bsheet, dialog.sheet.mfsheet { margin: auto; width: 460px; max-width: calc(100% - 40px); max-height: 80vh; border-radius: 20px; } }
+.mfbody { padding: 4px 0 8px; }
+.mfg { padding: 14px 20px; border-bottom: 1px solid var(--line); } .mfg:last-child { border-bottom: 0; }
+.mft { font-size: 12.5px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+.mfg .mchips button { display: inline-flex; align-items: center; gap: 6px; }
+.mfg .mdates { width: 100%; text-align: left; display: flex; justify-content: space-between; }
+.mfsw { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; cursor: pointer; }
+.mfsw b { display: block; font-size: 15px; font-weight: 600; } .mfsw small { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.mfsw input { width: 22px; height: 22px; accent-color: var(--gold); }
+.mfsort { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; font-size: 14px; }
+.mfsort label { display: flex; align-items: center; gap: 7px; cursor: pointer; } .mfsort input { accent-color: var(--gold); }
+#mBrand.set { color: var(--fg); font-weight: 600; }
+#fBrand.on { background: var(--gold); color: #10172a; border-color: var(--gold); }
+.mfsort label { justify-content: flex-start; text-align: left; }
+.mfg .mchips button.on { background: var(--gold); border-color: var(--gold); color: #10172a; font-weight: 700; }
