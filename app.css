@@ -1096,3 +1096,4 @@ body.app-m #staleBar { padding: calc(8px + env(safe-area-inset-top, 0px)) 14px 8
 .mfsort label { justify-content: flex-start; text-align: left; }
 .mfg .mchips button.on { background: var(--gold); border-color: var(--gold); color: #10172a; font-weight: 700; }
 .mlab { display: flow-root; }   /* 오른쪽 "지도로 보기"(float)가 줄바꿈되면 아래 목록이 그 옆으로 밀려 좁아지던 문제 */
+.mlab > a[style*="float"] { float: none !important; display: block; width: max-content; margin: 8px 0 0 auto; }   /* 떠 있는 링크 대신 자기 줄 오른쪽 — 목록이 옆으로 밀릴 수 없음 */
