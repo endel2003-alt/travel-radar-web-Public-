@@ -106,7 +106,7 @@ const S = window.TR_SERVER, BASE = S.url.replace(/\/$/, ''), REST = BASE + '/res
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
-const ST = { draft: ['승인 대기', 'warn'], approved: ['승인됨 · 예약', 'ok'], posting: ['올리는 중', 'gold'], posted: ['게시 완료', 'gold'], failed: ['실패', 'bad'], rejected: ['반려', ''] };
+const ST = { draft: ['승인 대기', 'warn'], approved: ['승인됨 · 예약', 'ok'], posting: ['올리는 중', 'gold'], processing: ['영상 처리 중', 'gold'], posted: ['게시 완료', 'gold'], failed: ['실패', 'bad'], rejected: ['반려', ''] };
 const CREW = { bell: '벨', dome: '돔이', pillow: '포근이', case: '짐짐', key: '키키' };
 const STALE_DAYS = 3;
 let AUTH = null, POSTS = [], STATS = [], DAILY = [], CONF = null, TAB = 'queue';
@@ -168,7 +168,7 @@ function render() {
   const days = []; for (let i = 0; i < 14; i++) days.push(ymd(new Date(Date.now() + 9 * 36e5 + i * 864e5)));
   const byDay = {}; POSTS.forEach(p => { const k = ymd(kst(p.slot_at)); (byDay[k] = byDay[k] || []).push(p); });
   const strip = days.map((d, i) => { const ps = (byDay[d] || []).filter(p => p.status !== 'rejected'); const st = ps.length ? (ps.some(p => p.status === 'failed') ? 'failed' : ps.some(p => p.status === 'draft') ? 'draft' : ps.some(p => p.status === 'posted') ? 'posted' : 'approved') : ''; const dt = new Date(d + 'T00:00:00Z'); return `<div class="${i === 0 ? 'today' : ''}" title="${ps.map(p => esc(p.title)).join(', ')}"><b>${dt.getUTCDate()}</b>${DOW[dt.getUTCDay()]}<i class="${st}"></i></div>`; }).join('');
-  const queue = POSTS.filter(p => ['draft', 'approved', 'posting', 'failed'].includes(p.status));
+  const queue = POSTS.filter(p => ['draft', 'approved', 'posting', 'processing', 'failed'].includes(p.status));
   const posted = POSTS.filter(p => p.status === 'posted').reverse();
   const rejected = POSTS.filter(p => p.status === 'rejected');
   const tabs = [['queue', `대기열 ${queue.length}`], ['posted', `게시됨 ${posted.length}`], ['perf', '성과'], ['rejected', `반려 ${rejected.length}`]];
@@ -199,13 +199,14 @@ function card(p) {
   if (p.status === 'approved') action = `<div class="okbox">${new Date(p.slot_at) > Date.now() ? `${whenTxt(p.slot_at)}에 자동으로 올라가요${CONF?.connected ? '' : ' (연결 후)'}.` : '곧 올라가요.'}</div><div class="btns"><button class="btn" data-act="unapprove">승인 취소</button>${CONF?.connected ? '<button class="btn go" data-act="now">지금 바로 올리기</button>' : ''}</div>`;
   if (p.status === 'failed') action = `<div class="errbox">올리지 못했어요 (${p.attempts}번 시도): ${esc(p.error || '알 수 없는 오류')}</div><div class="btns"><button class="btn pri" data-act="retry">다시 시도</button><button class="btn" data-act="save">저장</button><button class="btn ghost" data-act="reject">반려</button></div>`;
   if (p.status === 'posting') action = `<div class="okbox">인스타그램에 올리는 중이에요…</div>`;
-  if (p.status === 'posted') action = `${p.permalink ? `<a class="btn" style="text-align:center;text-decoration:none" href="${esc(p.permalink)}" target="_blank" rel="noopener">인스타에서 보기</a>` : ''}<div class="stats"><div><b>${fmtN(st?.reach)}</b><span>도달</span></div><div><b>${fmtN(st?.likes)}</b><span>좋아요</span></div><div><b>${fmtN(st?.comments)}</b><span>댓글</span></div><div><b>${fmtN(st?.saves)}</b><span>저장</span></div><div><b>${fmtN(st?.shares)}</b><span>공유</span></div></div><p class="meta">${st ? `성과 ${new Date(st.fetched_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 기준` : '성과는 연결 후 하루 한 번 모여요'}</p>`;
+  if (p.status === 'processing') action = `<div class="okbox">인스타그램이 영상을 처리하고 있어요. 보통 10~20분 안에 올라가요.</div>`;
+  if (p.status === 'posted') action = `${p.permalink ? `<a class="btn" style="text-align:center;text-decoration:none" href="${esc(p.permalink)}" target="_blank" rel="noopener">인스타에서 보기</a>` : ''}<div class="stats"><div><b>${fmtN(st?.reach)}</b><span>도달</span></div><div><b>${fmtN(st?.likes)}</b><span>좋아요</span></div><div><b>${fmtN(st?.comments)}</b><span>댓글</span></div><div><b>${fmtN(st?.saves)}</b><span>저장</span></div><div><b>${fmtN(st?.shares)}</b><span>공유</span></div></div>${p.story_media_id ? '<p class="meta">스토리도 올라갔어요</p>' : p.story_error ? `<p class="meta" style="color:var(--bad)">스토리는 올리지 못했어요: ${esc(p.story_error)}</p>` : ''}<p class="meta">${st ? `성과 ${new Date(st.fetched_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 기준` : '성과는 연결 후 하루 한 번 모여요'}</p>`;
   if (p.status === 'rejected') action = `<div class="btns"><button class="btn" data-act="restore">다시 대기열로</button></div>`;
   return `<article class="post st-${p.status}" data-id="${p.id}">
     <div class="phead"><span class="when">${whenTxt(p.slot_at)}</span><span class="dd">${dday(p.slot_at)}</span><span class="sp"></span>${p.crew ? `<span class="pill">${esc(CREW[p.crew] || p.crew)}</span>` : ''}<span class="pill ${sc}">${sl}</span></div>
-    <div class="imgs ${imgs.length === 1 ? 'one' : ''}">${imgs.map((u, i) => `<img loading="lazy" src="${esc(u)}" alt="${i + 1}장">`).join('')}</div>
+    <div class="imgs ${imgs.length === 1 && !p.story_image ? 'one' : ''}">${p.media_type === 'REELS' && p.video_url ? `<video src="${esc(p.video_url)}" poster="${esc(p.cover_url || '')}" controls playsinline preload="none" style="width:62%;flex:none;aspect-ratio:9/16;object-fit:cover;border-radius:10px;scroll-snap-align:start;background:#000"></video>` : imgs.map((u, i) => `<img loading="lazy" src="${esc(u)}" alt="${i + 1}장">`).join('')}${p.story_image ? `<figure style="flex:none;width:42%;margin:0;scroll-snap-align:start;position:relative"><img loading="lazy" src="${esc(p.story_image)}" alt="스토리" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:10px"><figcaption class="pill gold" style="position:absolute;left:8px;top:8px">스토리</figcaption></figure>` : ''}</div>
     <div class="pbody">
-      <div><div class="ttl">${esc(p.title)}</div><div class="meta">${esc(p.series || '')} · ${imgs.length}장${p.data_asof ? ` · 숫자 기준일 ${+p.data_asof.slice(5, 7)}/${+p.data_asof.slice(8)}` : ''}${p.note ? ` · ${esc(p.note)}` : ''}</div></div>
+      <div><div class="ttl">${esc(p.title)}</div><div class="meta">${esc(p.series || '')} · ${p.media_type === 'REELS' ? '릴스 영상' : imgs.length + '장'}${p.story_image ? ' + 스토리' : ''}${p.data_asof ? ` · 숫자 기준일 ${+p.data_asof.slice(5, 7)}/${+p.data_asof.slice(8)}` : ''}${p.note ? ` · ${esc(p.note)}` : ''}</div></div>
       ${editable && p.data_asof && sd > STALE_DAYS ? `<div class="warnbox">숫자 기준일에서 게시일까지 ${sd}일이에요. 요금·특가는 그사이 바뀌었을 수 있어요.<label><input type="checkbox" data-f="checked" ${p.checked ? 'checked' : ''}> 숫자 확인했어요 (또는 최신 숫자로 바꿨어요)</label></div>` : ''}
       ${editable ? `<label class="f">게시 시간<input type="datetime-local" data-f="slot" value="${toLocalInput(p.slot_at)}"></label>
       <label class="f">캡션<textarea data-f="caption">${esc(p.caption)}</textarea></label><div class="cnt" data-cnt></div>` : `<details><summary class="meta" style="cursor:pointer">캡션 보기</summary><p style="white-space:pre-wrap;margin-top:8px;font-size:14px">${esc(p.caption)}</p></details>`}
@@ -230,7 +231,7 @@ function bind(el) {
       if (!merged.caption.trim()) problems.push('캡션이 비어 있어요');
       if (merged.caption.length > 2200) problems.push('캡션이 2,200자를 넘어요');
       if (tags(merged.caption) > 30) problems.push('해시태그가 30개를 넘어요');
-      const n = (merged.images || []).length; if (n < 1 || n > 10) problems.push('이미지는 1~10장이어야 해요');
+      const n = (merged.images || []).length; if (merged.media_type === 'REELS') { if (!merged.video_url) problems.push('영상 주소가 없어요'); } else if (n < 1 || n > 10) problems.push('이미지는 1~10장이어야 해요');
       if (needsCheck(merged)) problems.push("숫자 기준일이 오래됐어요. '숫자 확인했어요'를 먼저 눌러 주세요");
       if (new Date(merged.slot_at) < Date.now() - 6e4) problems.push('게시 시간이 이미 지났어요. 시간을 바꾸거나 승인 후 \'지금 바로 올리기\'를 써 주세요');
       if (problems.length) { msg.textContent = problems.join(' · '); return; }
