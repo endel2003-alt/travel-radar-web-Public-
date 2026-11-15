@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#10172a">
+<title>TR 인스타 스튜디오</title>
+<style>
+:root { --bg:#10172a; --card:#172038; --fg:#ece7da; --muted:#a39f93; --faint:#6f7284; --line:#2a3450; --soft:#1c2640; --gold:#d4a84b; --gold2:#f0cf7d; --ok:#7fc2ad; --okbg:#1b3330; --warn:#e9a46a; --warnbg:#3a2a1c; --bad:#e58b7a; --badbg:#3a2026;
+  --font:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--fg); font-family:var(--font); font-size:15px; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere; -webkit-text-size-adjust:100%; }
+button, input, textarea { font:inherit; color:inherit; }
+button { cursor:pointer; }
+.wrap { max-width:1080px; margin:0 auto; padding:16px 16px 80px; }
+header.top { display:flex; align-items:center; gap:10px; padding:6px 0 14px; }
+header.top b { font-size:17px; letter-spacing:.02em; white-space:nowrap; }
+header.top .btn { white-space:nowrap; }
+header.top .sp { flex:1; }
+.pill { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); white-space:nowrap; }
+.pill.ok { color:var(--ok); background:var(--okbg); border-color:transparent; }
+.pill.warn { color:var(--warn); background:var(--warnbg); border-color:transparent; }
+.pill.bad { color:var(--bad); background:var(--badbg); border-color:transparent; }
+.pill.gold { color:#10172a; background:var(--gold); border-color:transparent; font-weight:700; }
+.dot { width:8px; height:8px; border-radius:50%; background:currentColor; }
+.conn { background:var(--card); border-radius:16px; padding:14px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:12px; }
+.conn p { color:var(--muted); font-size:13.5px; margin-top:2px; }
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+.kpi { background:var(--card); border-radius:14px; padding:12px 14px; }
+.kpi b { display:block; font-size:24px; font-weight:700; line-height:1.2; }
+.kpi span { color:var(--muted); font-size:12.5px; }
+.kpi.hl b { color:var(--gold2); }
+.strip { display:grid; grid-template-columns:repeat(14,minmax(0,1fr)); gap:4px; margin-bottom:14px; }
+.strip div { background:var(--soft); border-radius:8px; padding:6px 0 7px; text-align:center; font-size:11.5px; color:var(--faint); }
+.strip div b { display:block; font-size:13px; color:var(--muted); font-weight:600; }
+.strip div.today { outline:1.5px solid var(--gold); }
+.strip i { display:block; width:7px; height:7px; border-radius:50%; margin:4px auto 0; background:transparent; }
+.strip i.draft { background:var(--warn); } .strip i.approved { background:var(--ok); } .strip i.posted { background:var(--gold); } .strip i.failed { background:var(--bad); }
+.tabs { display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+.tabs button { background:none; border:1px solid var(--line); border-radius:999px; padding:7px 14px; font-size:14px; color:var(--muted); white-space:nowrap; }
+.tabs button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); font-weight:700; }
+.list { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:12px; }
+.post { background:var(--card); border-radius:18px; overflow:hidden; display:flex; flex-direction:column; }
+.post.st-approved { box-shadow:inset 0 0 0 2px var(--ok); }
+.post.st-failed { box-shadow:inset 0 0 0 2px var(--bad); }
+.phead { display:flex; align-items:center; gap:8px; padding:12px 14px 10px; flex-wrap:wrap; }
+.phead .when { font-weight:700; font-size:15px; }
+.phead .dd { color:var(--muted); font-size:13px; }
+.phead .sp { flex:1; }
+.imgs { display:flex; gap:6px; overflow-x:auto; scroll-snap-type:x mandatory; padding:0 14px; scrollbar-width:thin; }
+.imgs img { width:78%; flex:none; aspect-ratio:4/5; object-fit:cover; border-radius:10px; scroll-snap-align:start; background:var(--soft); }
+.imgs.one img { width:100%; }
+.pbody { padding:12px 14px 14px; display:flex; flex-direction:column; gap:10px; }
+.ttl { font-size:16px; font-weight:700; }
+.meta { color:var(--muted); font-size:13px; }
+label.f { display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:var(--muted); }
+textarea, input[type=datetime-local] { background:var(--soft); border:1px solid var(--line); border-radius:10px; padding:10px 12px; font-size:14.5px; color:var(--fg); width:100%; }
+textarea { min-height:150px; resize:vertical; line-height:1.55; }
+.cnt { font-size:12px; color:var(--faint); text-align:right; margin-top:-4px; }
+.cnt.over { color:var(--bad); }
+.warnbox { background:var(--warnbg); color:var(--warn); border-radius:10px; padding:10px 12px; font-size:13.5px; }
+.warnbox label { display:flex; gap:8px; align-items:center; margin-top:6px; color:var(--fg); }
+.errbox { background:var(--badbg); color:var(--bad); border-radius:10px; padding:10px 12px; font-size:13px; }
+.okbox { background:var(--okbg); color:var(--ok); border-radius:10px; padding:10px 12px; font-size:13.5px; }
+.btns { display:flex; gap:8px; flex-wrap:wrap; }
+.btn { border:1px solid var(--line); background:none; border-radius:12px; padding:10px 14px; font-size:14.5px; }
+.btn.pri { background:var(--gold); border-color:var(--gold); color:#10172a; font-weight:700; flex:1; }
+.btn.go { background:var(--ok); border-color:var(--ok); color:#10172a; font-weight:700; flex:1; }
+.btn.ghost { color:var(--muted); }
+.btn:disabled { opacity:.45; cursor:default; }
+.msg { font-size:13px; color:var(--muted); min-height:1em; }
+.stats { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+.stats div { background:var(--soft); border-radius:10px; padding:8px 4px; text-align:center; }
+.stats b { display:block; font-size:16px; }
+.stats span { font-size:11.5px; color:var(--muted); }
+.empty { color:var(--muted); background:var(--card); border-radius:16px; padding:28px 16px; text-align:center; }
+.gatebox { max-width:440px; margin:12vh auto 0; background:var(--card); border-radius:20px; padding:28px 22px; text-align:center; }
+.gatebox p { color:var(--muted); margin:10px 0 18px; }
+.gatebox a { display:inline-block; background:var(--gold); color:#10172a; font-weight:700; border-radius:12px; padding:11px 18px; text-decoration:none; }
+table.perf { width:100%; border-collapse:collapse; font-size:13.5px; background:var(--card); border-radius:14px; overflow:hidden; }
+table.perf th, table.perf td { padding:10px 10px; text-align:right; border-bottom:1px solid var(--line); white-space:nowrap; }
+table.perf th:first-child, table.perf td:first-child { text-align:left; white-space:normal; }
+table.perf th { color:var(--muted); font-weight:500; font-size:12.5px; }
+.tw { overflow-x:auto; border-radius:14px; }
+.spark { background:var(--card); border-radius:14px; padding:14px 16px; margin-bottom:12px; }
+.spark svg { width:100%; height:80px; display:block; margin-top:8px; }
+.guide { background:var(--card); border-radius:16px; padding:16px; margin-top:14px; font-size:14px; color:var(--muted); }
+.guide b { color:var(--fg); }
+.guide ol { padding-left:20px; margin-top:8px; display:grid; gap:6px; }
+a { color:var(--gold2); }
+@media (max-width:640px) {
+  .kpis { grid-template-columns:repeat(2,1fr); }
+  .strip { grid-template-columns:repeat(7,minmax(0,1fr)); }
+  .list { grid-template-columns:1fr; }
+  .stats b { font-size:15px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="meta" style="padding:40px 0;text-align:center">불러오는 중…</p></div>
+<script src="config.js"></script>
+<script>
+(() => {
+const S = window.TR_SERVER, BASE = S.url.replace(/\/$/, ''), REST = BASE + '/rest/v1';
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const DOW = ['일', '월', '화', '수', '목', '금', '토'];
+const ST = { draft: ['승인 대기', 'warn'], approved: ['승인됨 · 예약', 'ok'], posting: ['올리는 중', 'gold'], posted: ['게시 완료', 'gold'], failed: ['실패', 'bad'], rejected: ['반려', ''] };
+const CREW = { bell: '벨', dome: '돔이', pillow: '포근이', case: '짐짐', key: '키키' };
+const STALE_DAYS = 3;
+let AUTH = null, POSTS = [], STATS = [], DAILY = [], CONF = null, TAB = 'queue';
+
+// ---------- 로그인: 사이트(Travel Radar)에서 로그인한 세션을 같이 쓴다 ----------
+async function auth() {
+  try { AUTH = JSON.parse(localStorage.getItem('tr_auth') || 'null'); } catch (e) {}
+  if (!AUTH) return false;
+  if ((AUTH.expires_at || 0) - Date.now() < 5 * 60 * 1000) {
+    try {
+      const r = await fetch(`${BASE}/auth/v1/token?grant_type=refresh_token`, { method: 'POST', headers: { apikey: S.anon, 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: AUTH.refresh_token }) });
+      if (!r.ok) throw 0; const j = await r.json();
+      AUTH = { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (j.expires_in || 3600) * 1000, email: j.user?.email || AUTH.email, user_id: j.user?.id || AUTH.user_id };
+      localStorage.setItem('tr_auth', JSON.stringify(AUTH)); localStorage.setItem('tr_token', AUTH.access_token);
+    } catch (e) { return false; }
+  }
+  return true;
+}
+const H = (extra) => Object.assign({ apikey: S.anon, Authorization: `Bearer ${AUTH.access_token}`, 'Content-Type': 'application/json' }, extra || {});
+async function get(path) { const r = await fetch(REST + path, { headers: H() }); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+async function patch(id, body) {
+  const r = await fetch(`${REST}/tr_ig_posts?id=eq.${id}`, { method: 'PATCH', headers: H({ Prefer: 'return=representation' }), body: JSON.stringify(body) });
+  if (!r.ok) throw new Error('HTTP ' + r.status); const [row] = await r.json(); if (!row) throw new Error('권한이 없어요'); return row;
+}
+
+// ---------- 날짜 ----------
+const kst = (iso) => new Date(new Date(iso).getTime() + 9 * 36e5);          // 표시용 (UTC 필드에 KST 시각)
+const ymd = (d) => d.toISOString().slice(0, 10);
+const todayK = () => ymd(new Date(Date.now() + 9 * 36e5));
+const whenTxt = (iso) => { const d = kst(iso); return `${d.getUTCMonth() + 1}/${d.getUTCDate()} (${DOW[d.getUTCDay()]}) ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`; };
+const dday = (iso) => { const a = new Date(todayK() + 'T00:00:00Z'), b = new Date(ymd(kst(iso)) + 'T00:00:00Z'); const n = Math.round((b - a) / 864e5); return n === 0 ? '오늘' : n > 0 ? `D-${n}` : `${-n}일 전`; };
+const toLocalInput = (iso) => kst(iso).toISOString().slice(0, 16);
+const fromLocalInput = (v) => new Date(v + ':00+09:00').toISOString();
+const staleDays = (p) => p.data_asof ? Math.round((new Date(ymd(kst(p.slot_at)) + 'T00:00:00Z') - new Date(p.data_asof + 'T00:00:00Z')) / 864e5) : 0;
+const needsCheck = (p) => p.data_asof && staleDays(p) > STALE_DAYS && !p.checked;
+const tags = (t) => (t.match(/#[^\s#]+/g) || []).length;
+const fmtN = (n) => n == null ? '–' : Number(n).toLocaleString('ko-KR');
+
+// ---------- 불러오기 ----------
+async function load() {
+  const [p, s, d, c] = await Promise.all([
+    get('/tr_ig_posts?select=*&order=slot_at.asc'),
+    get('/tr_ig_stats?select=*&order=day.desc').catch(() => []),
+    get('/tr_ig_daily?select=*&order=day.asc').catch(() => []),
+    get('/tr_ig_config?select=*').catch(() => [])
+  ]);
+  POSTS = p; STATS = s; DAILY = d; CONF = c[0] || null;
+}
+const lastStat = (id) => STATS.find(x => x.post_id === id);
+
+// ---------- 그리기 ----------
+function render() {
+  const app = $('#app');
+  const cnt = (st) => POSTS.filter(p => p.status === st).length;
+  const next = POSTS.filter(p => p.status === 'approved' && new Date(p.slot_at) > Date.now())[0];
+  const conn = CONF?.connected
+    ? `<span class="pill ok"><span class="dot"></span>자동 게시 연결됨${CONF.username ? ' · @' + esc(CONF.username) : ''}</span>`
+    : `<span class="pill warn"><span class="dot"></span>자동 게시 미연결</span>`;
+  const days = []; for (let i = 0; i < 14; i++) days.push(ymd(new Date(Date.now() + 9 * 36e5 + i * 864e5)));
+  const byDay = {}; POSTS.forEach(p => { const k = ymd(kst(p.slot_at)); (byDay[k] = byDay[k] || []).push(p); });
+  const strip = days.map((d, i) => { const ps = (byDay[d] || []).filter(p => p.status !== 'rejected'); const st = ps.length ? (ps.some(p => p.status === 'failed') ? 'failed' : ps.some(p => p.status === 'draft') ? 'draft' : ps.some(p => p.status === 'posted') ? 'posted' : 'approved') : ''; const dt = new Date(d + 'T00:00:00Z'); return `<div class="${i === 0 ? 'today' : ''}" title="${ps.map(p => esc(p.title)).join(', ')}"><b>${dt.getUTCDate()}</b>${DOW[dt.getUTCDay()]}<i class="${st}"></i></div>`; }).join('');
+  const queue = POSTS.filter(p => ['draft', 'approved', 'posting', 'failed'].includes(p.status));
+  const posted = POSTS.filter(p => p.status === 'posted').reverse();
+  const rejected = POSTS.filter(p => p.status === 'rejected');
+  const tabs = [['queue', `대기열 ${queue.length}`], ['posted', `게시됨 ${posted.length}`], ['perf', '성과'], ['rejected', `반려 ${rejected.length}`]];
+  let body = '';
+  if (TAB === 'queue') body = queue.length ? `<div class="list">${queue.map(card).join('')}</div>` : `<div class="empty">대기 중인 포스트가 없어요.</div>`;
+  if (TAB === 'posted') body = posted.length ? `<div class="list">${posted.map(card).join('')}</div>` : `<div class="empty">아직 게시된 포스트가 없어요. 승인한 포스트는 예약 시간에 자동으로 올라가요.</div>`;
+  if (TAB === 'rejected') body = rejected.length ? `<div class="list">${rejected.map(card).join('')}</div>` : `<div class="empty">반려한 포스트가 없어요.</div>`;
+  if (TAB === 'perf') body = perf();
+  app.innerHTML = `<header class="top"><b>TR 인스타 스튜디오</b><span class="sp"></span>${conn}<button class="btn ghost" id="reload" style="padding:6px 10px">새로고침</button></header>
+    ${CONF?.connected ? '' : `<div class="conn"><div><b>지금은 '승인'까지만 돼요</b><p>인스타그램 연결(토큰 설정)이 끝나면 승인한 포스트가 예약 시간에 자동으로 올라가요. 그 전까지는 이 화면에서 검토·승인하고, 인스타 앱 예약 기능으로 올려도 돼요.${CONF?.last_error ? ` · 최근 상태: ${esc(CONF.last_error)}` : ''}</p></div></div>`}
+    <div class="kpis"><div class="kpi hl"><b>${cnt('draft')}</b><span>승인 대기</span></div><div class="kpi"><b>${cnt('approved')}</b><span>승인됨 · 예약</span></div><div class="kpi"><b>${cnt('posted')}</b><span>게시 완료</span></div><div class="kpi"><b>${next ? dday(next.slot_at) : '–'}</b><span>${next ? '다음 게시 ' + whenTxt(next.slot_at) : '다음 게시 없음'}</span></div></div>
+    <div class="strip">${strip}</div>
+    <nav class="tabs">${tabs.map(([k, l]) => `<button data-tab="${k}" class="${TAB === k ? 'on' : ''}">${l}</button>`).join('')}</nav>
+    ${body}
+    <div class="guide"><b>이렇게 써요</b><ol><li>카드를 넘겨 이미지와 캡션을 확인해요. 캡션·시간은 바로 고칠 수 있어요.</li><li>숫자 기준일이 오래된 포스트는 <b>'숫자 확인했어요'</b>를 눌러야 승인돼요.</li><li><b>승인</b>하면 예약 시간에 자동으로 올라가요. 마음이 바뀌면 그 전까지 '승인 취소'.</li><li>게시 후 성과(도달·좋아요·저장)는 하루 한 번 자동으로 모여요.</li></ol></div>`;
+  app.querySelectorAll('[data-tab]').forEach(b => b.onclick = () => { TAB = b.dataset.tab; render(); });
+  $('#reload').onclick = refresh;
+  app.querySelectorAll('.post').forEach(bind);
+}
+function card(p) {
+  const [sl, sc] = ST[p.status] || [p.status, ''];
+  const imgs = Array.isArray(p.images) ? p.images : [];
+  const editable = ['draft', 'failed'].includes(p.status);
+  const sd = staleDays(p);
+  const st = lastStat(p.id);
+  let action = '';
+  if (p.status === 'draft') action = `<div class="btns"><button class="btn pri" data-act="approve">승인</button><button class="btn" data-act="save">저장</button><button class="btn ghost" data-act="reject">반려</button></div>`;
+  if (p.status === 'approved') action = `<div class="okbox">${new Date(p.slot_at) > Date.now() ? `${whenTxt(p.slot_at)}에 자동으로 올라가요${CONF?.connected ? '' : ' (연결 후)'}.` : '곧 올라가요.'}</div><div class="btns"><button class="btn" data-act="unapprove">승인 취소</button>${CONF?.connected ? '<button class="btn go" data-act="now">지금 바로 올리기</button>' : ''}</div>`;
+  if (p.status === 'failed') action = `<div class="errbox">올리지 못했어요 (${p.attempts}번 시도): ${esc(p.error || '알 수 없는 오류')}</div><div class="btns"><button class="btn pri" data-act="retry">다시 시도</button><button class="btn" data-act="save">저장</button><button class="btn ghost" data-act="reject">반려</button></div>`;
+  if (p.status === 'posting') action = `<div class="okbox">인스타그램에 올리는 중이에요…</div>`;
+  if (p.status === 'posted') action = `${p.permalink ? `<a class="btn" style="text-align:center;text-decoration:none" href="${esc(p.permalink)}" target="_blank" rel="noopener">인스타에서 보기</a>` : ''}<div class="stats"><div><b>${fmtN(st?.reach)}</b><span>도달</span></div><div><b>${fmtN(st?.likes)}</b><span>좋아요</span></div><div><b>${fmtN(st?.comments)}</b><span>댓글</span></div><div><b>${fmtN(st?.saves)}</b><span>저장</span></div><div><b>${fmtN(st?.shares)}</b><span>공유</span></div></div><p class="meta">${st ? `성과 ${new Date(st.fetched_at).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 기준` : '성과는 연결 후 하루 한 번 모여요'}</p>`;
+  if (p.status === 'rejected') action = `<div class="btns"><button class="btn" data-act="restore">다시 대기열로</button></div>`;
+  return `<article class="post st-${p.status}" data-id="${p.id}">
+    <div class="phead"><span class="when">${whenTxt(p.slot_at)}</span><span class="dd">${dday(p.slot_at)}</span><span class="sp"></span>${p.crew ? `<span class="pill">${esc(CREW[p.crew] || p.crew)}</span>` : ''}<span class="pill ${sc}">${sl}</span></div>
+    <div class="imgs ${imgs.length === 1 ? 'one' : ''}">${imgs.map((u, i) => `<img loading="lazy" src="${esc(u)}" alt="${i + 1}장">`).join('')}</div>
+    <div class="pbody">
+      <div><div class="ttl">${esc(p.title)}</div><div class="meta">${esc(p.series || '')} · ${imgs.length}장${p.data_asof ? ` · 숫자 기준일 ${+p.data_asof.slice(5, 7)}/${+p.data_asof.slice(8)}` : ''}${p.note ? ` · ${esc(p.note)}` : ''}</div></div>
+      ${editable && p.data_asof && sd > STALE_DAYS ? `<div class="warnbox">숫자 기준일에서 게시일까지 ${sd}일이에요. 요금·특가는 그사이 바뀌었을 수 있어요.<label><input type="checkbox" data-f="checked" ${p.checked ? 'checked' : ''}> 숫자 확인했어요 (또는 최신 숫자로 바꿨어요)</label></div>` : ''}
+      ${editable ? `<label class="f">게시 시간<input type="datetime-local" data-f="slot" value="${toLocalInput(p.slot_at)}"></label>
+      <label class="f">캡션<textarea data-f="caption">${esc(p.caption)}</textarea></label><div class="cnt" data-cnt></div>` : `<details><summary class="meta" style="cursor:pointer">캡션 보기</summary><p style="white-space:pre-wrap;margin-top:8px;font-size:14px">${esc(p.caption)}</p></details>`}
+      ${action}<p class="msg" data-msg></p>
+    </div></article>`;
+}
+function bind(el) {
+  const id = +el.dataset.id; const p = POSTS.find(x => x.id === id); if (!p) return;
+  const ta = el.querySelector('[data-f=caption]'), cntEl = el.querySelector('[data-cnt]'), msg = el.querySelector('[data-msg]');
+  const upd = () => { if (!ta) return; const n = ta.value.length, t = tags(ta.value); cntEl.textContent = `${n.toLocaleString()} / 2,200자 · 해시태그 ${t} / 30`; cntEl.classList.toggle('over', n > 2200 || t > 30); };
+  ta?.addEventListener('input', upd); upd();
+  const fields = () => { const o = {}; if (ta) o.caption = ta.value; const s = el.querySelector('[data-f=slot]'); if (s?.value) o.slot_at = fromLocalInput(s.value); const c = el.querySelector('[data-f=checked]'); if (c) o.checked = c.checked; return o; };
+  const run = async (body, okText) => { el.querySelectorAll('button').forEach(b => b.disabled = true); msg.textContent = '저장 중…'; try { const row = await patch(id, body); Object.assign(p, row); msg.textContent = okText; setTimeout(render, 500); } catch (e) { msg.textContent = '실패: ' + e.message; el.querySelectorAll('button').forEach(b => b.disabled = false); } };
+  el.querySelectorAll('[data-act]').forEach(b => b.onclick = () => {
+    const a = b.dataset.act, f = fields();
+    if (a === 'save') return run(f, '저장했어요');
+    if (a === 'reject') return run(Object.assign(f, { status: 'rejected' }), '반려했어요');
+    if (a === 'restore') return run({ status: 'draft' }, '대기열로 돌렸어요');
+    if (a === 'unapprove') return run({ status: 'draft', approved_at: null }, '승인을 취소했어요');
+    if (a === 'approve' || a === 'retry') {
+      const merged = Object.assign({}, p, f); const problems = [];
+      if (!merged.caption.trim()) problems.push('캡션이 비어 있어요');
+      if (merged.caption.length > 2200) problems.push('캡션이 2,200자를 넘어요');
+      if (tags(merged.caption) > 30) problems.push('해시태그가 30개를 넘어요');
+      const n = (merged.images || []).length; if (n < 1 || n > 10) problems.push('이미지는 1~10장이어야 해요');
+      if (needsCheck(merged)) problems.push("숫자 기준일이 오래됐어요. '숫자 확인했어요'를 먼저 눌러 주세요");
+      if (new Date(merged.slot_at) < Date.now() - 6e4) problems.push('게시 시간이 이미 지났어요. 시간을 바꾸거나 승인 후 \'지금 바로 올리기\'를 써 주세요');
+      if (problems.length) { msg.textContent = problems.join(' · '); return; }
+      return run(Object.assign(f, { status: 'approved', approved_at: new Date().toISOString(), error: null, attempts: a === 'retry' ? 0 : p.attempts }), '승인했어요');
+    }
+    if (a === 'now') { if (!confirm('지금 바로 인스타그램에 올릴까요?')) return; return run({ slot_at: new Date().toISOString() }, '몇 분 안에 올라가요'); }
+  });
+}
+function perf() {
+  const posted = POSTS.filter(p => p.status === 'posted');
+  if (!posted.length && !DAILY.length) return `<div class="empty">게시한 포스트가 생기면 여기서 도달·좋아요·저장을 비교해 볼 수 있어요.</div>`;
+  const rows = posted.map(p => ({ p, s: lastStat(p.id) || {} }));
+  const sum = (k) => rows.reduce((a, r) => a + (r.s[k] || 0), 0);
+  let spark = '';
+  if (DAILY.length > 1) { const v = DAILY.map(d => d.followers || 0), mn = Math.min(...v), mx = Math.max(...v), w = 300, h = 70; const pts = v.map((x, i) => `${(i / (v.length - 1)) * w},${h - (mx === mn ? h / 2 : ((x - mn) / (mx - mn)) * (h - 8) + 4)}`).join(' ');
+    spark = `<div class="spark"><b>팔로워 ${fmtN(v[v.length - 1])}</b> <span class="meta">${v.length}일 · ${v[v.length - 1] - v[0] >= 0 ? '+' : ''}${fmtN(v[v.length - 1] - v[0])}</span><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="#d4a84b" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg></div>`; }
+  return `${spark}<div class="kpis"><div class="kpi"><b>${fmtN(sum('reach'))}</b><span>총 도달</span></div><div class="kpi"><b>${fmtN(sum('likes'))}</b><span>좋아요</span></div><div class="kpi"><b>${fmtN(sum('saves'))}</b><span>저장</span></div><div class="kpi"><b>${fmtN(sum('shares'))}</b><span>공유</span></div></div>
+    <div class="tw"><table class="perf"><thead><tr><th>포스트</th><th>도달</th><th>좋아요</th><th>댓글</th><th>저장</th><th>공유</th><th>저장률</th></tr></thead><tbody>${rows.sort((a, b) => (b.s.reach || 0) - (a.s.reach || 0)).map(({ p, s }) => `<tr><td>${esc(p.title)}<div class="meta">${whenTxt(p.slot_at)} · ${esc(CREW[p.crew] || '')}</div></td><td>${fmtN(s.reach)}</td><td>${fmtN(s.likes)}</td><td>${fmtN(s.comments)}</td><td>${fmtN(s.saves)}</td><td>${fmtN(s.shares)}</td><td>${s.reach ? ((s.saves || 0) / s.reach * 100).toFixed(1) + '%' : '–'}</td></tr>`).join('')}</tbody></table></div>
+    <p class="meta" style="margin-top:8px">저장률이 높은 주제가 '다시 보고 싶은 정보'예요. 다음 연재 주제를 고를 때 참고하세요.</p>`;
+}
+async function refresh() { try { await load(); render(); } catch (e) { $('#app').innerHTML = `<div class="gatebox"><b>불러오지 못했어요</b><p>${esc(e.message)}</p><a href="javascript:location.reload()">다시 시도</a></div>`; } }
+
+(async () => {
+  const ok = await auth();
+  if (!ok) { $('#app').innerHTML = `<div class="gatebox"><b>운영자 로그인이 필요해요</b><p>Travel Radar 사이트에서 운영자 계정으로 로그인한 뒤 이 페이지를 다시 열어 주세요.</p><a href="./#radar">사이트로 가기</a></div>`; return; }
+  try { await load(); } catch (e) { $('#app').innerHTML = `<div class="gatebox"><b>불러오지 못했어요</b><p>${esc(e.message)}</p><a href="./#radar">사이트로 가기</a></div>`; return; }
+  if (!POSTS.length && !CONF) { $('#app').innerHTML = `<div class="gatebox"><b>운영자 계정이 아니에요</b><p>이 페이지는 운영자만 볼 수 있어요.</p><a href="./#radar">사이트로 가기</a></div>`; return; }
+  render();
+  setInterval(() => { if (document.visibilityState === 'visible' && !document.activeElement?.matches('textarea,input')) refresh(); }, 60000);
+})();
+})();
+</script>
+</body>
+</html>
