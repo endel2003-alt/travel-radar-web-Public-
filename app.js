@@ -2304,9 +2304,12 @@ function freshText(withTime) {
   const h = freshHours(); if (h == null) return ''; const t = new Date(D.meta.collectedAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   return `${agoText(h)} 확인${withTime ? ` (${t})` : ''}`;
 }
+// 체인별 마지막 수집 시각(meta.chainCollectedAt, 수집기 0.9.57+). 없으면 빈 배열 → 예전처럼 전체 시각만 보인다.
+function chainFresh() { const c = D.meta?.chainCollectedAt, L = { accor: '아코르', ihg: 'IHG', marriott: '메리어트', hilton: '힐튼' }; if (!c) return []; return Object.keys(L).map(k => ({ k, label: L[k], h: isFinite(Date.parse(c[k] || '')) ? (Date.now() - Date.parse(c[k])) / 36e5 : null })).filter(x => x.h != null); }
 const freshLevel = () => { const h = freshHours(); return h == null ? '' : h >= FRESH_STALE_H ? 'stale' : h >= FRESH_WARN_H ? 'warn' : 'ok'; };
 function freshPaint() {
-  const m = $('#meta'); if (m) { m.textContent = D.meta?.collectedAt ? `업데이트 ${freshText()}${FRESH_LOADING ? ' · 새 데이터 받는 중…' : ''}` : ''; m.title = freshText(true); m.className = `muted small fresh ${freshLevel()}`; }
+  const cf = chainFresh(), lag = cf.filter(x => x.h >= FRESH_WARN_H);   // 체인별 마지막 수집: 늦은 체인은 숨기지 않고 옆에 적는다
+  const m = $('#meta'); if (m) { m.textContent = D.meta?.collectedAt ? `업데이트 ${freshText()}${lag.length ? ` · ${lag.map(x => `${x.label} ${agoText(x.h)}`).join(', ')}` : ''}${FRESH_LOADING ? ' · 새 데이터 받는 중…' : ''}` : ''; m.title = freshText(true) + (cf.length ? '\n' + cf.map(x => `${x.label}: ${agoText(x.h)} 확인`).join('\n') : ''); m.className = `muted small fresh ${lag.length && freshLevel() === 'ok' ? 'warn' : freshLevel()}`; }
   document.querySelectorAll('.fresh[data-live]').forEach(x => { x.textContent = freshText(); x.className = `fresh ${freshLevel()}`; });
   const h = freshHours(); let bar = document.getElementById('staleBar'); let off = false; try { off = sessionStorage.getItem('tr_stale_off') === D.meta?.collectedAt; } catch (e) {}
   if (h == null || h < FRESH_STALE_H || off || FRESH_LOADING) { bar?.remove(); return; }
