@@ -6,7 +6,7 @@ const NAME = { accor: 'Accor ALL', ihg: 'IHG One Rewards', marriott: 'Marriott B
 const TARGET_TIER = { accor: 'Platinum', ihg: 'Platinum (Ambassador)', marriott: 'Platinum', hilton: 'Gold / Diamond' };
 const PATH = {
   accor: 'ALL Accor+ Explorer(연 $255 ≈ ₩36만, 30박 보너스) + 실제 30박 → Platinum. 또는 ALL 우리카드 Infinite로 Gold 즉시, 6천만원 사용 시 Platinum.',
-  ihg: 'IC Ambassador(연 $225 ≈ ₩32만 또는 45,000P) → 즉시 Platinum + 주말 무료박권. 조식·라운지는 Diamond(70박)부터.',
+  ihg: 'IC Ambassador(연 $225 ≈ ₩32만 또는 45,000P) → 즉시 Platinum + 주말 보너스 숙박권. 조식·라운지는 Diamond(70박)부터.',
   marriott: '신한 더 베스트 카드로 Gold 즉시, 실제 50박을 채워야 Platinum. 카드로 Platinum 가는 길은 한국엔 없음.',
   hilton: '롯데 힐튼 아멕스 프리미엄으로 Gold 즉시(조식 2인). 연 2,400만원 사용 시 Diamond + 주말권 2매. 상태 매치로 Diamond 선취 가능.',
 };
@@ -20,7 +20,7 @@ const CRITERIA = [
     v: { accor: [3, 'SNU 바우처 2~12장, 예약 시 확정'], ihg: [2, 'Milestone 확정 스위트(20·40·70박, 전화 확정)'], marriott: [2, 'NUA 5~10장, 5일 전부터 확정 시도'], hilton: [1, '"가능 시" · CUR은 Reserve/120박만'] } },
   { id: 'checkout', label: '레이트 체크아웃', tip: '보장인가 "가능 시"인가',
     v: { accor: [1, '14시 가능 시'], ihg: [2, '14시 가능 시 · Ambassador 16시 보장'], marriott: [3, 'Platinum 16시 보장 (리조트 제외)'], hilton: [1, '가능 시 · Reserve만 16시 보장'] } },
-  { id: 'freenight', label: '무료박', tip: '한국 거주자가 받을 수 있는 숙박권',
+  { id: 'freenight', label: '보너스 숙박', tip: '한국 거주자가 받을 수 있는 숙박권',
     v: { accor: [3, 'Explorer Stay Plus 2장: 2박 중 1박 무료 (APAC)'], ihg: [2, 'Ambassador 주말 2박 중 1박 무료 (IC만)'], marriott: [1, '카드 FNA는 미국 카드만 · 75박 Choice Benefit'], hilton: [2, '롯데 카드 주말권 1~2매'] } },
   { id: 'points', label: '포인트 가치·사용', tip: '1포인트 가치와 쓰기 쉬운 정도',
     v: { accor: [3, '고정 ₩30/p, 어느 호텔이든 현금처럼'], ihg: [2, '0.5~0.6¢ (≈₩7~8/p) · 세일 때 0.5¢(≈₩7)에 사서 바로 쓰기'], marriott: [2, '0.7~0.8¢ (≈₩10~11/p) · 다이내믹, 5박 4박값'], hilton: [2, '0.4~0.5¢ (≈₩6~7/p) · 5th Night Free로 보충'] } },
@@ -72,7 +72,7 @@ function recommend(ans) {
   if (n === 'n30') { add('accor', 3, 'Explorer 30박 보너스로 Platinum 사정권'); add('ihg', 2, null); }
   if (n === 'n60') { add('marriott', 4, '50박이면 Platinum 직행, 라운지·16시 체크아웃'); add('accor', 3, '60박 → SNU 2장 재지급 조건 충족'); add('hilton', 2, null); }
   if (ans.card === 'yes') addCrit('card', 2); else { add('hilton', -2, null); add('marriott', -1, null); }
-  if (ans.paid === 'yes') { add('accor', 3, 'Explorer: Stay Plus 2장 + 다이닝 30% + 30박 보너스'); add('ihg', 3, 'Ambassador: 즉시 Platinum + IC 주말 무료박'); } else { add('accor', -1, null); add('ihg', -2, null); }
+  if (ans.paid === 'yes') { add('accor', 3, 'Explorer: Stay Plus 2장 + 다이닝 30% + 30박 보너스'); add('ihg', 3, 'Ambassador: 즉시 Platinum + IC 주말 보너스 숙박'); } else { add('accor', -1, null); add('ihg', -2, null); }
   if (ans.miles === 'yes') addCrit('miles', 2);
   if (ans.scene === 'nature' || ans.scene === 'both') { const w = ans.scene === 'both' ? 1 : 2; add('accor', 2 * w, '소피텔·풀만·뫼벤픽 비치 리조트 많음 (푸켓·다낭·후아힌)'); add('ihg', 2 * w, '식스센스·인터컨 리조트 (사무이·다낭·푸꾸옥)'); add('marriott', 2 * w, 'JW·쉐라톤·르메르디앙 리조트 (푸켓·다낭)'); add('hilton', 1 * w, '콘래드 코사무이·힐튼 다낭'); }
   if (ans.scene === 'urban' || ans.scene === 'both') { const w = ans.scene === 'both' ? 1 : 2; add('marriott', 2 * w, '방콕·호치민·홍콩 도심 라운지 호텔 충실'); add('ihg', 2 * w, '인터컨·킴튼·인디고 도심 호텔'); add('accor', 1 * w, null); add('hilton', 1 * w, null); }

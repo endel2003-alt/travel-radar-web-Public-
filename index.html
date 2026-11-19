@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611180020">
+<link rel="stylesheet" href="app.css?v=202611191530">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -51,7 +51,7 @@
         <div class="fgroup"><div class="ft">When</div><div class="frow"><input id="fFrom" type="date"><span class="muted">–</span><input id="fTo" type="date"></div><label class="mini"><input id="fWeekend" type="checkbox"> 금·토 체크인만</label></div>
         <div class="fgroup"><div class="ft">Where</div><select id="fWhere"><option value="">전체</option></select></div>
         <div class="fgroup"><div class="ft">Benefit</div><div class="chips">
-          <button class="chip on" data-b="SUITE">스위트</button><button class="chip on" data-b="FREE_NIGHT">무료박</button><button class="chip on" data-b="POINTS">포인트</button><button class="chip on" data-b="SALE">세일</button></div></div>
+          <button class="chip on" data-b="SUITE">스위트</button><button class="chip on" data-b="FREE_NIGHT">보너스 숙박</button><button class="chip on" data-b="POINTS">포인트</button><button class="chip on" data-b="SALE">세일</button></div></div>
         <div class="fgroup"><div class="ft">Chain</div><div class="chips">
           <button class="chip on" data-c="accor">Accor</button><button class="chip on" data-c="ihg">IHG</button><button class="chip on" data-c="marriott">Marriott</button><button class="chip on" data-c="hilton">Hilton</button><button class="chip" type="button" id="fBrand">브랜드</button></div></div>
         <div class="fgroup"><div class="ft">Sort</div><select id="fSort"><option value="tier">티어 가치순</option><option value="cost">내 비용 낮은 순</option><option value="saving">절약 큰 순</option><option value="date">날짜순</option><option value="new">새로 열림</option><option value="pricey">비싼 호텔 순 (정가)</option><option value="hotel">호텔명</option></select></div>
@@ -128,7 +128,7 @@
     <p id="watchTarget" class="muted small" style="margin:4px 0 12px"></p>
     <input type="hidden" name="hotel_key"><input type="hidden" name="cc"><input type="hidden" name="city">
     <div class="egrid">
-      <div class="field wide"><span>이런 혜택이 열리면</span><div class="wchips"><label><input type="checkbox" name="b" value="SUITE" checked> 스위트</label><label><input type="checkbox" name="b" value="FREE_NIGHT" checked> 무료박·1+1</label><label><input type="checkbox" name="b" value="POINTS" checked> 포인트</label><label><input type="checkbox" name="b" value="SALE" checked> 세일</label></div></div>
+      <div class="field wide"><span>이런 혜택이 열리면</span><div class="wchips"><label><input type="checkbox" name="b" value="SUITE" checked> 스위트</label><label><input type="checkbox" name="b" value="FREE_NIGHT" checked> 보너스 숙박·1+1</label><label><input type="checkbox" name="b" value="POINTS" checked> 포인트</label><label><input type="checkbox" name="b" value="SALE" checked> 세일</label></div></div>
       <label class="field"><span>언제부터</span><input type="date" name="date_from"></label>
       <label class="field"><span>언제까지 (비우면 아무 때나)</span><input type="date" name="date_to"></label>
       <label class="field"><span>포인트 이하 (선택)</span><input type="number" name="maxPt" min="0" step="1000" placeholder="예: 60000"></label>
@@ -214,8 +214,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611180020"></script>
-<script src="config.js?v=202611180020"></script>
-<script src="app.js?v=202611180020"></script>
+<script src="compare.js?v=202611191530"></script>
+<script src="config.js?v=202611191530"></script>
+<script src="app.js?v=202611191530"></script>
 </body>
 </html>
