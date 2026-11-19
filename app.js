@@ -1136,7 +1136,11 @@ document.addEventListener('click', (e) => {
 { const m = /app\.js\?v=(\d{12})/.exec([...document.scripts].map(x => x.src).join(' ')); const el = document.getElementById('buildVer'); if (m && el) el.textContent = `build ${m[1].slice(4, 6)}.${m[1].slice(6, 8)} ${m[1].slice(8, 10)}:${m[1].slice(10, 12)}`; }
 document.addEventListener('click', (e) => { const b = e.target.closest('[data-share]'); if (!b) return; e.preventDefault(); b.classList.add('busy'); shareCard(b.dataset.share, b.dataset.shareRow || '').finally(() => b.classList.remove('busy')); });
 function tierBarHtml() {
-  const chips = CH_ALL.map(c => { const t = myTier(c); const on = ui.chains.has(c); return `<button class="tchip ${c} ${on ? 'on' : ''} ${t ? '' : 'none'}" data-tc="${c}" title="${on ? '이 체인 숨기기' : '이 체인 보이기'}">${cb(c, 'sm')}${CHAIN[c]} ${t ? `<b>${esc(tierKo(t))}</b>${c === 'accor' && profile.explorer ? ' +Explorer' : ''}${c === 'ihg' && profile.ambassador ? ' +Amb' : ''}` : '<span class="muted">—</span>'}</button>`; }).join('');
+  // 한 줄에 들어가게: 체인 이름은 뱃지 글자(A·I·M·H·Y)로 대신하고, Explorer·앰배서더 같은 추가 혜택은 금색 + 하나로 (마우스를 올리면 전체 이름)
+  const chips = CH_ALL.map(c => { const t = myTier(c); const on = ui.chains.has(c);
+    const extra = [c === 'accor' && profile.explorer ? 'ALL Accor+ Explorer' : '', c === 'ihg' && profile.ambassador ? 'InterContinental Ambassador' : ''].filter(Boolean);
+    const tip = `${CHAIN[c]} ${t ? tierKo(t) : '티어 없음'}${extra.length ? ' + ' + extra.join(', ') : ''} · ${on ? '누르면 이 체인 숨기기' : '누르면 이 체인 보이기'}`;
+    return `<button class="tchip ${c} ${on ? 'on' : ''} ${t ? '' : 'none'}" data-tc="${c}" title="${esc(tip)}" aria-label="${esc(tip)}">${cb(c, 'sm')}${t ? `<b>${esc(tierKo(t))}</b>${extra.length ? '<i class="tx">+</i>' : ''}` : '<span class="muted">—</span>'}</button>`; }).join('');
   return `<span class="tl">${hasProfile() ? 'My tier' : 'No tier yet'}</span>${chips}<button class="lnk" data-open-profile>${hasProfile() ? '수정' : '내 티어 넣기'}</button>`;
 }
 // ---------- 모바일 앱 모드 (시안 G2 · 720px 이하) ----------
@@ -1421,7 +1425,8 @@ function renderProfileBtn() {
 function tierShort(short) {
   const ts = CH_ALL.filter(myTier).map(c => tierKo(myTier(c)));
   if (!ts.length) return short ? '내 티어' : '내 티어 넣기';
-  return short ? (ts.length > 1 ? `${ts[0]} +${ts.length - 1}` : ts[0]) : ts.join(' · ');
+  // PC도 이름을 다 늘어놓지 않는다 (체인이 5개가 되면서 "플래티넘 · 플래티넘 · …"이 어느 체인인지 안 보였음) — 자세한 건 MY TIER 줄에
+  return short ? (ts.length > 1 ? `${ts[0]} +${ts.length - 1}` : ts[0]) : `내 티어 ${ts.length}개`;
 }
 // 우측 레일: 바우처 D-day · 미니 달력(내 최저) · 티어 플래너 · 이번 주 변화
 function renderRail(rows) {

@@ -94,7 +94,9 @@ main > section:not(.home) { padding-top: 40px; }
 .search .clear { background: none; border: 0; color: var(--muted); font-size: 11px; padding: 0; }
 .search .go { background: none; border: 0; padding: 0; color: var(--fg); text-decoration: underline; text-underline-offset: 5px; }
 .search .go:hover { color: var(--gold); }
-.tierbar { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+.tierbar { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+.tchip i.tx { font-style: normal; color: var(--gold); font-weight: 700; margin-left: 2px; font-size: 12px; vertical-align: 3px; }
+.tchip.none:not(:hover) .muted { opacity: .6; }
 .tierbar .tl { color: var(--gold); margin-right: 4px; }
 .tchip { background: none; border: 0; padding: 0; font-size: 13px; color: var(--muted); white-space: nowrap; border-bottom: 1px solid transparent; }
 .tchip b { color: var(--fg); font-weight: 500; }
