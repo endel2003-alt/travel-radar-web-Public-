@@ -10,7 +10,7 @@
   --font: "Pretendard Variable", Pretendard, "IBM Plex Sans KR", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --serif: "Playfair Display", "Gowun Batang", "Noto Serif KR", Georgia, serif;   /* 숫자·영문은 Playfair, 한글은 Gowun Batang 으로 폴백 */
   --radius: 0px;
-  --c-accor: rgb(12, 0, 126); --c-ihg: rgb(31, 68, 86); --c-marriott: rgb(255, 140, 106); --c-hilton: #000;   /* 체인 브랜드 색 (뱃지·지도 마커) — 여기 한 곳만 바꾸면 전체 반영 */
+  --c-accor: rgb(12, 0, 126); --c-ihg: rgb(31, 68, 86); --c-marriott: rgb(255, 140, 106); --c-hilton: #000; --c-hyatt: rgb(0, 114, 152);   /* 체인 브랜드 색 (뱃지·지도 마커) — 여기 한 곳만 바꾸면 전체 반영 */
   --gutter: 40px;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
@@ -209,12 +209,13 @@ td.date .dow.we { color: var(--gold); }
 .hsub { color: var(--muted); font-size: 12px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ctag { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); padding: 1px 6px; }
 /* 체인 뱃지: 브랜드 색 사각 + 세리프 머리글자 + 얇은 흰 테두리. .ctag(글자 태그)도 체인 클래스가 붙으면 뱃지로 */
-.cb, .ctag.accor, .ctag.ihg, .ctag.marriott, .ctag.hilton { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; border: 0; padding: 0; font-size: 0; letter-spacing: 0; vertical-align: middle; color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); flex-shrink: 0; }
-.cb::before, .ctag.accor::before, .ctag.ihg::before, .ctag.marriott::before, .ctag.hilton::before { font-family: var(--serif); font-weight: 700; font-size: 12px; line-height: 1; }
+.cb, .ctag.accor, .ctag.ihg, .ctag.marriott, .ctag.hilton, .ctag.hyatt { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; border: 0; padding: 0; font-size: 0; letter-spacing: 0; vertical-align: middle; color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.55); flex-shrink: 0; }
+.cb::before, .ctag.accor::before, .ctag.ihg::before, .ctag.marriott::before, .ctag.hilton::before, .ctag.hyatt::before { font-family: var(--serif); font-weight: 700; font-size: 12px; line-height: 1; }
 .cb.accor, .ctag.accor { background: var(--c-accor); } .cb.accor::before, .ctag.accor::before { content: 'A'; }
 .cb.ihg, .ctag.ihg { background: var(--c-ihg); } .cb.ihg::before, .ctag.ihg::before { content: 'I'; }
 .cb.marriott, .ctag.marriott { background: var(--c-marriott); color: #10172a; } .cb.marriott::before, .ctag.marriott::before { content: 'M'; }
 .cb.hilton, .ctag.hilton { background: var(--c-hilton); } .cb.hilton::before, .ctag.hilton::before { content: 'H'; }
+.cb.hyatt, .ctag.hyatt { background: var(--c-hyatt); } .cb.hyatt::before, .ctag.hyatt::before { content: 'Y'; }
 .cb.sm { width: 18px; height: 18px; border-radius: 5px; } .cb.sm::before { font-size: 10px; }
 .cb.lg { width: 38px; height: 38px; border-radius: 11px; } .cb.lg::before { font-size: 19px; }
 .cb.w { width: 20px; height: 20px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.7); } .cb.w::before { font-size: 11px; }
@@ -737,7 +738,7 @@ body.app-m .loadingNote > span { display: none; }
 .nlist { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
 .nitem { display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: inherit; text-decoration: none; border-left-width: 4px; transition: transform .12s, border-color .12s; }
 .nitem:hover { transform: translateY(-2px); border-color: var(--gold); }
-.nitem.accor { border-left-color: var(--c-accor); } .nitem.ihg { border-left-color: var(--c-ihg); } .nitem.marriott { border-left-color: var(--c-marriott); } .nitem.hilton { border-left-color: var(--c-hilton); } .nitem.other { border-left-color: var(--line); opacity: .9; }
+.nitem.accor { border-left-color: var(--c-accor); } .nitem.ihg { border-left-color: var(--c-ihg); } .nitem.marriott { border-left-color: var(--c-marriott); } .nitem.hilton { border-left-color: var(--c-hilton); } .nitem.hyatt { border-left-color: var(--c-hyatt); } .nitem.other { border-left-color: var(--line); opacity: .9; }
 .nitem .nmeta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); letter-spacing: .03em; }
 .nitem .nk { padding: 1px 7px; border-radius: 6px; background: var(--soft); } .nitem .nr { padding: 1px 7px; border-radius: 6px; background: var(--gold-soft); color: var(--gold); } .nitem .nd { margin-left: auto; }
 .nitem b { font-family: var(--serif); font-size: 18px; line-height: 1.35; font-weight: 600; }

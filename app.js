@@ -18,7 +18,7 @@ const ptShort = (n) => n >= 1e4 ? `${+(n / 1e4).toFixed(1)}만pt` : `${n.toLocal
 const NARROW = () => window.matchMedia('(max-width: 860px)').matches;
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const BEN = { SUITE: { label: '스위트', icon: '' }, FREE_NIGHT: { label: '보너스 숙박', icon: '' }, POINTS: { label: '포인트', icon: '' }, SALE: { label: '세일', icon: '' } };
-const CHAIN = { accor: 'Accor', ihg: 'IHG', marriott: 'Marriott', hilton: 'Hilton' };
+const CHAIN = { accor: 'Accor', ihg: 'IHG', marriott: 'Marriott', hilton: 'Hilton', hyatt: 'Hyatt' };
 // 식스센스 예약 페이지 경로(sixsenses.com/en/hotels-resorts/asia-the-pacific/{나라}/{여기}/accommodation/). 이름으로 만든 슬러그가 안 맞는 곳만 적는다
 const SIXS_PATH = { CXRNV: 'ninh-van-bay' };
 const RAW = { SNU: '스위트 업그레이드 쿠폰 (SNU)', STAY_PLUS: '1박 무료 쿠폰 (Stay Plus)', RED_HOT: 'Red Hot Room 특가', POINTS: '포인트 숙박', POINTS_SUITE: '스위트 포인트 숙박', AMB: 'Ambassador 주말 보너스 숙박', FIVE4: '포인트 5박 예약 시 1박 무료', SALE: '회원 특가', 'marriott:POINTS': '포인트 숙박 (기본 객실)' };
@@ -812,7 +812,7 @@ function tierBenefits(h) {
 const benefitValue = (list) => (list || []).reduce((s, b) => s + (b.s === 'ok' ? b.v : b.s === 'maybe' ? b.v * .4 : 0), 0);
 
 // 검색어 파서: "방콕 11월 2박 포인트 라운지" → 조건으로
-const Q_CHAIN = { 아코르: 'accor', accor: 'accor', ihg: 'ihg', 메리어트: 'marriott', marriott: 'marriott', 힐튼: 'hilton', hilton: 'hilton' };
+const Q_CHAIN = { 아코르: 'accor', accor: 'accor', ihg: 'ihg', 메리어트: 'marriott', marriott: 'marriott', 힐튼: 'hilton', hilton: 'hilton', 하얏트: 'hyatt', hyatt: 'hyatt' };
 const Q_BEN = { 포인트: 'POINTS', 스위트: 'SUITE', 세일: 'SALE', 무료박: 'FREE_NIGHT', 무료: 'FREE_NIGHT', 보너스: 'FREE_NIGHT', 보너스숙박: 'FREE_NIGHT', 추가1박: 'FREE_NIGHT', 바우처: 'VOUCHER' };
 function parseQ(q) {
   const out = { text: [], chains: new Set(), bens: new Set(), month: null, nights: null, weekend: false, holiday: false, lounge: false, breakfast: false, five4: false, voucher: false, onePlusOne: false, city: null };
@@ -2306,7 +2306,7 @@ function freshText(withTime) {
   return `${agoText(h)} 확인${withTime ? ` (${t})` : ''}`;
 }
 // 체인별 마지막 수집 시각(meta.chainCollectedAt, 수집기 0.9.57+). 없으면 빈 배열 → 예전처럼 전체 시각만 보인다.
-function chainFresh() { const c = D.meta?.chainCollectedAt, L = { accor: '아코르', ihg: 'IHG', marriott: '메리어트', hilton: '힐튼' }; if (!c) return []; return Object.keys(L).map(k => ({ k, label: L[k], h: isFinite(Date.parse(c[k] || '')) ? (Date.now() - Date.parse(c[k])) / 36e5 : null })).filter(x => x.h != null); }
+function chainFresh() { const c = D.meta?.chainCollectedAt, L = { accor: '아코르', ihg: 'IHG', marriott: '메리어트', hilton: '힐튼', hyatt: '하얏트' }; if (!c) return []; return Object.keys(L).map(k => ({ k, label: L[k], h: isFinite(Date.parse(c[k] || '')) ? (Date.now() - Date.parse(c[k])) / 36e5 : null })).filter(x => x.h != null); }
 const freshLevel = () => { const h = freshHours(); return h == null ? '' : h >= FRESH_STALE_H ? 'stale' : h >= FRESH_WARN_H ? 'warn' : 'ok'; };
 function freshPaint() {
   const cf = chainFresh(), lag = cf.filter(x => x.h >= FRESH_WARN_H);   // 체인별 마지막 수집: 늦은 체인은 숨기지 않고 옆에 적는다
