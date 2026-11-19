@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&family=Gowun+Batang:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
-<link rel="stylesheet" href="app.css?v=202611191800">
+<link rel="stylesheet" href="app.css?v=202611191930">
 <script src="vendor/leaflet/leaflet.js"></script>
 </head>
 <body>
@@ -198,6 +198,11 @@
       <label>보유 포인트 <input name="hiltonPts" type="number" min="0" step="1000"></label>
       <label>올해 숙박 수 <input name="hiltonNights" type="number" min="0" max="400"></label>
     </fieldset>
+    <fieldset class="hyatt"><legend><i class="cb lg hyatt"></i><span>World of Hyatt<small>파크 하얏트 · 그랜드 하얏트 · 안다즈 · 하얏트 리젠시</small></span></legend>
+      <label>티어 <select name="hyattTier"><option value="">회원 아님</option><option>Member</option><option>Discoverist</option><option>Explorist</option><option>Globalist</option></select></label>
+      <label>보유 포인트 <input name="hyattPts" type="number" min="0" step="1000"></label>
+      <label>올해 숙박 수 <input name="hyattNights" type="number" min="0" max="400"></label>
+    </fieldset>
     <fieldset class="ihg"><legend><i class="cb lg ihg"></i><span>IHG One Rewards<small>인터컨티넨탈 · 크라운플라자 · 홀리데이인</small></span></legend>
       <label>티어 <select name="ihgTier"><option value="">회원 아님</option><option>Club</option><option>Silver</option><option>Gold</option><option>Platinum</option><option>Diamond</option></select></label>
       <label>Ambassador 회원 <input name="ambassador" type="checkbox"></label>
@@ -214,8 +219,8 @@
 </dialog>
 <dialog id="dlgQuiz"><form method="dialog" id="quizForm"></form></dialog>
 
-<script src="compare.js?v=202611191800"></script>
-<script src="config.js?v=202611191800"></script>
-<script src="app.js?v=202611191800"></script>
+<script src="compare.js?v=202611191930"></script>
+<script src="config.js?v=202611191930"></script>
+<script src="app.js?v=202611191930"></script>
 </body>
 </html>
