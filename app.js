@@ -1181,7 +1181,7 @@ function mHeroHtml(rows, groups, opts) {
   const heroHtml = `<div class="mhero">${hero && hImg(hero.h) && !NO_EXT_IMG ? `<img src="${esc(hImg(hero.h))}" alt="" referrerpolicy="no-referrer" onerror="trImgErr(this, '${esc(hero.h.img ? hero.h.image || '' : '')}')">` : ''}<span class="ov"></span>
       <button type="button" class="hamb onhero" data-hamb aria-label="메뉴"><span></span><span></span><span></span></button>
       <div class="brand"><svg viewBox="0 0 200 200"><rect x="10" y="10" width="180" height="180" rx="40" fill="#d4a84b"/><path d="M52 72 H108 M80 72 V140 M110 140 V96 H130 a14 14 0 0 1 0 28 H110 M126 124 L146 140" fill="none" stroke="#141a2e" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Travel Radar<i class="beta">Beta</i></b><small>Members only</small></span></div>
-      <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
+      <div class="tx"><b class="pill">${opts?.pill || 'Today'}</b><h1>${opts?.title || `내 등급의 혜택,<br><em>제대로 써야 다 받아요.</em>`}</h1><p>${heroSub(rows, groups).split('.')[0]}</p>${hero ? `<small>사진 · ${esc(hero.h.name)}</small>` : ''}</div></div>`;
   return { heroHtml, band, wallet, soonHtml };
 }
 // ---------- 지역 고르기 (모바일 검색): 나라 → 도시 2단계 시트 ----------
@@ -1354,7 +1354,8 @@ function resTitle(rows, groups) {
   const qp = lastQ || {}; const where = $('#fWhere'); const wl = where.value ? where.options[where.selectedIndex].textContent.replace(/ \(\d+\)$/, '').replace(' 전체', '') : (qp.city || '');
   const n = `<em>${groups.length}곳</em>`;
   if (!groups.length) return `${wl ? wl + '에서는' : '이 조건으로는'} 지금 열린 곳이 없습니다.`;
-  return `오직 멤버들에게만,<br>${wl ? wl + ' ' : ''}${n}이 열립니다.`;
+  if (wl) return `${wl}에서 지금<br>${n}이 열려 있어요.`;   // 지역을 고르면 그 지역 숫자를 제목에
+  return `내 등급의 혜택,<br><em>제대로 써야 다 받아요.</em>`;
 }
 function heroEyebrow(rows) {
   const qp = lastQ || {}; const from = $('#fFrom').value, to = $('#fTo').value;
@@ -1370,7 +1371,8 @@ function heroSub(rows, groups) {
   const lounge = groups.filter(o => (o.benefits || []).some(b => /라운지/.test(b.label) && b.s !== 'no')).length;
   const fresh = groups.filter(o => o.fresh).length;
   const tiers = CH_ALL.filter(c => ui.chains.has(c) && myTier(c)).map(c => `${CHAIN[c]} ${tierKo(myTier(c))}`);
-  const first = mine && tiers.length ? `${tiers.join(' · ')}로 쓸 수 있는 것만 골랐습니다.` : '티어를 넣으면 당신이 쓸 수 있는 것만 남깁니다.';
+  // 제목이 "내 등급의 혜택, 제대로 써야 다 받아요."로 바뀌어 전체 숫자는 여기 첫 문장에 둔다 (모바일은 첫 문장만 보임)
+  const first = mine && tiers.length ? `${tiers.join(' · ')}로 쓸 수 있는 곳, 오늘 ${groups.length.toLocaleString()}곳을 골랐어요.` : '티어를 넣으면 당신이 쓸 수 있는 것만 남깁니다.';
   const parts = [nCash ? `회원가·특가 ${nCash}곳` : '', nPts ? `포인트 ${nPts}곳` : '', nVch ? `바우처·보너스 숙박 ${nVch}곳` : '', mine && lounge ? `라운지 ${lounge}곳` : '', fresh ? `이틀 새 새로 열린 ${fresh}곳` : ''].filter(Boolean);
   return first + (parts.length ? ' ' + parts.join(' · ') + '.' : '');
 }
@@ -1718,7 +1720,7 @@ function viewHome() {
   const el = $('#v-home'); const P = profile;
   if (MOBILE()) {
     const mine = hasProfile() ? D.rows.filter(eligible) : D.rows; const groups = groupHotels(mine).sort((a, b) => b.tierValue - a.tierValue || (b.best?.sv || 0) - (a.best?.sv || 0));
-    const H = mHeroHtml(mine, groups, { pill: hasProfile() ? 'Today' : 'Members only', title: hasProfile() ? `오직 멤버들에게만,<br>오늘 <em>${groups.length.toLocaleString()}곳</em>이 열립니다` : `내 등급을 넣으면<br><em>${groups.length.toLocaleString()}곳</em> 중 내 것이 보입니다` });
+    const H = mHeroHtml(mine, groups, { pill: hasProfile() ? 'Today' : 'Members only', title: hasProfile() ? `내 등급의 혜택,<br><em>제대로 써야 다 받아요.</em>` : `내 등급을 넣으면<br><em>${groups.length.toLocaleString()}곳</em> 중 내 것이 보입니다` });
     ui.hLimit = ui.hLimit || 24;
     el.innerHTML = `${H.heroHtml}${H.band}${H.wallet}
       ${hasProfile() ? '' : `<div class="onb mpad"><p>${esc(cp('home.onb'))}</p><button type="button" class="btn primary" data-onb>내 등급 넣기</button><a class="btn ghost" href="#radar">검색부터</a></div>`}
