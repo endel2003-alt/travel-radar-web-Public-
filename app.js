@@ -212,6 +212,22 @@ function fixOddRefs(rows) {
       }
     }
   }
+  // 2차: 호텔 전체 기준. 여러 박 묶음(5박 무료·앰배서더 주말 2박)은 하루 튄 값이 이어진 여러 날의 합계에 다 섞여서 위 기준(앞뒤 날짜 비교)으로는 안 걸린다.
+  // 그래서 같은 호텔의 1박 정가 중앙값(보정 후)을 '평소 1박'으로 보고, 1박당 정가가 그 2.5배를 넘는 행은 평소 값 × 박수로 보정한다.
+  // 예) 쉐라톤 하이퐁: 11/25 하루만 ₩492만(평소 ₩9~14만) → 그날이 낀 5박 묶음 정가가 ₩534만으로 잡혀 '티어 가치 ₩449만'이 됐음.
+  const single = new Map();
+  for (const r of rows) { if (r.b === 'SUITE' || !r.ref || (r.n || 1) !== 1) continue; (single.get(r.h) || single.set(r.h, []).get(r.h)).push(r.ref); }
+  const typical = new Map(); for (const [h, a] of single) if (a.length >= 5) { a.sort((x, y) => x - y); typical.set(h, a[Math.floor(a.length / 2)]); }
+  for (const r of rows) {
+    if (r.b === 'SUITE' || !r.ref) continue; const m = typical.get(r.h); if (!m) continue; const n = r.n || 1;
+    if (r.ref / n > m * 2.5) {
+      r.ref0 = r.ref0 || r.ref; r.ap = 1; r.odd = 1;
+      if (r.b === 'FREE_NIGHT' && !r.pt) {
+        // 무료 1박 묶음(앰배서더 주말 등): 내가 실제 내는 돈(my)은 그대로 두고, 공짜 1박의 가치만 '평소 1박의 1.5배(주말 할증 감안)'까지로 제한
+        if (r.sv != null) r.sv = Math.min(r.sv, Math.round(m * 1.5)); r.ref = (r.my || 0) + (r.sv || 0);
+      } else { r.ref = Math.round(m * n); if (r.my != null) r.sv = r.ref - r.my; }
+    }
+  }
 }
 function applyData({ rows, hotels, promos, guides, meta }) {
   $('#loadingNote')?.remove();
