@@ -1349,7 +1349,7 @@ function openCal(btn) {
   render(); dlg.showModal();
 }
 const cb = (c, size = '') => `<i class="cb ${c} ${size}" aria-label="${CHAIN[c] || c}"></i>`;   // 체인 뱃지 (CSS .cb)
-const M_CHIPS = ['연휴', '1+1', '포인트', '바우처', '5박 무료', '라운지', '조식', '스위트'];
+const M_CHIPS = ['연휴', '1+1', '포인트', '바우처', '라운지', '조식', '스위트'];
 // 검색어에서 박수(2박)와 칩 단어를 뺀 '순수 키워드'만 — 폼을 다시 그려도 검색어가 쌓이지 않게
 const kwOnly = (q) => { let t = ` ${q} `; for (const c of [...M_CHIPS].sort((a, b) => b.length - a.length)) t = t.split(` ${c} `).join(' '); return t.replace(/\s\d+박(?=\s)/g, ' ').replace(/\s{2,}/g, ' ').trim(); };
 // 검색 탭(모바일): 폼 카드가 먼저 — 어디로 · 언제 · 몇 박 · 혜택 → [호텔 찾기] — 그 아래 결과
