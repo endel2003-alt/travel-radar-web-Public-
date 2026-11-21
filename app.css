@@ -1128,7 +1128,7 @@ dialog.sheet { max-height: 88dvh; }
 .apk { font-style: normal; font-size: 10px; font-weight: 600; color: var(--gold); }
 .aday .chips { display: flex; flex-wrap: wrap; gap: 4px; } .aday .msg { font-size: 11px; color: var(--muted); }
 .achip { font-style: normal; font-size: 11px; font-weight: 600; line-height: 1; padding: 4px 6px; border: 1px solid; }
-.achip.y { background: var(--ecos); color: var(--eco); border-color: var(--eco); } .achip.w { background: var(--gold-soft); color: var(--gold); border-color: var(--gold); } .achip.c { background: var(--biz); color: #fff; border-color: var(--biz); } .achip.f { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.achip.y { background: var(--ecos); color: var(--eco); border-color: var(--eco); } .achip.w { background: var(--gold-soft); color: var(--gold); border-color: var(--gold); } .achip.c { background: var(--biz); color: var(--card); border-color: var(--biz); } .achip.f { background: var(--fg); color: var(--bg); border-color: var(--fg); }
 .adet { flex: 1 1 320px; background: var(--card); border: 1px solid var(--rule); padding: 24px; display: flex; flex-direction: column; gap: 4px; position: sticky; top: 80px; }
 .adet h2 { margin: 0 0 8px; font-family: var(--serif); font-weight: 400; font-size: 22px; line-height: 1.3; }
 .arow { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
