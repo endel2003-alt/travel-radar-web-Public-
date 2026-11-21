@@ -762,8 +762,97 @@ async function viewNews() {
   $('#ndataBody').innerHTML = `<p class="muted small">${head}</p>` + (dItems.length ? dItems.map(it => `<article class="ncard ${it.kind}"><h2>${esc(it.title)}</h2>${it.sub ? `<p class="muted small">${esc(it.sub)}</p>` : ''}<ol>${it.items.map(x => `<li>${x}</li>`).join('')}</ol>${it.more ? `<p class="muted small">… 외 ${it.more}곳</p>` : ''}</article>`).join('') : '<div class="empty">아직 변화가 없어요. 수집이 이틀 이상 쌓이면 여기에 생겨요.</div>');
 }
 
+// ---------- 항공 (대한항공 마일리지 좌석 달력) ----------
+// tr_award_data(): routes + days[[route, 'YYYY-MM-DD', 상태(1 열림·0 없음·-1 운항 없음), 일반, 프리미엄, 비즈니스, 일등, 성수기]]
+let AIR = null;
+async function loadAir(force) {
+  if (AIR && !force && Date.now() - AIR.at < 600e3) return AIR;
+  const S = window.TR_SERVER;
+  const res = await fetch(`${S.url.replace(/\/$/, '')}/rest/v1/rpc/tr_award_data`, { method: 'POST', headers: Object.assign(guestHeaders(), { 'Content-Type': 'application/json' }), body: '{}' });
+  if (!res.ok) throw new Error('air ' + res.status);
+  const d = await res.json(); const by = {};
+  for (const r of d.routes || []) by[r.id] = Object.assign(r, { days: {} });
+  for (const x of d.days || []) { const r = by[x[0]]; if (r) r.days[x[1]] = { st: x[2], y: x[3], w: x[4], c: x[5], f: x[6], pk: !!x[7] }; }
+  AIR = { routes: (d.routes || []).map(r => by[r.id]), by, checked: d.checked ? new Date(d.checked) : null, at: Date.now() };
+  return AIR;
+}
+const AIR_ST = { to: 'KE:SEL-DPS', cab: 'all', mon: null, sel: null };
+try { const s = JSON.parse(localStorage.getItem('tr_air') || 'null'); if (s) Object.assign(AIR_ST, { to: s.to || AIR_ST.to, cab: s.cab || 'all' }); } catch (e) {}
+const airSave = () => { try { localStorage.setItem('tr_air', JSON.stringify({ to: AIR_ST.to, cab: AIR_ST.cab })); } catch (e) {} };
+const AIR_CAB = [['y', '일반석', '일반'], ['w', '프리미엄석', '프리미엄'], ['c', '비즈니스', '비즈니스'], ['f', '일등석', '일등']];
+const AIR_CC = { JP: '일본', TW: '대만', HK: '홍콩', TH: '태국', VN: '베트남', SG: '싱가포르', MY: '말레이시아', ID: '인도네시아', PH: '필리핀' };
+const airName = (r) => r.ap && r.ap !== r.city && (r.city === '도쿄') ? `${r.city} ${r.ap}` : r.city;
+const kstToday = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const keUrl = (r, iso, cabin) => `https://www.koreanair.com/booking/search?bookingType=A&tripType=OW&departure=${r.from}&arrival=${r.to}&adults=1&children=0&infants=0&departureDate=${iso}&cabinClass=${cabin}`;
+async function viewFlights(arg) {
+  const el = $('#v-flights');
+  el.innerHTML = `<h1>마일리지 좌석</h1><p class="lead">대한항공 마일리지로 갈 수 있는 날을 달력으로 보여 줘요. 인천 출발 편도 1명 기준이고, 날짜를 누르면 필요한 마일과 세금이 나와요.</p><div class="loadingNote"><span></span>좌석을 불러오는 중</div>`;
+  let A; try { A = await loadAir(); } catch (e) { el.querySelector('.loadingNote').outerHTML = '<div class="empty">좌석 정보를 불러오지 못했어요. 잠시 후 다시 열어 보세요.</div>'; return; }
+  if (location.hash.replace(/^#\/?/, '').split('/')[0] !== 'flights') return;
+  if (!A.routes.length) { el.querySelector('.loadingNote').outerHTML = '<div class="empty">아직 좌석 정보가 없어요.</div>'; return; }
+  // #flights/DPS 또는 #flights/DPS/2026-12-03 으로 바로 열기
+  if (arg) { const [code, iso] = arg.split('/'); const r = A.routes.find(x => x.to === code.toUpperCase() || x.id === code); if (r) { AIR_ST.to = r.id; if (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)) { AIR_ST.mon = iso.slice(0, 7); AIR_ST.sel = iso; } } }
+  if (!A.by[AIR_ST.to]) AIR_ST.to = A.routes[0].id;
+  const today = kstToday(); const allDates = Object.keys(Object.assign({}, ...A.routes.map(r => r.days))).sort();
+  const months = [...new Set(allDates.map(d => d.slice(0, 7)))];
+  if (!AIR_ST.mon || !months.includes(AIR_ST.mon)) AIR_ST.mon = months[0];
+  const asof = A.checked ? `${A.checked.getMonth() + 1}월 ${A.checked.getDate()}일 ${A.checked.getHours()}시` : '';
+  const opts = Object.entries(A.routes.reduce((g, r) => ((g[r.cc] = g[r.cc] || []).push(r), g), {})).map(([cc, rs]) => `<optgroup label="${AIR_CC[cc] || cc}">${rs.map(r => `<option value="${r.id}">${esc(airName(r))}</option>`).join('')}</optgroup>`).join('');
+  el.innerHTML = `<h1>마일리지 좌석</h1><p class="lead">대한항공 마일리지로 갈 수 있는 날을 달력으로 보여 줘요. 인천 출발 편도 1명 기준이고, 날짜를 누르면 필요한 마일과 세금이 나와요.${asof ? ` <b>${asof} 조회</b>한 값이라 지금은 달라졌을 수 있어요.` : ''}</p>
+  <div class="actl"><label><span>어디로 가세요?</span><select id="aTo">${opts}</select></label><div><span>좌석</span><div class="aseg" id="aCab"></div></div><div><span>출발 달</span><div class="aseg" id="aMon"></div></div></div>
+  <div class="atwo"><div class="acalw"><div class="acalh"><h2 id="aCalT"></h2><div class="alegend"><i class="achip y">일반</i><i class="achip w">프리미엄</i><i class="achip c">비즈니스</i><i class="apk">성수기</i><span>마일이 더 드는 날</span></div></div><div class="ascroll"><div class="acal" id="aCal"></div></div><p class="muted small" id="aCalS"></p></div><aside class="adet" id="aDet" aria-live="polite"></aside></div>
+  <h2 class="ah2">다른 도시는 어때요?</h2><p class="muted small" id="aTblS"></p><div class="ascroll"><table class="atbl"><thead><tr><th>도착 도시</th><th>일반석</th><th>비즈니스</th><th>비즈니스 최저</th></tr></thead><tbody id="aTb"></tbody></table></div>
+  <p class="anote">비공식 정보예요. 남은 좌석 수는 알 수 없고, 조회한 시각에 1석 이상 보였다는 뜻이에요. 실제 예약은 대한항공에서 본인 계정으로 해 주세요.</p>`;
+  const sel = $('#aTo'); sel.value = AIR_ST.to;
+  sel.addEventListener('change', () => { AIR_ST.to = sel.value; AIR_ST.sel = null; airSave(); render(); });
+  const seg = (host, items, key) => { host.innerHTML = items.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${AIR_ST[key] === v}">${l}</button>`).join(''); host.onclick = (e) => { const b = e.target.closest('button'); if (!b) return; AIR_ST[key] = b.dataset.v; if (key === 'mon') AIR_ST.sel = null; airSave(); render(); }; };
+  const has = (day, k) => day && day[k] != null;
+  function render() {
+    const r = A.by[AIR_ST.to]; sel.value = r.id;
+    seg($('#aCab'), [['all', '전체'], ['y', '일반석'], ['c', '비즈니스']], 'cab');
+    seg($('#aMon'), months.map(m => [m, `${+m.slice(5)}월`]), 'mon');
+    const [yy, mm] = AIR_ST.mon.split('-').map(Number);
+    $('#aCalT').textContent = `${yy}년 ${mm}월 · 인천 → ${airName(r)}`;
+    const first = new Date(Date.UTC(yy, mm - 1, 1)).getUTCDay(), nd = new Date(Date.UTC(yy, mm, 0)).getUTCDate();
+    let h = DOW.map(w => `<div class="adow">${w}</div>`).join('') + '<div></div>'.repeat(first); let shown = 0, cnt = 0, cntC = 0, firstOpen = null;
+    for (let d = 1; d <= nd; d++) {
+      const iso = `${yy}-${String(mm).padStart(2, '0')}-${String(d).padStart(2, '0')}`; const day = r.days[iso]; const sun = (first + d - 1) % 7 === 0;
+      if (!day || iso < today) { h += `<div class="aday out"><span class="t"><b>${d}</b></span></div>`; continue; }
+      shown++;
+      if (day.st === -1) { h += `<div class="aday nf${sun ? ' sun' : ''}"><span class="t"><b>${d}</b></span><span class="msg">운항편 없음</span></div>`; continue; }
+      const chips = AIR_CAB.filter(([k]) => (AIR_ST.cab === 'all' || AIR_ST.cab === k) && has(day, k)).map(([k, , s]) => `<i class="achip ${k}">${s}</i>`);
+      if (chips.length) { cnt++; if (firstOpen == null) firstOpen = iso; } if (has(day, 'c')) cntC++;
+      h += `<button type="button" class="aday${chips.length ? '' : ' none'}${sun ? ' sun' : ''}" data-d="${iso}" aria-pressed="${AIR_ST.sel === iso}"><span class="t"><b>${d}</b>${day.pk ? '<i class="apk">성수기</i>' : ''}</span><span class="chips">${chips.join('') || '<span class="msg">좌석 없음</span>'}</span></button>`;
+    }
+    $('#aCal').innerHTML = h;
+    $('#aCal').onclick = (e) => { const b = e.target.closest('button[data-d]'); if (!b) return; AIR_ST.sel = b.dataset.d; render(); if (MOBILE()) $('#aDet').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+    $('#aCalS').textContent = shown ? `이 달 ${shown}일 가운데 좌석이 있는 날은 ${cnt}일${AIR_ST.cab !== 'y' ? `, 비즈니스가 있는 날은 ${cntC}일` : ''}이에요.` : '이 달은 아직 조회한 날짜가 없어요.';
+    if (!AIR_ST.sel || AIR_ST.sel.slice(0, 7) !== AIR_ST.mon) AIR_ST.sel = firstOpen;
+    detail(r); table(r);
+  }
+  function detail(r) {
+    const a = $('#aDet'); const iso = AIR_ST.sel; const day = iso && r.days[iso];
+    if (!day) { a.innerHTML = `<div class="eyebrow">선택한 날짜</div><h2>이 달에는 고른 좌석이 없어요</h2><p class="muted small">다른 달이나 다른 좌석을 눌러 보세요.</p>`; return; }
+    const dd = new Date(iso + 'T00:00:00Z'); const rowsH = AIR_CAB.filter(([k]) => k === 'y' || k === 'c' || has(day, k)).map(([k, l]) => `<div class="arow"><span>${l}</span>${has(day, k) ? `<b${k === 'c' ? ' class="big"' : ''}>${day[k].toLocaleString()}마일</b>` : '<em>좌석 없음</em>'}</div>`).join('');
+    const cabin = AIR_ST.cab === 'y' || !has(day, 'c') ? 'Y' : 'C';
+    const city = r.tr ? esc(r.tr.split('·')[0]) : '';
+    a.innerHTML = `<div class="eyebrow">선택한 날짜</div><h2>${dd.getUTCMonth() + 1}월 ${dd.getUTCDate()}일 (${DOW[dd.getUTCDay()]})<br>인천 → ${esc(airName(r))}</h2>${rowsH}<div class="arow"><span>세금·유류할증료</span><b>${r.tax ? won(r.tax) : '–'}</b></div><p class="muted small">${day.pk ? '성수기 날짜라 평소보다 마일이 더 들어요. ' : ''}편도 1명 기준이에요. 남은 좌석 수는 알 수 없어요.</p>
+      <a class="abtn" href="${keUrl(r, iso, cabin)}" target="_blank" rel="noopener">대한항공에서 이 날짜 조회하기 ↗</a><p class="muted small">도시·날짜가 채워진 마일리지 예매 화면이 열려요. 로그인 후 "항공편 검색"을 누르면 돼요.</p>
+      ${city ? `<button type="button" class="abtn ghost" id="aHotel">${city} 호텔 혜택 같이 보기 (${dd.getUTCMonth() + 1}/${dd.getUTCDate()}부터)</button>` : ''}`;
+    $('#aHotel')?.addEventListener('click', () => { $('#fText').value = city; $('#fFrom').value = iso; $('#fTo').value = addDays(iso, 4); track('air:hotel'); location.hash = '#radar'; });
+  }
+  function table(cur) {
+    const ds = allDates.filter(d => d >= today); const from = ds[0], to = ds[ds.length - 1];
+    $('#aTblS').textContent = from ? `${+from.slice(5, 7)}월 ${+from.slice(8)}일부터 ${+to.slice(5, 7)}월 ${+to.slice(8)}일까지 ${ds.length}일 가운데 좌석이 있는 날 수예요. 도시를 누르면 달력이 바뀌어요.` : '';
+    const rows = A.routes.map(r => { let y = 0, c = 0, min = null; for (const [d, v] of Object.entries(r.days)) { if (d < today) continue; if (v.y != null) y++; if (v.c != null) { c++; if (min == null || v.c < min) min = v.c; } } return { r, y, c, min }; }).sort((a, b) => b.c - a.c || b.y - a.y);
+    $('#aTb').innerHTML = rows.map(x => `<tr class="${x.r.id === cur.id ? 'on' : ''}"><td><button type="button" data-r="${x.r.id}">${esc(airName(x.r))}</button></td><td>${x.y}일</td><td class="c">${x.c}일</td><td>${x.min != null ? x.min.toLocaleString() + '마일' : '없음'}</td></tr>`).join('');
+    $('#aTb').onclick = (e) => { const b = e.target.closest('button[data-r]'); if (!b) return; AIR_ST.to = b.dataset.r; AIR_ST.sel = null; airSave(); render(); $('#v-flights').scrollIntoView({ behavior: 'smooth' }); };
+  }
+  render();
+}
+
 // ---------- 라우터 ----------
-const views = { applinks: viewAppLinks, about: viewAbout, terms: viewTerms, privacy: viewPrivacy, contact: viewContact, radar: viewRadar, home: viewHome, account: viewAccount, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, news: viewNews, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
+const views = { flights: viewFlights, applinks: viewAppLinks, about: viewAbout, terms: viewTerms, privacy: viewPrivacy, contact: viewContact, radar: viewRadar, home: viewHome, account: viewAccount, me: viewMe, plan: viewPlan, check: viewCheck, alerts: viewAlerts, news: viewNews, best: viewBest, map: viewMap, hotel: viewHotel, hotels: viewHotels, guide: viewGuide, promos: viewPromos };
 function route() {
   const hash = location.hash.replace(/^#\/?/, '') || (matchMedia('(max-width: 720px)').matches ? 'home' : 'radar'); const [name, ...rest] = hash.split('/'); const arg = decodeURIComponent(rest.join('/'));
   if (name === 'hotels') { location.replace('#radar'); return; }   // Hotels(도시별 목록) 메뉴는 뺐다 — 옛 링크는 검색으로 보낸다 (viewHotels 는 공개 가이드 페이지용으로 남겨 둠)
@@ -772,7 +861,7 @@ function route() {
   document.body.classList.toggle('app-m', MOBILE() && name === 'home');   // 홈은 사진 헤더가 상단바를 대신한다 (검색 탭은 viewRadar 가 직접 정함)
   (views[name] || viewRadar)(arg); track('view:' + (views[name] ? name : 'radar')); applyCopy(); if (!QUIET) window.scrollTo({ top: 0 });
   // 섹션 제목 위 금색 아이브로우 (브랜드)
-  const EYE = { about: 'About', terms: 'Terms of use', privacy: 'Privacy policy', contact: 'Contact', home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
+  const EYE = { flights: 'Flights · Korean Air miles', about: 'About', terms: 'Terms of use', privacy: 'Privacy policy', contact: 'Contact', home: 'Members only · For you', account: 'My account', news: 'Hotel news · from my inbox', plan: 'Trip planner', check: 'Owner · Data check', alerts: 'Watchlist & alerts', me: 'Members only · Today', best: 'Best of the month', map: 'On the map', hotels: 'Hotels', hotel: 'Hotel', guide: 'Membership guide', promos: 'Offers' };
   const sec = document.getElementById('v-' + (views[name] ? name : 'radar')); const h1 = sec?.querySelector('h1');
   if (h1 && EYE[name] && !(name === 'home' && MOBILE()) && !h1.previousElementSibling?.classList?.contains('eyebrow')) h1.insertAdjacentHTML('beforebegin', `<div class="eyebrow">${EYE[name]}</div>`);
 }
