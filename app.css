@@ -1142,3 +1142,13 @@ dialog.sheet { max-height: 88dvh; }
 .atbl td button { width: 100%; min-height: 44px; background: none; border: 0; text-align: left; cursor: pointer; font: inherit; font-family: var(--font); font-size: 14px; color: var(--fg); padding: 0; } .atbl td button:hover { color: var(--gold); } .atbl tr.on td button { font-weight: 700; }
 .anote { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.7; }
 @media (max-width: 720px) { .actl select { min-width: 0; width: 100%; } .actl label, .actl > div { width: 100%; } .aseg button { flex: 1; padding: 0 8px; } .acal { min-width: 0; gap: 2px; } .aday { min-height: 62px; padding: 5px; gap: 4px; } .aday[aria-pressed="true"] { padding: 4px; } .aday .t b { font-size: 14px; } .achip { font-size: 9.5px; padding: 3px 4px; } .apk { font-size: 9px; } .aday .msg { font-size: 9.5px; } .adet { position: static; padding: 18px; } }
+
+/* 헤더 업데이트 표시: 점 + 짧은 글자 (자세한 시각은 마우스 올리면) */
+.topbar #meta.hmeta { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); cursor: help; max-width: 160px; overflow: hidden; }
+.topbar #meta .fdot { width: 7px; height: 7px; border-radius: 50%; background: #5fb67a; flex: none; }
+.topbar #meta.warn .fdot { background: #d4a84b; } .topbar #meta.stale .fdot { background: #e2735f; }
+.topbar #meta em { font-style: normal; color: inherit; opacity: .85; }
+.topbar #meta .fload { animation: fpulse 1.4s ease-in-out infinite; }
+@keyframes fpulse { 50% { opacity: .35; } }
+@media (max-width: 1440px) { .topbar #meta.hmeta { display: inline-flex; } }
+@media (max-width: 1200px) { .topbar #meta.hmeta { display: none; } }

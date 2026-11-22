@@ -2447,7 +2447,8 @@ function chainFresh() { const c = D.meta?.chainCollectedAt, L = { accor: '아코
 const freshLevel = () => { const h = freshHours(); return h == null ? '' : h >= FRESH_STALE_H ? 'stale' : h >= FRESH_WARN_H ? 'warn' : 'ok'; };
 function freshPaint() {
   const cf = chainFresh(), lag = cf.filter(x => x.h >= FRESH_WARN_H);   // 체인별 마지막 수집: 늦은 체인은 숨기지 않고 옆에 적는다
-  const m = $('#meta'); if (m) { m.textContent = D.meta?.collectedAt ? `업데이트 ${freshText()}${lag.length ? ` · ${lag.map(x => `${x.label} ${agoText(x.h)}`).join(', ')}` : ''}${FRESH_LOADING ? ' · 새 데이터 받는 중…' : ''}` : ''; m.title = freshText(true) + (cf.length ? '\n' + cf.map(x => `${x.label}: ${agoText(x.h)} 확인`).join('\n') : ''); m.className = `muted small fresh ${lag.length && freshLevel() === 'ok' ? 'warn' : freshLevel()}`; }
+  // 헤더에는 짧게(점 + "2일 전"), 체인별 시각은 마우스를 올리면 보이는 설명으로
+  const m = $('#meta'); if (m) { const h = freshHours(); m.innerHTML = D.meta?.collectedAt ? `<i class="fdot"></i>${esc(h == null ? '' : agoText(h))}${lag.length ? `<em>· ${lag.length}곳 늦음</em>` : ''}${FRESH_LOADING ? '<em class="fload">갱신 중</em>' : ''}` : ''; m.title = '데이터 업데이트 ' + freshText(true) + (cf.length ? '\n' + cf.map(x => `${x.label}: ${agoText(x.h)} 확인`).join('\n') : '') + (FRESH_LOADING ? '\n새 데이터 받는 중…' : ''); m.setAttribute('aria-label', m.title.replace(/\n/g, ', ')); m.className = `fresh hmeta ${lag.length && freshLevel() === 'ok' ? 'warn' : freshLevel()}`; }
   document.querySelectorAll('.fresh[data-live]').forEach(x => { x.textContent = freshText(); x.className = `fresh ${freshLevel()}`; });
   const h = freshHours(); let bar = document.getElementById('staleBar'); let off = false; try { off = sessionStorage.getItem('tr_stale_off') === D.meta?.collectedAt; } catch (e) {}
   if (h == null || h < FRESH_STALE_H || off || FRESH_LOADING) { bar?.remove(); return; }
