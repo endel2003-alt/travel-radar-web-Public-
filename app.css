@@ -1152,3 +1152,19 @@ dialog.sheet { max-height: 88dvh; }
 @keyframes fpulse { 50% { opacity: .35; } }
 @media (max-width: 1440px) { .topbar #meta.hmeta { display: inline-flex; } }
 @media (max-width: 1200px) { .topbar #meta.hmeta { display: none; } }
+
+/* 항공 도시 비교 목록 (표 대신 grid — 모바일 표 규칙의 영향을 받지 않게) */
+.alist { margin-top: 12px; border-top: 1px solid var(--rule); }
+.alh, .ali { display: grid; grid-template-columns: minmax(0, 1.6fr) 1fr 1fr 1.2fr; align-items: center; gap: 12px; }
+.alh { padding: 8px 0; font-size: 12px; font-weight: 600; color: var(--muted); border-bottom: 1px solid var(--rule); } .alh span:not(:first-child) { text-align: right; }
+.ali { width: 100%; min-height: 48px; padding: 0; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.ali:hover b { color: var(--gold); } .ali.on b { font-weight: 700; color: var(--gold); }
+.ali b { font-weight: 500; font-size: 14px; } .ali span { text-align: right; font-family: var(--serif); font-size: 15px; } .ali span.c { font-weight: 700; color: var(--biz); }
+.ali small { display: none; }
+@media (max-width: 720px) {
+  .alh { display: none; }
+  .ali { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "n y c" "n m m"; row-gap: 2px; column-gap: 14px; padding: 12px 0; }
+  .ali b { grid-area: n; font-size: 15px; } .ali span:nth-of-type(1) { grid-area: y; } .ali span.c { grid-area: c; } .ali span.m { grid-area: m; font-family: var(--font); font-size: 12px; color: var(--muted); }
+  .ali small { display: inline; font-family: var(--font); font-size: 11px; color: var(--muted); font-weight: 400; margin-right: 4px; }
+  .ali span { font-size: 14px; }
+}

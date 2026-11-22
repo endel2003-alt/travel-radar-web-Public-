@@ -801,7 +801,7 @@ async function viewFlights(arg) {
   el.innerHTML = `<h1>마일리지 좌석</h1><p class="lead">대한항공 마일리지로 갈 수 있는 날을 달력으로 보여 줘요. 인천 출발 편도 1명 기준이고, 날짜를 누르면 필요한 마일과 세금이 나와요.${asof ? ` <b>${asof} 조회</b>한 값이라 지금은 달라졌을 수 있어요.` : ''}</p>
   <div class="actl"><label><span>어디로 가세요?</span><select id="aTo">${opts}</select></label><div><span>좌석</span><div class="aseg" id="aCab"></div></div><div><span>출발 달</span><div class="aseg" id="aMon"></div></div></div>
   <div class="atwo"><div class="acalw"><div class="acalh"><h2 id="aCalT"></h2><div class="alegend"><i class="achip y">일반</i><i class="achip w">프리미엄</i><i class="achip c">비즈니스</i><i class="apk">성수기</i><span>마일이 더 드는 날</span></div></div><div class="ascroll"><div class="acal" id="aCal"></div></div><p class="muted small" id="aCalS"></p></div><aside class="adet" id="aDet" aria-live="polite"></aside></div>
-  <h2 class="ah2">다른 도시는 어때요?</h2><p class="muted small" id="aTblS"></p><div class="ascroll"><table class="atbl"><thead><tr><th>도착 도시</th><th>일반석</th><th>비즈니스</th><th>비즈니스 최저</th></tr></thead><tbody id="aTb"></tbody></table></div>
+  <h2 class="ah2">다른 도시는 어때요?</h2><p class="muted small" id="aTblS"></p><div class="alist" role="table" aria-label="도시별 좌석 있는 날"><div class="alh" role="row"><span role="columnheader">도착 도시</span><span role="columnheader">일반석</span><span role="columnheader">비즈니스</span><span role="columnheader">비즈니스 최저</span></div><div id="aTb" role="rowgroup"></div></div>
   <p class="anote">비공식 정보예요. 남은 좌석 수는 알 수 없고, 조회한 시각에 1석 이상 보였다는 뜻이에요. 실제 예약은 대한항공에서 본인 계정으로 해 주세요.</p>`;
   const sel = $('#aTo'); sel.value = AIR_ST.to;
   sel.addEventListener('change', () => { AIR_ST.to = sel.value; AIR_ST.sel = null; airSave(); render(); });
@@ -845,7 +845,7 @@ async function viewFlights(arg) {
     const ds = allDates.filter(d => d >= today); const from = ds[0], to = ds[ds.length - 1];
     $('#aTblS').textContent = from ? `${+from.slice(5, 7)}월 ${+from.slice(8)}일부터 ${+to.slice(5, 7)}월 ${+to.slice(8)}일까지 ${ds.length}일 가운데 좌석이 있는 날 수예요. 도시를 누르면 달력이 바뀌어요.` : '';
     const rows = A.routes.map(r => { let y = 0, c = 0, min = null; for (const [d, v] of Object.entries(r.days)) { if (d < today) continue; if (v.y != null) y++; if (v.c != null) { c++; if (min == null || v.c < min) min = v.c; } } return { r, y, c, min }; }).sort((a, b) => b.c - a.c || b.y - a.y);
-    $('#aTb').innerHTML = rows.map(x => `<tr class="${x.r.id === cur.id ? 'on' : ''}"><td><button type="button" data-r="${x.r.id}">${esc(airName(x.r))}</button></td><td>${x.y}일</td><td class="c">${x.c}일</td><td>${x.min != null ? x.min.toLocaleString() + '마일' : '없음'}</td></tr>`).join('');
+    $('#aTb').innerHTML = rows.map(x => `<button type="button" role="row" class="ali${x.r.id === cur.id ? ' on' : ''}" data-r="${x.r.id}"><b role="cell">${esc(airName(x.r))}</b><span role="cell"><small>일반</small>${x.y}일</span><span role="cell" class="c"><small>비즈니스</small>${x.c}일</span><span role="cell" class="m">${x.min != null ? x.min.toLocaleString() + '마일~' : '비즈니스 없음'}</span></button>`).join('');
     $('#aTb').onclick = (e) => { const b = e.target.closest('button[data-r]'); if (!b) return; AIR_ST.to = b.dataset.r; AIR_ST.sel = null; airSave(); render(); $('#v-flights').scrollIntoView({ behavior: 'smooth' }); };
   }
   render();
